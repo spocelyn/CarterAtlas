@@ -2,6 +2,7 @@
 <html>
 <head>
 	<title>Atlas 2.0 - Pac-Man</title>
+	<link rel="icon" type="image/svg+xml" href="favicon.svg">
 	<style type="text/css">
 		html, body {
 			width: 100%;
@@ -47,11 +48,36 @@
 			font-size: 14px;
 			cursor: pointer;
 		}
+		.mute-btn {
+			position: fixed;
+			top: 15px;
+			right: 150px;
+			z-index: 10;
+			color: #a855f7;
+			background: transparent;
+			border: 1px solid #a855f7;
+			border-radius: 6px;
+			padding: 3px 10px;
+			font-family: sans-serif;
+			font-size: 14px;
+			cursor: pointer;
+		}
+		.controls-hint {
+			position: fixed;
+			top: 15px;
+			left: 15px;
+			z-index: 10;
+			color: #a9a9c0;
+			font-family: sans-serif;
+			font-size: 12px;
+		}
 	</style>
 </head>
 <body>
 	<a class="home-link" href="index.html">&larr; Home</a>
 	<button class="pause-btn" id="pauseBtn">Pause</button>
+	<button class="mute-btn" id="muteBtn">Mute</button>
+	<div class="controls-hint">Arrow Keys: Move | N: New Game | P: Pause</div>
 	<div id="pacman"></div>
 
 	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.min.js"></script>
@@ -1169,9 +1195,16 @@ var PACMAN = (function () {
         }
     }
 
+    function toggleSound() {
+        audio.disableSound();
+        localStorage["soundDisabled"] = !soundDisabled();
+        return soundDisabled();
+    }
+
     return {
         "init" : init,
-        "togglePause" : togglePause
+        "togglePause" : togglePause,
+        "toggleSound" : toggleSound
     };
 
 }());
@@ -1362,6 +1395,13 @@ $(function(){
 
   document.getElementById('pauseBtn').addEventListener('click', function() {
     PACMAN.togglePause();
+  });
+
+  var muteBtn = document.getElementById('muteBtn');
+  muteBtn.innerText = localStorage["soundDisabled"] === "true" ? 'Unmute' : 'Mute';
+  muteBtn.addEventListener('click', function() {
+    var isDisabled = PACMAN.toggleSound();
+    muteBtn.innerText = isDisabled ? 'Unmute' : 'Mute';
   });
 });
 

@@ -2,14 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pong Game - 1 or 2 Players</title>
+    <title>Atlas 2.0 - Pong</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
     <style>
         html, body {
             width: 100%;
             height: 100%;
             margin: 0;
             overflow: hidden;
-            background: black;
+            background: linear-gradient(135deg, #0b0b12, #141427, #1a1330);
             display: flex;
             align-items: center;
             justify-content  : center;
@@ -52,7 +54,9 @@ var paddleSpeed = 16;
 
 // --- GAME MODE CONFIGURATION ---
 var gameStarted = false;
+var menuState = 'main'; // main, difficulty
 var isTwoPlayerMode = false; // false = vs AI, true = 2 Players
+var aiDifficulty = 'medium'; // easy, medium, hard
 var paused = false;
 
 // Score Tracking
@@ -62,8 +66,13 @@ var rightScore = 0;
 // Button regions for mouse clicks
 var btn1Player = { x: 0, y: 0, w: 200, h: 50 };
 var btn2Player = { x: 0, y: 0, w: 200, h: 50 };
+var btnEasy = { x: 0, y: 0, w: 150, h: 50 };
+var btnMedium = { x: 0, y: 0, w: 150, h: 50 };
+var btnHard = { x: 0, y: 0, w: 150, h: 50 };
+var btnDifficultyBack = { x: 0, y: 0, w: 150, h: 40 };
 var btnBack = { x: 20, y: 20, w: 100, h: 35 };
 var btnPause = { x: 140, y: 20, w: 100, h: 35 };
+var btnMute = { x: 260, y: 20, w: 100, h: 35 };
 
 // --- PADDLES ---
 const leftPaddle = {
@@ -113,10 +122,22 @@ function resizeCanvas() {
   rightPaddle.y = canvas.height / 2 - paddleHeight / 2;
 
   // Dynamically position menu buttons
+  var menuY = canvas.height / 2 + 20;
+
   btn1Player.x = canvas.width / 2 - 220;
-  btn1Player.y = canvas.height / 2 + 20;
+  btn1Player.y = menuY;
   btn2Player.x = canvas.width / 2 + 20;
-  btn2Player.y = canvas.height / 2 + 20;
+  btn2Player.y = menuY;
+
+  var diffStartX = canvas.width / 2 - 255;
+  btnEasy.x = diffStartX;
+  btnEasy.y = menuY;
+  btnMedium.x = diffStartX + 170;
+  btnMedium.y = menuY;
+  btnHard.x = diffStartX + 340;
+  btnHard.y = menuY;
+  btnDifficultyBack.x = canvas.width / 2 - 75;
+  btnDifficultyBack.y = menuY + 80;
 }
 
 function toggleFullscreen() {
@@ -136,17 +157,58 @@ function collides(obj1, obj2) {
          obj1.y + obj1.height > obj2.y;
 }
 
+// --- SOUND ---
+var audioCtx = null;
+var muted = localStorage.getItem('atlasSoundMuted') === 'true';
+function playBeep(freq, duration, type, volume) {
+  if (muted) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type || 'square';
+    osc.frequency.value = freq;
+    gain.gain.value = volume || 0.15;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+    osc.stop(audioCtx.currentTime + duration);
+  } catch (e) {}
+}
+const sound = {
+  hit: () => playBeep(440, 0.07, 'square', 0.12),
+  wall: () => playBeep(220, 0.06, 'square', 0.1),
+  score: () => playBeep(140, 0.3, 'sawtooth', 0.18)
+};
+
+var maxBallSpeed = 24;
+function speedUpBall() {
+  const factor = 1.06;
+  ball.dx *= factor;
+  ball.dy *= factor;
+  if (Math.abs(ball.dx) > maxBallSpeed) ball.dx = maxBallSpeed * Math.sign(ball.dx);
+  if (Math.abs(ball.dy) > maxBallSpeed) ball.dy = maxBallSpeed * Math.sign(ball.dy);
+}
+
+const AI_SETTINGS = {
+  easy:   { baseMultiplier: 0.68, fastMultiplier: 0.78, margin: 18 },
+  medium: { baseMultiplier: 0.80, fastMultiplier: 0.95, margin: 12 },
+  hard:   { baseMultiplier: 1.05, fastMultiplier: 1.20, margin: 4 }
+};
+
 function updateAI() {
+  const settings = AI_SETTINGS[aiDifficulty];
   const paddleCenter = leftPaddle.y + (leftPaddle.height / 2);
-  var activeAISpeed = paddleSpeed * 0.65;
+  var activeAISpeed = paddleSpeed * settings.baseMultiplier;
 
   if (Math.abs(ball.dx) > 16) {
-    activeAISpeed = paddleSpeed * 0.85;
+    activeAISpeed = paddleSpeed * settings.fastMultiplier;
   }
 
-  if (paddleCenter < ball.y - 15) {
+  if (paddleCenter < ball.y - settings.margin) {
     leftPaddle.dy = activeAISpeed;
-  } else if (paddleCenter > ball.y + 15) {
+  } else if (paddleCenter > ball.y + settings.margin) {
     leftPaddle.dy = -activeAISpeed;
   } else {
     leftPaddle.dy = 0;
@@ -157,20 +219,26 @@ function loop() {
   requestAnimationFrame(loop);
   context.clearRect(0,0,canvas.width,canvas.height);
 
-  if (!gameStarted) {
-    // Menu Screen
-    context.fillStyle = 'white';
-    context.font = '32px monospace';
+  if (!gameStarted && menuState === 'main') {
+    // Main Menu Screen
+    context.save();
+    context.shadowColor = '#a855f7';
+    context.shadowBlur = 16;
+    context.fillStyle = '#c99bff';
+    context.font = '800 32px "DM Sans", sans-serif';
     context.textAlign = 'center';
     context.fillText('SELECT GAME MODE', canvas.width / 2, canvas.height / 2 - 60);
+    context.restore();
 
+    context.fillStyle = 'white';
     context.font = '14px monospace';
+    context.textAlign = 'center';
     context.fillText('PRESS SPACEBAR TO TOGGLE FULLSCREEN', canvas.width / 2, canvas.height / 2 - 20);
 
     // 1 Player Button
-    context.fillStyle = '#333';
+    context.fillStyle = '#1a1330';
     context.fillRect(btn1Player.x, btn1Player.y, btn1Player.w, btn1Player.h);
-    context.strokeStyle = 'white';
+    context.strokeStyle = '#a855f7';
     context.lineWidth = 2;
     context.strokeRect(btn1Player.x, btn1Player.y, btn1Player.w, btn1Player.h);
     context.fillStyle = 'white';
@@ -178,7 +246,7 @@ function loop() {
     context.fillText('1 PLAYER (VS AI)', btn1Player.x + btn1Player.w / 2, btn1Player.y + 32);
 
     // 2 Player Button
-    context.fillStyle = '#333';
+    context.fillStyle = '#1a1330';
     context.fillRect(btn2Player.x, btn2Player.y, btn2Player.w, btn2Player.h);
     context.strokeRect(btn2Player.x, btn2Player.y, btn2Player.w, btn2Player.h);
     context.fillStyle = 'white';
@@ -188,6 +256,54 @@ function loop() {
     context.fillStyle = 'darkgrey';
     context.font = '14px monospace';
     context.fillText('P1: W/S Keys | P2: Arrow Keys', canvas.width / 2, canvas.height / 2 + 110);
+    return;
+  }
+
+  if (!gameStarted && menuState === 'difficulty') {
+    // Difficulty Select Screen
+    context.save();
+    context.shadowColor = '#a855f7';
+    context.shadowBlur = 16;
+    context.fillStyle = '#c99bff';
+    context.font = '800 32px "DM Sans", sans-serif';
+    context.textAlign = 'center';
+    context.fillText('SELECT DIFFICULTY', canvas.width / 2, canvas.height / 2 - 60);
+    context.restore();
+    context.textAlign = 'center';
+
+    // Easy Button
+    context.fillStyle = '#1a1330';
+    context.fillRect(btnEasy.x, btnEasy.y, btnEasy.w, btnEasy.h);
+    context.strokeStyle = '#a855f7';
+    context.lineWidth = 2;
+    context.strokeRect(btnEasy.x, btnEasy.y, btnEasy.w, btnEasy.h);
+    context.fillStyle = 'white';
+    context.font = '16px monospace';
+    context.fillText('EASY', btnEasy.x + btnEasy.w / 2, btnEasy.y + 32);
+
+    // Medium Button
+    context.fillStyle = '#1a1330';
+    context.fillRect(btnMedium.x, btnMedium.y, btnMedium.w, btnMedium.h);
+    context.strokeRect(btnMedium.x, btnMedium.y, btnMedium.w, btnMedium.h);
+    context.fillStyle = 'white';
+    context.fillText('MEDIUM', btnMedium.x + btnMedium.w / 2, btnMedium.y + 32);
+
+    // Hard Button
+    context.fillStyle = '#1a1330';
+    context.fillRect(btnHard.x, btnHard.y, btnHard.w, btnHard.h);
+    context.strokeRect(btnHard.x, btnHard.y, btnHard.w, btnHard.h);
+    context.fillStyle = 'white';
+    context.fillText('HARD', btnHard.x + btnHard.w / 2, btnHard.y + 32);
+
+    // Back Button
+    context.fillStyle = '#222';
+    context.fillRect(btnDifficultyBack.x, btnDifficultyBack.y, btnDifficultyBack.w, btnDifficultyBack.h);
+    context.strokeStyle = '#a855f7';
+    context.lineWidth = 1;
+    context.strokeRect(btnDifficultyBack.x, btnDifficultyBack.y, btnDifficultyBack.w, btnDifficultyBack.h);
+    context.fillStyle = 'white';
+    context.font = '14px monospace';
+    context.fillText('← BACK', btnDifficultyBack.x + btnDifficultyBack.w / 2, btnDifficultyBack.y + 25);
     return;
   }
 
@@ -237,10 +353,12 @@ function loop() {
     if (ball.y < grid) {
       ball.y = grid;
       ball.dy *= -1;
+      sound.wall();
     }
     else if (ball.y + grid > canvas.height - grid) {
       ball.y = canvas.height - grid * 2;
       ball.dy *= -1;
+      sound.wall();
     }
 
     // Scoring
@@ -248,6 +366,7 @@ function loop() {
       ball.resetting = true;
       if (ball.x < 0) rightScore++;
       else leftScore++;
+      sound.score();
 
       setTimeout(() => {
         ball.resetting = false;
@@ -259,16 +378,20 @@ function loop() {
       }, 400);
     }
 
-    // Collisions (Speed updates removed)
+    // Collisions
     if (collides(ball, leftPaddle)) {
       ball.dx *= -1;
       ball.x = leftPaddle.x + leftPaddle.width;
       ball.color = leftPaddle.color;
+      speedUpBall();
+      sound.hit();
     }
     else if (collides(ball, rightPaddle)) {
       ball.dx *= -1;
       ball.x = rightPaddle.x - ball.width;
       ball.color = rightPaddle.color;
+      speedUpBall();
+      sound.hit();
     }
   }
 
@@ -301,10 +424,16 @@ function loop() {
   context.fillText(leftScore, canvas.width / 4, grid * 5);
   context.fillText(rightScore, (canvas.width / 2) * 1.5, grid * 5);
 
+  if (!isTwoPlayerMode) {
+    context.fillStyle = 'darkgrey';
+    context.font = '13px monospace';
+    context.fillText('AI: ' + aiDifficulty.toUpperCase(), canvas.width / 2, 55);
+  }
+
   // Draw Back Button
   context.fillStyle = '#222';
   context.fillRect(btnBack.x, btnBack.y, btnBack.w, btnBack.h);
-  context.strokeStyle = 'white';
+  context.strokeStyle = '#a855f7';
   context.lineWidth = 1;
   context.strokeRect(btnBack.x, btnBack.y, btnBack.w, btnBack.h);
   context.fillStyle = 'white';
@@ -315,13 +444,24 @@ function loop() {
   // Draw Pause Button
   context.fillStyle = '#222';
   context.fillRect(btnPause.x, btnPause.y, btnPause.w, btnPause.h);
-  context.strokeStyle = 'white';
+  context.strokeStyle = '#a855f7';
   context.lineWidth = 1;
   context.strokeRect(btnPause.x, btnPause.y, btnPause.w, btnPause.h);
   context.fillStyle = 'white';
   context.font = '14px monospace';
   context.textAlign = 'center';
   context.fillText(paused ? '▶ RESUME' : '❙❙ PAUSE', btnPause.x + btnPause.w / 2, btnPause.y + 22);
+
+  // Draw Mute Button
+  context.fillStyle = '#222';
+  context.fillRect(btnMute.x, btnMute.y, btnMute.w, btnMute.h);
+  context.strokeStyle = '#a855f7';
+  context.lineWidth = 1;
+  context.strokeRect(btnMute.x, btnMute.y, btnMute.w, btnMute.h);
+  context.fillStyle = 'white';
+  context.font = '14px monospace';
+  context.textAlign = 'center';
+  context.fillText(muted ? 'UNMUTE' : 'MUTE', btnMute.x + btnMute.w / 2, btnMute.y + 22);
 
   if (paused) {
     context.fillStyle = 'rgba(0,0,0,0.6)';
@@ -352,11 +492,10 @@ window.addEventListener('click', (e) => {
   const mouseX = e.clientX - rect.left;
   const mouseY = e.clientY - rect.top;
 
-  if (!gameStarted) {
+  if (!gameStarted && menuState === 'main') {
     if (mouseX >= btn1Player.x && mouseX <= btn1Player.x + btn1Player.w &&
         mouseY >= btn1Player.y && mouseY <= btn1Player.y + btn1Player.h) {
-      isTwoPlayerMode = false;
-      gameStarted = true;
+      menuState = 'difficulty';
       canvas.focus();
     }
     else if (mouseX >= btn2Player.x && mouseX <= btn2Player.x + btn2Player.w &&
@@ -365,10 +504,38 @@ window.addEventListener('click', (e) => {
       gameStarted = true;
       canvas.focus();
     }
+  } else if (!gameStarted && menuState === 'difficulty') {
+    if (mouseX >= btnEasy.x && mouseX <= btnEasy.x + btnEasy.w &&
+        mouseY >= btnEasy.y && mouseY <= btnEasy.y + btnEasy.h) {
+      isTwoPlayerMode = false;
+      aiDifficulty = 'easy';
+      gameStarted = true;
+      canvas.focus();
+    }
+    else if (mouseX >= btnMedium.x && mouseX <= btnMedium.x + btnMedium.w &&
+             mouseY >= btnMedium.y && mouseY <= btnMedium.y + btnMedium.h) {
+      isTwoPlayerMode = false;
+      aiDifficulty = 'medium';
+      gameStarted = true;
+      canvas.focus();
+    }
+    else if (mouseX >= btnHard.x && mouseX <= btnHard.x + btnHard.w &&
+             mouseY >= btnHard.y && mouseY <= btnHard.y + btnHard.h) {
+      isTwoPlayerMode = false;
+      aiDifficulty = 'hard';
+      gameStarted = true;
+      canvas.focus();
+    }
+    else if (mouseX >= btnDifficultyBack.x && mouseX <= btnDifficultyBack.x + btnDifficultyBack.w &&
+             mouseY >= btnDifficultyBack.y && mouseY <= btnDifficultyBack.y + btnDifficultyBack.h) {
+      menuState = 'main';
+      canvas.focus();
+    }
   } else {
     if (mouseX >= btnBack.x && mouseX <= btnBack.x + btnBack.w &&
         mouseY >= btnBack.y && mouseY <= btnBack.y + btnBack.h) {
       gameStarted = false;
+      menuState = 'main';
       leftScore = 0;
       rightScore = 0;
       ball.x = canvas.width / 2;
@@ -380,6 +547,12 @@ window.addEventListener('click', (e) => {
     else if (mouseX >= btnPause.x && mouseX <= btnPause.x + btnPause.w &&
              mouseY >= btnPause.y && mouseY <= btnPause.y + btnPause.h) {
       paused = !paused;
+      canvas.focus();
+    }
+    else if (mouseX >= btnMute.x && mouseX <= btnMute.x + btnMute.w &&
+             mouseY >= btnMute.y && mouseY <= btnMute.y + btnMute.h) {
+      muted = !muted;
+      localStorage.setItem('atlasSoundMuted', muted);
       canvas.focus();
     }
   }

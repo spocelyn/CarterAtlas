@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Atlas 2.0 - Space Invaders</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -34,6 +35,7 @@ body::before {
   background: radial-gradient(circle, rgba(168,85,247,0.25), transparent 70%);
   filter: blur(100px);
   animation: floatGlow 6s ease-in-out infinite alternate;
+  pointer-events: none;
 }
 @keyframes floatGlow {
   from { transform: translate(-50px, -50px); }
@@ -44,6 +46,11 @@ body::before {
   font-weight: 800;
   letter-spacing: 1px;
   opacity: 0.9;
+}
+.hint {
+  font-size: 0.85rem;
+  color: #a9a9c0;
+  margin-top: -20px;
 }
 .launch-btn {
   position: relative;
@@ -157,6 +164,7 @@ canvas {
 <body>
 <a class="home-link" href="index.html">&larr; Home</a>
 <div class="title" id="splashTitle">Atlas 2.0</div>
+<div class="hint" id="controlsHint">Arrow Keys: Move | Up Arrow / Space: Shoot (hold to fire)</div>
 <button class="launch-btn" id="launchBtn">Launch</button>
 <div id="game-container">
   <div class="score-board">
@@ -174,6 +182,7 @@ canvas {
   </div>
   <div>
     <button class="back-btn" id="pauseBtn">Pause</button>
+    <button class="back-btn" id="muteBtn">Mute</button>
     <button class="back-btn" id="backBtn">Exit Game</button>
   </div>
 </div>
@@ -199,7 +208,9 @@ const keys = {};
 
 // --- SOUND ---
 let audioCtx = null;
+let muted = localStorage.getItem('atlasSoundMuted') === 'true';
 function playBeep(freq, duration, type, volume) {
+  if (muted) return;
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = audioCtx.createOscillator();
@@ -256,8 +267,53 @@ let invaders = [];
 let invaderDirection = 1;
 let invaderBaseSpeed = 1.2;
 
+const BOSS_WAVE_INTERVAL = 10;
+let boss = null;
+let bossesDefeated = 0;
+
+function isBossWave(w) {
+  return w % BOSS_WAVE_INTERVAL === 0;
+}
+
+function addScore(amount) {
+  score += amount;
+  document.getElementById('scoreVal').innerText = score;
+  if (score > highScore) {
+    highScore = score;
+    document.getElementById('highScoreVal').innerText = highScore;
+    localStorage.setItem('atlasSpaceInvadersHighScore', highScore);
+  }
+}
+
+function spawnBoss() {
+  const tier = wave / BOSS_WAVE_INTERVAL;
+  const health = 20 + (tier - 1) * 10;
+  boss = {
+    width: 160,
+    height: 80,
+    x: canvas.width / 2 - 80,
+    y: 60,
+    health: health,
+    maxHealth: health,
+    direction: 1,
+    speed: 2 + tier * 0.4,
+    hitFlash: 0
+  };
+}
+
 function spawnWave() {
   invaders = [];
+  boss = null;
+  playerBullets.length = 0;
+  shootCooldown = 0;
+  invaderBullets.length = 0;
+  document.getElementById('waveVal').innerText = wave;
+
+  if (isBossWave(wave)) {
+    spawnBoss();
+    return;
+  }
+
   const totalWidth = invaderCols * (invaderWidth + invaderPadding) - invaderPadding;
   const startX = (canvas.width - totalWidth) / 2;
   for (let row = 0; row < invaderRows; row++) {
@@ -273,16 +329,13 @@ function spawnWave() {
     }
   }
   invaderDirection = 1;
-  invaderBaseSpeed = 1.2 + (wave - 1) * 0.3;
-  playerBullets.length = 0;
-  shootCooldown = 0;
-  invaderBullets.length = 0;
-  document.getElementById('waveVal').innerText = wave;
+  invaderBaseSpeed = (1.2 + (wave - 1) * 0.3) * (1 + bossesDefeated * 0.2);
 }
 
 function resetGame() {
   score = 0;
   wave = 1;
+  bossesDefeated = 0;
   gameOver = false;
   paused = false;
   document.getElementById('pauseBtn').innerText = 'Pause';
@@ -331,50 +384,55 @@ function update() {
     if (playerBullets[i].y < 0) playerBullets.splice(i, 1);
   }
 
-  let hitEdge = false;
-  let aliveCount = 0;
-  const aliveRatio = invaders.filter(inv => inv.alive).length / totalInvaders;
-  const effectiveSpeed = invaderBaseSpeed * (1 + (1 - aliveRatio) * 1.5);
-  for (const inv of invaders) {
-    if (!inv.alive) continue;
-    aliveCount++;
-    inv.x += effectiveSpeed * invaderDirection;
-    if (inv.x <= 0 || inv.x + inv.width >= canvas.width) hitEdge = true;
-  }
-  if (hitEdge) {
-    invaderDirection *= -1;
+  if (boss) {
+    updateBoss();
+  } else {
+    let hitEdge = false;
+    let aliveCount = 0;
+    const aliveRatio = invaders.filter(inv => inv.alive).length / totalInvaders;
+    const effectiveSpeed = invaderBaseSpeed * (1 + (1 - aliveRatio) * 1.5);
     for (const inv of invaders) {
-      if (inv.alive) inv.y += 20;
+      if (!inv.alive) continue;
+      aliveCount++;
+      inv.x += effectiveSpeed * invaderDirection;
+      if (inv.x <= 0 || inv.x + inv.width >= canvas.width) hitEdge = true;
     }
-  }
+    if (hitEdge) {
+      invaderDirection *= -1;
+      for (const inv of invaders) {
+        if (inv.alive) inv.y += 20;
+      }
+    }
 
-  if (aliveCount === 0) {
-    waveJustCleared = wave;
-    wave++;
-    transitionTimer = TRANSITION_FRAMES;
-    sound.waveClear();
-    return;
-  }
-
-  for (const inv of invaders) {
-    if (inv.alive && inv.y + inv.height >= player.y) {
-      triggerGameOver();
+    if (aliveCount === 0) {
+      waveJustCleared = wave;
+      wave++;
+      transitionTimer = TRANSITION_FRAMES;
+      sound.waveClear();
       return;
     }
-  }
 
-  if (Math.random() < 0.015 + wave * 0.002) {
-    const shooters = invaders.filter(inv => inv.alive);
-    if (shooters.length) {
-      const shooter = shooters[Math.floor(Math.random() * shooters.length)];
-      invaderBullets.push({
-        x: shooter.x + shooter.width / 2 - 2,
-        y: shooter.y + shooter.height,
-        width: 4,
-        height: 12
-      });
+    for (const inv of invaders) {
+      if (inv.alive && inv.y + inv.height >= player.y) {
+        triggerGameOver();
+        return;
+      }
+    }
+
+    if (Math.random() < 0.015 + wave * 0.002) {
+      const shooters = invaders.filter(inv => inv.alive);
+      if (shooters.length) {
+        const shooter = shooters[Math.floor(Math.random() * shooters.length)];
+        invaderBullets.push({
+          x: shooter.x + shooter.width / 2 - 2,
+          y: shooter.y + shooter.height,
+          width: 4,
+          height: 12
+        });
+      }
     }
   }
+
   for (let i = invaderBullets.length - 1; i >= 0; i--) {
     invaderBullets[i].y += 5;
     if (invaderBullets[i].y > canvas.height) {
@@ -382,24 +440,40 @@ function update() {
     }
   }
 
-  for (let i = playerBullets.length - 1; i >= 0; i--) {
-    let hit = false;
-    for (const inv of invaders) {
-      if (inv.alive && collides(playerBullets[i], inv)) {
-        inv.alive = false;
-        hit = true;
+  if (boss) {
+    for (let i = playerBullets.length - 1; i >= 0; i--) {
+      if (collides(playerBullets[i], boss)) {
+        playerBullets.splice(i, 1);
+        boss.health--;
+        boss.hitFlash = 6;
         sound.explode();
-        score += 10;
-        document.getElementById('scoreVal').innerText = score;
-        if (score > highScore) {
-          highScore = score;
-          document.getElementById('highScoreVal').innerText = highScore;
-          localStorage.setItem('atlasSpaceInvadersHighScore', highScore);
+        addScore(5);
+        if (boss.health <= 0) {
+          addScore(200);
+          bossesDefeated++;
+          boss = null;
+          waveJustCleared = wave;
+          wave++;
+          transitionTimer = TRANSITION_FRAMES;
+          sound.waveClear();
+          return;
         }
-        break;
       }
     }
-    if (hit) playerBullets.splice(i, 1);
+  } else {
+    for (let i = playerBullets.length - 1; i >= 0; i--) {
+      let hit = false;
+      for (const inv of invaders) {
+        if (inv.alive && collides(playerBullets[i], inv)) {
+          inv.alive = false;
+          hit = true;
+          sound.explode();
+          addScore(10);
+          break;
+        }
+      }
+      if (hit) playerBullets.splice(i, 1);
+    }
   }
 
   for (let i = invaderBullets.length - 1; i >= 0; i--) {
@@ -407,6 +481,27 @@ function update() {
       triggerGameOver();
       return;
     }
+  }
+}
+
+function updateBoss() {
+  boss.x += boss.speed * boss.direction;
+  if (boss.x <= 0 || boss.x + boss.width >= canvas.width) {
+    boss.direction *= -1;
+  }
+  if (boss.hitFlash > 0) boss.hitFlash--;
+
+  if (Math.random() < 0.025 + wave * 0.001) {
+    invaderBullets.push({
+      x: boss.x + boss.width / 2 - 3,
+      y: boss.y + boss.height,
+      width: 5,
+      height: 14
+    });
+  }
+  if (Math.random() < 0.012) {
+    invaderBullets.push({ x: boss.x + boss.width * 0.2, y: boss.y + boss.height, width: 5, height: 14 });
+    invaderBullets.push({ x: boss.x + boss.width * 0.8, y: boss.y + boss.height, width: 5, height: 14 });
   }
 }
 
@@ -445,6 +540,55 @@ function drawInvader(inv) {
   context.fillRect(x + w * 0.58, y + h * 0.4, w * 0.12, h * 0.12);
 }
 
+function drawBoss() {
+  const cx = boss.x + boss.width / 2;
+  const cy = boss.y + boss.height / 2;
+  const flashColor = boss.hitFlash > 0 ? '#ffffff' : '#ff3860';
+
+  context.save();
+  context.shadowColor = '#ff3860';
+  context.shadowBlur = 18;
+  context.fillStyle = flashColor;
+
+  // Saucer body
+  context.beginPath();
+  context.ellipse(cx, cy + boss.height * 0.15, boss.width / 2, boss.height * 0.35, 0, 0, Math.PI * 2);
+  context.fill();
+
+  // Dome on top
+  context.beginPath();
+  context.ellipse(cx, cy - boss.height * 0.15, boss.width * 0.22, boss.height * 0.28, 0, Math.PI, 0);
+  context.fill();
+  context.restore();
+
+  // Row of lights along the saucer's rim
+  context.fillStyle = '#ffeb3b';
+  const lightCount = 7;
+  for (let i = 0; i < lightCount; i++) {
+    const lx = boss.x + (boss.width / (lightCount - 1)) * i;
+    context.beginPath();
+    context.arc(lx, cy + boss.height * 0.15, 4, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  const barWidth = boss.width;
+  const barHeight = 10;
+  const barX = boss.x;
+  const barY = boss.y - 22;
+  context.fillStyle = '#222';
+  context.fillRect(barX, barY, barWidth, barHeight);
+  context.fillStyle = '#ff2d55';
+  context.fillRect(barX, barY, barWidth * (boss.health / boss.maxHealth), barHeight);
+  context.strokeStyle = '#ffffff';
+  context.lineWidth = 1;
+  context.strokeRect(barX, barY, barWidth, barHeight);
+
+  context.fillStyle = '#ffffff';
+  context.font = '600 12px "DM Sans", sans-serif';
+  context.textAlign = 'center';
+  context.fillText('BOSS', boss.x + boss.width / 2, barY - 8);
+}
+
 function draw() {
   context.fillStyle = '#05050a';
   context.fillRect(0, 0, canvas.width, canvas.height);
@@ -470,9 +614,13 @@ function draw() {
     context.restore();
   }
 
-  for (const inv of invaders) {
-    if (!inv.alive) continue;
-    drawInvader(inv);
+  if (boss) {
+    drawBoss();
+  } else {
+    for (const inv of invaders) {
+      if (!inv.alive) continue;
+      drawInvader(inv);
+    }
   }
 
   context.save();
@@ -507,9 +655,15 @@ function draw() {
     context.fillText('W A V E   ' + waveJustCleared + '   C L E A R E D', canvas.width / 2, canvas.height / 2 - 14);
 
     context.shadowBlur = 0;
-    context.fillStyle = '#a9a9c0';
-    context.font = '600 15px "DM Sans", sans-serif';
-    context.fillText('Get ready for wave ' + (waveJustCleared + 1) + '...', canvas.width / 2, canvas.height / 2 + 24);
+    if (isBossWave(waveJustCleared + 1)) {
+      context.fillStyle = '#ff2d55';
+      context.font = '800 15px "DM Sans", sans-serif';
+      context.fillText('⚠ BOSS INCOMING — WAVE ' + (waveJustCleared + 1) + ' ⚠', canvas.width / 2, canvas.height / 2 + 24);
+    } else {
+      context.fillStyle = '#a9a9c0';
+      context.font = '600 15px "DM Sans", sans-serif';
+      context.fillText('Get ready for wave ' + (waveJustCleared + 1) + '...', canvas.width / 2, canvas.height / 2 + 24);
+    }
     context.restore();
   }
 
@@ -544,6 +698,7 @@ document.addEventListener('keyup', function(e) {
 
 function startGame() {
   document.getElementById('splashTitle').style.display = 'none';
+  document.getElementById('controlsHint').style.display = 'none';
   document.getElementById('launchBtn').style.display = 'none';
   document.getElementById('game-container').style.display = 'flex';
   if (document.documentElement.requestFullscreen) {
@@ -567,6 +722,7 @@ document.getElementById('backBtn').addEventListener('click', function() {
   }
   document.getElementById('game-container').style.display = 'none';
   document.getElementById('splashTitle').style.display = 'block';
+  document.getElementById('controlsHint').style.display = 'block';
   document.getElementById('launchBtn').style.display = 'block';
 });
 
@@ -574,6 +730,12 @@ document.getElementById('pauseBtn').addEventListener('click', function() {
   if (gameOver) return;
   paused = !paused;
   this.innerText = paused ? 'Resume' : 'Pause';
+});
+document.getElementById('muteBtn').innerText = muted ? 'Unmute' : 'Mute';
+document.getElementById('muteBtn').addEventListener('click', function() {
+  muted = !muted;
+  localStorage.setItem('atlasSoundMuted', muted);
+  this.innerText = muted ? 'Unmute' : 'Mute';
 });
 </script>
 </body>

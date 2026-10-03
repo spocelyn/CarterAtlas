@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Atlas 2.0 - Flappy Bird</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: linear-gradient(135deg, #0b0b12, #141427, #1a1330);
+  --border: rgba(168, 85, 247, 0.25);
+  --text: #ffffff;
+  --accent1: #a855f7;
+  --accent2: #6366f1;
+}
+body {
+  font-family: "DM Sans", system-ui, sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+body::before {
+  content: "";
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(168,85,247,0.25), transparent 70%);
+  filter: blur(100px);
+  animation: floatGlow 6s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes floatGlow {
+  from { transform: translate(-50px, -50px); }
+  to { transform: translate(50px, 50px); }
+}
+.title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  opacity: 0.9;
+}
+.launch-btn {
+  position: relative;
+  font-size: 2.3rem;
+  font-weight: 800;
+  padding: 32px 100px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--accent1);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+}
+.launch-btn:hover {
+  transform: translateY(-8px) scale(1.05);
+  box-shadow: 0 25px 70px rgba(0,0,0,0.7);
+  filter: brightness(1.15);
+}
+#game-container {
+  display: none;
+  width: 100vw;
+  height: 100vh;
+  background: #0b0b12;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  z-index: 10;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+.score-board {
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--accent1);
+}
+.hint {
+  font-size: 0.85rem;
+  color: #a9a9c0;
+  margin-top: -10px;
+}
+#canvas-wrap {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+canvas {
+  border: 2px solid var(--border);
+  box-shadow: 0 15px 50px rgba(168,85,247,0.3);
+  background: black;
+  height: 75vh;
+  max-height: 600px;
+  width: auto;
+  cursor: pointer;
+}
+.overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(0,0,0,0.78);
+}
+.overlay-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+.overlay-score {
+  font-size: 1.1rem;
+  color: var(--accent1);
+  font-weight: 700;
+}
+.play-again-btn {
+  font-size: 1.1rem;
+  font-weight: 800;
+  padding: 14px 36px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--accent1);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.play-again-btn:hover {
+  transform: translateY(-3px) scale(1.03);
+  filter: brightness(1.15);
+}
+.back-btn {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.back-btn:hover { background: rgba(255, 255, 255, 0.2); }
+.home-link {
+  position: fixed;
+  top: 15px;
+  right: 20px;
+  z-index: 10;
+  color: var(--accent1);
+  font-family: inherit;
+  text-decoration: none;
+  font-size: 14px;
+}
+</style>
+</head>
+<body>
+<a class="home-link" href="index.html">&larr; Home</a>
+<div class="title" id="splashTitle">Atlas 2.0</div>
+<button class="launch-btn" id="launchBtn">Launch</button>
+<div id="game-container">
+  <div class="score-board">
+    Score: <span id="scoreVal">0</span> &nbsp;
+    High Score: <span id="highScoreVal">0</span>
+  </div>
+  <div class="hint">Press SPACE, click, or tap to flap</div>
+  <div id="canvas-wrap">
+    <canvas width="400" height="600" id="game"></canvas>
+    <div class="overlay" id="gameOverOverlay">
+      <div class="overlay-title">GAME OVER</div>
+      <div class="overlay-score" id="finalScoreText"></div>
+      <button class="play-again-btn" id="playAgainBtn">Play Again</button>
+    </div>
+  </div>
+  <div>
+    <button class="back-btn" id="pauseBtn">Pause</button>
+    <button class="back-btn" id="muteBtn">Mute</button>
+    <button class="back-btn" id="backBtn">Exit Game</button>
+  </div>
+</div>
+<script>
+const canvas = document.getElementById('game');
+const context = canvas.getContext('2d');
+const gameOverOverlay = document.getElementById('gameOverOverlay');
+const finalScoreText = document.getElementById('finalScoreText');
+
+let highScore = Number(localStorage.getItem('atlasFlappyBirdHighScore')) || 0;
+document.getElementById('highScoreVal').innerText = highScore;
+
+let score = 0;
+let gameOver = false;
+let paused = false;
+let started = false;
+let rAF = null;
+let frameCount = 0;
+
+// --- SOUND ---
+let audioCtx = null;
+let muted = localStorage.getItem('atlasSoundMuted') === 'true';
+function playBeep(freq, duration, type, volume) {
+  if (muted) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type || 'square';
+    osc.frequency.value = freq;
+    gain.gain.value = volume || 0.15;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+    osc.stop(audioCtx.currentTime + duration);
+  } catch (e) {}
+}
+const sound = {
+  flap: () => playBeep(500, 0.06, 'square', 0.1),
+  point: () => playBeep(800, 0.08, 'square', 0.12),
+  hit: () => playBeep(110, 0.5, 'sawtooth', 0.2)
+};
+
+// --- CLOUDS ---
+const clouds = [];
+for (let i = 0; i < 5; i++) {
+  clouds.push({
+    x: Math.random() * canvas.width,
+    y: 40 + Math.random() * 200,
+    scale: 0.6 + Math.random() * 0.8,
+    speed: 0.2 + Math.random() * 0.3
+  });
+}
+
+const GROUND_HEIGHT = 50;
+const GRAVITY = 0.45;
+const FLAP_VELOCITY = -8;
+const PIPE_WIDTH = 60;
+const PIPE_GAP = 165;
+const PIPE_SPEED = 3;
+const PIPE_SPACING = 230;
+
+const bird = {
+  x: 100,
+  y: canvas.height / 2,
+  radius: 15,
+  velocity: 0
+};
+
+let pipes = [];
+
+function resetGame() {
+  score = 0;
+  gameOver = false;
+  paused = false;
+  started = false;
+  frameCount = 0;
+  document.getElementById('pauseBtn').innerText = 'Pause';
+  document.getElementById('scoreVal').innerText = score;
+  gameOverOverlay.style.display = 'none';
+
+  bird.y = canvas.height / 2;
+  bird.velocity = 0;
+  pipes = [];
+}
+
+function spawnPipe() {
+  const margin = 70;
+  const playableHeight = canvas.height - GROUND_HEIGHT;
+  const gapY = margin + Math.random() * (playableHeight - margin * 2 - PIPE_GAP);
+  pipes.push({ x: canvas.width, gapY: gapY, passed: false });
+}
+
+function flap() {
+  if (gameOver || paused) return;
+  started = true;
+  bird.velocity = FLAP_VELOCITY;
+  sound.flap();
+}
+
+function triggerGameOver() {
+  gameOver = true;
+  sound.hit();
+  finalScoreText.innerText = 'Score: ' + score + ' | High Score: ' + highScore;
+  gameOverOverlay.style.display = 'flex';
+}
+
+function update() {
+  if (gameOver || paused || !started) return;
+
+  bird.velocity += GRAVITY;
+  bird.y += bird.velocity;
+
+  if (bird.y - bird.radius < 0) {
+    bird.y = bird.radius;
+    bird.velocity = 0;
+  }
+  if (bird.y + bird.radius > canvas.height - GROUND_HEIGHT) {
+    triggerGameOver();
+    return;
+  }
+
+  if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - PIPE_SPACING) {
+    spawnPipe();
+  }
+
+  for (let i = pipes.length - 1; i >= 0; i--) {
+    const pipe = pipes[i];
+    pipe.x -= PIPE_SPEED;
+
+    if (pipe.x + PIPE_WIDTH < 0) {
+      pipes.splice(i, 1);
+      continue;
+    }
+
+    if (!pipe.passed && pipe.x + PIPE_WIDTH < bird.x) {
+      pipe.passed = true;
+      score++;
+      document.getElementById('scoreVal').innerText = score;
+      sound.point();
+      if (score > highScore) {
+        highScore = score;
+        document.getElementById('highScoreVal').innerText = highScore;
+        localStorage.setItem('atlasFlappyBirdHighScore', highScore);
+      }
+    }
+
+    const hitX = bird.x + bird.radius > pipe.x && bird.x - bird.radius < pipe.x + PIPE_WIDTH;
+    const hitGap = bird.y - bird.radius < pipe.gapY || bird.y + bird.radius > pipe.gapY + PIPE_GAP;
+    if (hitX && hitGap) {
+      triggerGameOver();
+      return;
+    }
+  }
+}
+
+function drawBird() {
+  context.fillStyle = '#eab308';
+  context.beginPath();
+  context.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+  context.fill();
+
+  context.fillStyle = '#ffffff';
+  context.beginPath();
+  context.arc(bird.x + 5, bird.y - 4, 4, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = '#05050a';
+  context.beginPath();
+  context.arc(bird.x + 6.5, bird.y - 4, 2, 0, Math.PI * 2);
+  context.fill();
+
+  context.fillStyle = '#f97316';
+  context.beginPath();
+  context.moveTo(bird.x + bird.radius - 2, bird.y);
+  context.lineTo(bird.x + bird.radius + 8, bird.y + 3);
+  context.lineTo(bird.x + bird.radius - 2, bird.y + 6);
+  context.closePath();
+  context.fill();
+}
+
+function drawPipes() {
+  const playableHeight = canvas.height - GROUND_HEIGHT;
+  pipes.forEach(pipe => {
+    context.save();
+    context.shadowColor = '#22c55e';
+    context.shadowBlur = 8;
+    context.fillStyle = '#22c55e';
+    context.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.gapY);
+    context.fillRect(pipe.x, pipe.gapY + PIPE_GAP, PIPE_WIDTH, playableHeight - (pipe.gapY + PIPE_GAP));
+    context.restore();
+    context.fillStyle = '#16a34a';
+    context.fillRect(pipe.x - 4, pipe.gapY - 18, PIPE_WIDTH + 8, 18);
+    context.fillRect(pipe.x - 4, pipe.gapY + PIPE_GAP, PIPE_WIDTH + 8, 18);
+  });
+}
+
+function drawCloud(cloud) {
+  const x = cloud.x, y = cloud.y, s = cloud.scale;
+  context.fillStyle = 'rgba(255,255,255,0.85)';
+  context.beginPath();
+  context.arc(x, y, 16 * s, 0, Math.PI * 2);
+  context.arc(x + 18 * s, y - 8 * s, 20 * s, 0, Math.PI * 2);
+  context.arc(x + 38 * s, y, 16 * s, 0, Math.PI * 2);
+  context.arc(x + 18 * s, y + 6 * s, 18 * s, 0, Math.PI * 2);
+  context.fill();
+}
+
+function drawGround() {
+  const groundY = canvas.height - GROUND_HEIGHT;
+  context.fillStyle = '#58c43a';
+  context.fillRect(0, groundY, canvas.width, 10);
+  context.fillStyle = '#ded895';
+  context.fillRect(0, groundY + 10, canvas.width, GROUND_HEIGHT - 10);
+}
+
+function draw() {
+  const skyGradient = context.createLinearGradient(0, 0, 0, canvas.height - GROUND_HEIGHT);
+  skyGradient.addColorStop(0, '#4ec0ca');
+  skyGradient.addColorStop(1, '#bdeef5');
+  context.fillStyle = skyGradient;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  clouds.forEach(cloud => {
+    cloud.x -= cloud.speed;
+    if (cloud.x < -60) cloud.x = canvas.width + 60;
+    drawCloud(cloud);
+  });
+
+  drawPipes();
+  drawGround();
+  drawBird();
+
+  if (!started && !gameOver) {
+    context.font = '600 16px "DM Sans", sans-serif';
+    context.textAlign = 'center';
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 3;
+    context.strokeText('Press SPACE or click to start', canvas.width / 2, canvas.height / 2 - 40);
+    context.fillStyle = '#ffffff';
+    context.fillText('Press SPACE or click to start', canvas.width / 2, canvas.height / 2 - 40);
+  }
+
+  if (paused) {
+    context.fillStyle = 'rgba(0,0,0,0.65)';
+    context.fillRect(0, canvas.height / 2 - 40, canvas.width, 80);
+    context.fillStyle = '#ffffff';
+    context.font = '800 32px "DM Sans", sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+  }
+}
+
+function loop() {
+  rAF = requestAnimationFrame(loop);
+  frameCount++;
+  update();
+  draw();
+}
+
+document.addEventListener('keydown', function(e) {
+  if (document.getElementById('game-container').style.display !== 'flex') return;
+  if (e.key === ' ') {
+    e.preventDefault();
+    flap();
+  }
+});
+
+canvas.addEventListener('mousedown', flap);
+canvas.addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  flap();
+});
+
+function startGame() {
+  document.getElementById('splashTitle').style.display = 'none';
+  document.getElementById('launchBtn').style.display = 'none';
+  document.getElementById('game-container').style.display = 'flex';
+  if (document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+  resetGame();
+  if (rAF) cancelAnimationFrame(rAF);
+  rAF = requestAnimationFrame(loop);
+}
+
+document.getElementById('launchBtn').addEventListener('click', startGame);
+
+document.getElementById('playAgainBtn').addEventListener('click', function() {
+  resetGame();
+});
+
+document.getElementById('backBtn').addEventListener('click', function() {
+  cancelAnimationFrame(rAF);
+  if (document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  }
+  document.getElementById('game-container').style.display = 'none';
+  document.getElementById('splashTitle').style.display = 'block';
+  document.getElementById('launchBtn').style.display = 'block';
+});
+
+document.getElementById('pauseBtn').addEventListener('click', function() {
+  if (gameOver || !started) return;
+  paused = !paused;
+  this.innerText = paused ? 'Resume' : 'Pause';
+});
+document.getElementById('muteBtn').innerText = muted ? 'Unmute' : 'Mute';
+document.getElementById('muteBtn').addEventListener('click', function() {
+  muted = !muted;
+  localStorage.setItem('atlasSoundMuted', muted);
+  this.innerText = muted ? 'Unmute' : 'Mute';
+});
+</script>
+</body>
+</html>

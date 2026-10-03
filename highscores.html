@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Atlas 2.0 - High Scores</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: linear-gradient(135deg, #0b0b12, #141427, #1a1330);
+  --border: rgba(168, 85, 247, 0.25);
+  --text: #ffffff;
+  --accent1: #a855f7;
+  --accent2: #6366f1;
+}
+body {
+  font-family: "DM Sans", system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+  background: var(--bg);
+  color: var(--text);
+}
+.title {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  opacity: 0.9;
+}
+.subtitle {
+  margin-top: -25px;
+  font-size: 1rem;
+  color: #a9a9c0;
+}
+.score-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 420px;
+  padding: 0 20px;
+}
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  text-decoration: none;
+  transition: all 0.25s ease;
+}
+.score-row:hover {
+  transform: translateY(-4px);
+  background: rgba(168, 85, 247, 0.15);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+}
+.score-row .game-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.score-row .game-score {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--accent1);
+}
+.score-row .no-score {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6b6b80;
+}
+.home-link {
+  position: fixed;
+  top: 15px;
+  right: 20px;
+  z-index: 10;
+  color: var(--accent1);
+  font-family: inherit;
+  text-decoration: none;
+  font-size: 14px;
+}
+</style>
+</head>
+<body>
+<a class="home-link" href="index.html">&larr; Home</a>
+<div class="title">High Scores</div>
+<div class="subtitle" style="margin-top:-30px;">Your best runs across Atlas 2.0</div>
+<div class="score-list" id="scoreList"></div>
+<script>
+const GAMES = [
+  { name: 'PONG', key: null, page: 'pong.html' },
+  { name: 'PAC-MAN', key: 'atlasPacmanHighScore', page: 'pacman.html' },
+  { name: 'TETRIS', key: 'atlasTetrisHighScore', page: 'tetris.html' },
+  { name: 'SPACE INVADERS', key: 'atlasSpaceInvadersHighScore', page: 'spaceinvaders.html' },
+  { name: 'SNAKE', key: 'atlasSnakeHighScore', page: 'snake.html' },
+  { name: 'FLAPPY BIRD', key: 'atlasFlappyBirdHighScore', page: 'flappybird.html' }
+];
+
+const list = document.getElementById('scoreList');
+
+GAMES.forEach(game => {
+  const row = document.createElement('a');
+  row.className = 'score-row';
+  row.href = game.page;
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'game-name';
+  nameEl.innerText = game.name;
+  row.appendChild(nameEl);
+
+  const scoreEl = document.createElement('span');
+  if (game.key === null) {
+    scoreEl.className = 'no-score';
+    scoreEl.innerText = 'No high score tracked';
+  } else {
+    const value = Number(localStorage.getItem(game.key)) || 0;
+    scoreEl.className = 'game-score';
+    scoreEl.innerText = value;
+  }
+  row.appendChild(scoreEl);
+
+  list.appendChild(row);
+});
+</script>
+</body>
+</html>

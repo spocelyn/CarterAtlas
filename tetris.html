@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Atlas 2.0 - Tetris</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -34,6 +35,7 @@ body::before {
   background: radial-gradient(circle, rgba(168,85,247,0.25), transparent 70%);
   filter: blur(100px);
   animation: floatGlow 6s ease-in-out infinite alternate;
+  pointer-events: none;
 }
 @keyframes floatGlow {
   from { transform: translate(-50px, -50px); }
@@ -44,6 +46,11 @@ body::before {
   font-weight: 800;
   letter-spacing: 1px;
   opacity: 0.9;
+}
+.hint {
+  font-size: 0.85rem;
+  color: #a9a9c0;
+  margin-top: -20px;
 }
 .launch-btn {
   position: relative;
@@ -116,16 +123,45 @@ canvas {
 <body>
 <a class="home-link" href="index.html">&larr; Home</a>
 <div class="title" id="splashTitle">Atlas 2.0</div>
+<div class="hint" id="controlsHint">Arrow Keys: Move &amp; Rotate | Down: Drop Faster</div>
 <button class="launch-btn" id="launchBtn">Launch</button>
 <div id="game-container">
   <div class="score-board">Score: <span id="scoreVal">0</span> &nbsp; High Score: <span id="highScoreVal">0</span></div>
   <canvas width="320" height="640" id="game"></canvas>
   <div>
     <button class="back-btn" id="pauseBtn">Pause</button>
+    <button class="back-btn" id="muteBtn">Mute</button>
     <button class="back-btn" id="backBtn">Exit Game</button>
   </div>
 </div>
 <script>
+// --- SOUND ---
+var audioCtx = null;
+var muted = localStorage.getItem('atlasSoundMuted') === 'true';
+function playBeep(freq, duration, type, volume) {
+  if (muted) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type || 'square';
+    osc.frequency.value = freq;
+    gain.gain.value = volume || 0.15;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+    osc.stop(audioCtx.currentTime + duration);
+  } catch (e) {}
+}
+const sound = {
+  move: () => playBeep(200, 0.04, 'square', 0.08),
+  rotate: () => playBeep(300, 0.05, 'square', 0.1),
+  lock: () => playBeep(150, 0.08, 'square', 0.12),
+  clear: () => playBeep(660, 0.3, 'triangle', 0.18),
+  gameOver: () => playBeep(110, 0.6, 'sawtooth', 0.2)
+};
+
 function getRandomInt(min, max) {
   min = Math.ceil(min);
   max = Math.floor(max);
@@ -168,6 +204,7 @@ function isValidMove(matrix, cellRow, cellCol) {
   return true;
 }
 function placeTetromino() {
+  sound.lock();
   for (let row = 0; row < tetromino.matrix.length; row++) {
     for (let col = 0; col < tetromino.matrix[row].length; col++) {
       if (tetromino.matrix[row][col]) {
@@ -192,6 +229,7 @@ function placeTetromino() {
     }
   }
   if (linesCleared > 0) {
+    sound.clear();
     score += linesCleared * 100;
     document.getElementById('scoreVal').innerText = score;
     if (score > highScore) {
@@ -205,6 +243,7 @@ function placeTetromino() {
 function showGameOver() {
   cancelAnimationFrame(rAF);
   gameOver = true;
+  sound.gameOver();
   context.fillStyle = 'black';
   context.globalAlpha = 0.75;
   context.fillRect(0, canvas.height / 2 - 30, canvas.width, 60);
@@ -302,12 +341,14 @@ document.addEventListener('keydown', function(e) {
     const col = e.which === 37 ? tetromino.col - 1 : tetromino.col + 1;
     if (isValidMove(tetromino.matrix, tetromino.row, col)) {
       tetromino.col = col;
+      sound.move();
     }
   }
   if (e.which === 38) {
     const matrix = rotate(tetromino.matrix);
     if (isValidMove(matrix, tetromino.row, tetromino.col)) {
       tetromino.matrix = matrix;
+      sound.rotate();
     }
   }
   if (e.which === 40) {
@@ -322,6 +363,7 @@ document.addEventListener('keydown', function(e) {
 });
 document.getElementById('launchBtn').addEventListener('click', function() {
   document.getElementById('splashTitle').style.display = 'none';
+  document.getElementById('controlsHint').style.display = 'none';
   this.style.display = 'none';
   document.getElementById('game-container').style.display = 'flex';
   if (document.documentElement.requestFullscreen) {
@@ -349,12 +391,19 @@ document.getElementById('backBtn').addEventListener('click', function() {
   }
   document.getElementById('game-container').style.display = 'none';
   document.getElementById('splashTitle').style.display = 'block';
+  document.getElementById('controlsHint').style.display = 'block';
   document.getElementById('launchBtn').style.display = 'block';
 });
 document.getElementById('pauseBtn').addEventListener('click', function() {
   if (gameOver) return;
   paused = !paused;
   this.innerText = paused ? 'Resume' : 'Pause';
+});
+document.getElementById('muteBtn').innerText = muted ? 'Unmute' : 'Mute';
+document.getElementById('muteBtn').addEventListener('click', function() {
+  muted = !muted;
+  localStorage.setItem('atlasSoundMuted', muted);
+  this.innerText = muted ? 'Unmute' : 'Mute';
 });
 </script>
 </body>
