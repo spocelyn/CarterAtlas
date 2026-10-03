@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Atlas 2.0 - Tetris</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: linear-gradient(135deg, #0b0b12, #141427, #1a1330);
+  --border: rgba(168, 85, 247, 0.25);
+  --text: #ffffff;
+  --accent1: #a855f7;
+  --accent2: #6366f1;
+}
+body {
+  font-family: "DM Sans", system-ui, sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+body::before {
+  content: "";
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(168,85,247,0.25), transparent 70%);
+  filter: blur(100px);
+  animation: floatGlow 6s ease-in-out infinite alternate;
+}
+@keyframes floatGlow {
+  from { transform: translate(-50px, -50px); }
+  to { transform: translate(50px, 50px); }
+}
+.title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  opacity: 0.9;
+}
+.launch-btn {
+  position: relative;
+  font-size: 2.3rem;
+  font-weight: 800;
+  padding: 32px 100px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--accent1);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+}
+.launch-btn:hover {
+  transform: translateY(-8px) scale(1.05);
+  box-shadow: 0 25px 70px rgba(0,0,0,0.7);
+  filter: brightness(1.15);
+}
+#game-container {
+  display: none;
+  width: 100vw;
+  height: 100vh;
+  background: #0b0b12;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  z-index: 10;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+.score-board {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--accent1);
+}
+canvas {
+  border: 2px solid var(--border);
+  box-shadow: 0 15px 50px rgba(168,85,247,0.3);
+  background: black;
+  height: 75vh;
+  max-height: 580px;
+  width: auto;
+}
+.back-btn {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.back-btn:hover { background: rgba(255, 255, 255, 0.2); }
+.home-link {
+  position: fixed;
+  top: 15px;
+  right: 20px;
+  z-index: 10;
+  color: var(--accent1);
+  font-family: inherit;
+  text-decoration: none;
+  font-size: 14px;
+}
+</style>
+</head>
+<body>
+<a class="home-link" href="index.html">&larr; Home</a>
+<div class="title" id="splashTitle">Atlas 2.0</div>
+<button class="launch-btn" id="launchBtn">Launch</button>
+<div id="game-container">
+  <div class="score-board">Score: <span id="scoreVal">0</span></div>
+  <canvas width="320" height="640" id="game"></canvas>
+  <button class="back-btn" id="backBtn">Exit Game</button>
+</div>
+<script>
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+function generateSequence() {
+  const sequence = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'];
+  while (sequence.length) {
+    const rand = getRandomInt(0, sequence.length - 1);
+    const name = sequence.splice(rand, 1)[0];
+    tetrominoSequence.push(name);
+  }
+}
+function getNextTetromino() {
+  if (tetrominoSequence.length === 0) {
+    generateSequence();
+  }
+  const name = tetrominoSequence.pop();
+  const matrix = tetrominos[name];
+  const col = playfield[0].length / 2 - Math.ceil(matrix[0].length / 2);
+  const row = name === 'I' ? -1 : -2;
+  return { name: name, matrix: matrix, row: row, col: col };
+}
+function rotate(matrix) {
+  const N = matrix.length - 1;
+  return matrix.map((row, i) => row.map((val, j) => matrix[N - j][i]));
+}
+function isValidMove(matrix, cellRow, cellCol) {
+  for (let row = 0; row < matrix.length; row++) {
+    for (let col = 0; col < matrix[row].length; col++) {
+      if (matrix[row][col] && (
+          cellCol + col < 0 ||
+          cellCol + col >= playfield[0].length ||
+          cellRow + row >= playfield.length ||
+          (cellRow + row >= 0 && playfield[cellRow + row][cellCol + col]))) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+function placeTetromino() {
+  for (let row = 0; row < tetromino.matrix.length; row++) {
+    for (let col = 0; col < tetromino.matrix[row].length; col++) {
+      if (tetromino.matrix[row][col]) {
+        if (tetromino.row + row < 0) {
+          return showGameOver();
+        }
+        playfield[tetromino.row + row][tetromino.col + col] = tetromino.name;
+      }
+    }
+  }
+  let linesCleared = 0;
+  for (let row = playfield.length - 1; row >= 0; ) {
+    if (playfield[row].every(cell => !!cell)) {
+      linesCleared++;
+      for (let r = row; r >= 0; r--) {
+        for (let c = 0; c < playfield[r].length; c++) {
+          playfield[r][c] = playfield[r-1] ? playfield[r-1][c] : 0;
+        }
+      }
+    } else {
+      row--;
+    }
+  }
+  if (linesCleared > 0) {
+    score += linesCleared * 100;
+    document.getElementById('scoreVal').innerText = score;
+  }
+  tetromino = getNextTetromino();
+}
+function showGameOver() {
+  cancelAnimationFrame(rAF);
+  gameOver = true;
+  context.fillStyle = 'black';
+  context.globalAlpha = 0.75;
+  context.fillRect(0, canvas.height / 2 - 30, canvas.width, 60);
+  context.globalAlpha = 1;
+  context.fillStyle = 'white';
+  context.font = '36px monospace';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2);
+}
+function getDropSpeed() {
+  if (score >= 4000) return 10;
+  if (score >= 3000) return 15;
+  if (score >= 2000) return 20;
+  if (score >= 1000) return 28;
+  return 35;
+}
+const canvas = document.getElementById('game');
+const context = canvas.getContext('2d');
+const grid = 32;
+const tetrominoSequence = [];
+const playfield = [];
+for (let row = -2; row < 20; row++) {
+  playfield[row] = [];
+  for (let col = 0; col < 10; col++) {
+    playfield[row][col] = 0;
+  }
+}
+const tetrominos = {
+  'I': [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+  'J': [[1,0,0],[1,1,1],[0,0,0]],
+  'L': [[0,0,1],[1,1,1],[0,0,0]],
+  'O': [[1,1],[1,1]],
+  'S': [[0,1,1],[1,1,0],[0,0,0]],
+  'Z': [[1,1,0],[0,1,1],[0,0,0]],
+  'T': [[0,1,0],[1,1,1],[0,0,0]]
+};
+const colors = {
+  'I': 'cyan', 'O': 'yellow', 'T': 'purple', 'S': 'green',
+  'Z': 'red', 'J': 'blue', 'L': 'orange'
+};
+let count = 0;
+let tetromino = null;
+let rAF = null;
+let gameOver = false;
+let score = 0;
+function loop() {
+  rAF = requestAnimationFrame(loop);
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  for (let row = 0; row < 20; row++) {
+    for (let col = 0; col < 10; col++) {
+      if (playfield[row][col]) {
+        const name = playfield[row][col];
+        context.fillStyle = colors[name];
+        context.fillRect(col * grid, row * grid, grid - 1, grid - 1);
+      }
+    }
+  }
+  if (tetromino) {
+    if (++count > getDropSpeed()) {
+      tetromino.row++;
+      count = 0;
+      if (!isValidMove(tetromino.matrix, tetromino.row, tetromino.col)) {
+        tetromino.row--;
+        placeTetromino();
+      }
+    }
+    context.fillStyle = colors[tetromino.name];
+    for (let row = 0; row < tetromino.matrix.length; row++) {
+      for (let col = 0; col < tetromino.matrix[row].length; col++) {
+        if (tetromino.matrix[row][col]) {
+          context.fillRect((tetromino.col + col) * grid, (tetromino.row + row) * grid, grid - 1, grid - 1);
+        }
+      }
+    }
+  }
+}
+document.addEventListener('keydown', function(e) {
+  if (gameOver || document.getElementById('game-container').style.display !== 'flex') return;
+  if (e.which === 37 || e.which === 39) {
+    const col = e.which === 37 ? tetromino.col - 1 : tetromino.col + 1;
+    if (isValidMove(tetromino.matrix, tetromino.row, col)) {
+      tetromino.col = col;
+    }
+  }
+  if (e.which === 38) {
+    const matrix = rotate(tetromino.matrix);
+    if (isValidMove(matrix, tetromino.row, tetromino.col)) {
+      tetromino.matrix = matrix;
+    }
+  }
+  if (e.which === 40) {
+    const row = tetromino.row + 1;
+    if (!isValidMove(tetromino.matrix, row, tetromino.col)) {
+      tetromino.row = row - 1;
+      placeTetromino();
+      return;
+    }
+    tetromino.row = row;
+  }
+});
+document.getElementById('launchBtn').addEventListener('click', function() {
+  document.getElementById('splashTitle').style.display = 'none';
+  this.style.display = 'none';
+  document.getElementById('game-container').style.display = 'flex';
+  if (document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen();
+  }
+  gameOver = false;
+  count = 0;
+  score = 0;
+  document.getElementById('scoreVal').innerText = score;
+  for (let row = -2; row < 20; row++) {
+    playfield[row] = [];
+    for (let col = 0; col < 10; col++) playfield[row][col] = 0;
+  }
+  tetrominoSequence.length = 0;
+  tetromino = getNextTetromino();
+  if (rAF) cancelAnimationFrame(rAF);
+  rAF = requestAnimationFrame(loop);
+});
+document.getElementById('backBtn').addEventListener('click', function() {
+  cancelAnimationFrame(rAF);
+  if (document.exitFullscreen) {
+    document.exitFullscreen();
+  }
+  document.getElementById('game-container').style.display = 'none';
+  document.getElementById('splashTitle').style.display = 'block';
+  document.getElementById('launchBtn').style.display = 'block';
+});
+</script>
+</body>
+</html>

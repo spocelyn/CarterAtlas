@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Atlas 2.0</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: linear-gradient(135deg, #0b0b12, #141427, #1a1330);
+  --border: rgba(168, 85, 247, 0.25);
+  --text: #ffffff;
+  --accent1: #a855f7;
+  --accent2: #6366f1;
+}
+body {
+  font-family: "DM Sans", system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+  background: var(--bg);
+  color: var(--text);
+}
+.title {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  opacity: 0.9;
+}
+.subtitle {
+  margin-top: -25px;
+  font-size: 1rem;
+  color: #a9a9c0;
+}
+.game-grid {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 0 20px;
+}
+.game-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 220px;
+  padding: 40px 20px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+  box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+}
+.game-card:hover {
+  transform: translateY(-8px) scale(1.05);
+  background: var(--accent1);
+  box-shadow: 0 25px 70px rgba(0,0,0,0.7);
+}
+</style>
+</head>
+<body>
+<div class="title">Atlas 2.0</div>
+<div class="subtitle" style="margin-top:-30px;">Pick a game to play</div>
+<div class="game-grid">
+  <a class="game-card" href="pong.html">
+    PONG
+  </a>
+  <a class="game-card" href="pacman.html">
+    PAC-MAN
+  </a>
+  <a class="game-card" href="tetris.html">
+    TETRIS
+  </a>
+</div>
+</body>
+</html>
