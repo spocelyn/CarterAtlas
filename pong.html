@@ -53,6 +53,7 @@ var paddleSpeed = 16;
 // --- GAME MODE CONFIGURATION ---
 var gameStarted = false;
 var isTwoPlayerMode = false; // false = vs AI, true = 2 Players
+var paused = false;
 
 // Score Tracking
 var leftScore = 0;
@@ -62,6 +63,7 @@ var rightScore = 0;
 var btn1Player = { x: 0, y: 0, w: 200, h: 50 };
 var btn2Player = { x: 0, y: 0, w: 200, h: 50 };
 var btnBack = { x: 20, y: 20, w: 100, h: 35 };
+var btnPause = { x: 140, y: 20, w: 100, h: 35 };
 
 // --- PADDLES ---
 const leftPaddle = {
@@ -189,35 +191,37 @@ function loop() {
     return;
   }
 
-  // Input Handling
-  if (keys['ArrowUp']) {
-    rightPaddle.dy = -paddleSpeed;
-  } else if (keys['ArrowDown']) {
-    rightPaddle.dy = paddleSpeed;
-  } else {
-    rightPaddle.dy = 0;
-  }
-
-  if (isTwoPlayerMode) {
-    if (keys['w'] || keys['W']) {
-      leftPaddle.dy = -paddleSpeed;
-    } else if (keys['s'] || keys['S']) {
-      leftPaddle.dy = paddleSpeed;
+  if (!paused) {
+    // Input Handling
+    if (keys['ArrowUp']) {
+      rightPaddle.dy = -paddleSpeed;
+    } else if (keys['ArrowDown']) {
+      rightPaddle.dy = paddleSpeed;
     } else {
-      leftPaddle.dy = 0;
+      rightPaddle.dy = 0;
     }
-  } else {
-    updateAI();
+
+    if (isTwoPlayerMode) {
+      if (keys['w'] || keys['W']) {
+        leftPaddle.dy = -paddleSpeed;
+      } else if (keys['s'] || keys['S']) {
+        leftPaddle.dy = paddleSpeed;
+      } else {
+        leftPaddle.dy = 0;
+      }
+    } else {
+      updateAI();
+    }
+
+    leftPaddle.y += leftPaddle.dy;
+    rightPaddle.y += rightPaddle.dy;
+
+    if (leftPaddle.y < grid) leftPaddle.y = grid;
+    else if (leftPaddle.y > maxPaddleY) leftPaddle.y = maxPaddleY;
+
+    if (rightPaddle.y < grid) rightPaddle.y = grid;
+    else if (rightPaddle.y > maxPaddleY) rightPaddle.y = maxPaddleY;
   }
-
-  leftPaddle.y += leftPaddle.dy;
-  rightPaddle.y += rightPaddle.dy;
-
-  if (leftPaddle.y < grid) leftPaddle.y = grid;
-  else if (leftPaddle.y > maxPaddleY) leftPaddle.y = maxPaddleY;
-
-  if (rightPaddle.y < grid) rightPaddle.y = grid;
-  else if (rightPaddle.y > maxPaddleY) rightPaddle.y = maxPaddleY;
 
   // Draw Paddles
   context.fillStyle = leftPaddle.color;
@@ -225,45 +229,47 @@ function loop() {
   context.fillStyle = rightPaddle.color;
   context.fillRect(rightPaddle.x, rightPaddle.y, rightPaddle.width, rightPaddle.height);
 
-  // Ball Movement
-  ball.x += ball.dx;
-  ball.y += ball.dy;
+  if (!paused) {
+    // Ball Movement
+    ball.x += ball.dx;
+    ball.y += ball.dy;
 
-  if (ball.y < grid) {
-    ball.y = grid;
-    ball.dy *= -1;
-  }
-  else if (ball.y + grid > canvas.height - grid) {
-    ball.y = canvas.height - grid * 2;
-    ball.dy *= -1;
-  }
+    if (ball.y < grid) {
+      ball.y = grid;
+      ball.dy *= -1;
+    }
+    else if (ball.y + grid > canvas.height - grid) {
+      ball.y = canvas.height - grid * 2;
+      ball.dy *= -1;
+    }
 
-  // Scoring
-  if ((ball.x < 0 || ball.x > canvas.width) && !ball.resetting) {
-    ball.resetting = true;
-    if (ball.x < 0) rightScore++;
-    else leftScore++;
+    // Scoring
+    if ((ball.x < 0 || ball.x > canvas.width) && !ball.resetting) {
+      ball.resetting = true;
+      if (ball.x < 0) rightScore++;
+      else leftScore++;
 
-    setTimeout(() => {
-      ball.resetting = false;
-      ball.x = canvas.width / 2;
-      ball.y = canvas.height / 2;
-      ball.dx = (ball.dx < 0) ? ballSpeed : -ballSpeed;
-      ball.dy = (ball.dy < 0) ? ballSpeed : -ballSpeed;
-      ball.color = 'white';
-    }, 400);
-  }
+      setTimeout(() => {
+        ball.resetting = false;
+        ball.x = canvas.width / 2;
+        ball.y = canvas.height / 2;
+        ball.dx = (ball.dx < 0) ? ballSpeed : -ballSpeed;
+        ball.dy = (ball.dy < 0) ? ballSpeed : -ballSpeed;
+        ball.color = 'white';
+      }, 400);
+    }
 
-  // Collisions (Speed updates removed)
-  if (collides(ball, leftPaddle)) {
-    ball.dx *= -1;
-    ball.x = leftPaddle.x + leftPaddle.width;
-    ball.color = leftPaddle.color;
-  }
-  else if (collides(ball, rightPaddle)) {
-    ball.dx *= -1;
-    ball.x = rightPaddle.x - ball.width;
-    ball.color = rightPaddle.color;
+    // Collisions (Speed updates removed)
+    if (collides(ball, leftPaddle)) {
+      ball.dx *= -1;
+      ball.x = leftPaddle.x + leftPaddle.width;
+      ball.color = leftPaddle.color;
+    }
+    else if (collides(ball, rightPaddle)) {
+      ball.dx *= -1;
+      ball.x = rightPaddle.x - ball.width;
+      ball.color = rightPaddle.color;
+    }
   }
 
   // Draw Ball
@@ -305,6 +311,26 @@ function loop() {
   context.font = '14px monospace';
   context.textAlign = 'center';
   context.fillText('← BACK', btnBack.x + btnBack.w / 2, btnBack.y + 22);
+
+  // Draw Pause Button
+  context.fillStyle = '#222';
+  context.fillRect(btnPause.x, btnPause.y, btnPause.w, btnPause.h);
+  context.strokeStyle = 'white';
+  context.lineWidth = 1;
+  context.strokeRect(btnPause.x, btnPause.y, btnPause.w, btnPause.h);
+  context.fillStyle = 'white';
+  context.font = '14px monospace';
+  context.textAlign = 'center';
+  context.fillText(paused ? '▶ RESUME' : '❙❙ PAUSE', btnPause.x + btnPause.w / 2, btnPause.y + 22);
+
+  if (paused) {
+    context.fillStyle = 'rgba(0,0,0,0.6)';
+    context.fillRect(0, canvas.height / 2 - 40, canvas.width, 80);
+    context.fillStyle = 'white';
+    context.font = '32px monospace';
+    context.textAlign = 'center';
+    context.fillText('PAUSED', canvas.width / 2, canvas.height / 2 + 10);
+  }
 }
 
 const keys = {};
@@ -348,6 +374,12 @@ window.addEventListener('click', (e) => {
       ball.x = canvas.width / 2;
       ball.y = canvas.height / 2;
       ball.color = 'white';
+      paused = false;
+      canvas.focus();
+    }
+    else if (mouseX >= btnPause.x && mouseX <= btnPause.x + btnPause.w &&
+             mouseY >= btnPause.y && mouseY <= btnPause.y + btnPause.h) {
+      paused = !paused;
       canvas.focus();
     }
   }

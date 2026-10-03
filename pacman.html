@@ -33,10 +33,25 @@
 			text-decoration: none;
 			font-size: 14px;
 		}
+		.pause-btn {
+			position: fixed;
+			top: 15px;
+			right: 85px;
+			z-index: 10;
+			color: #a855f7;
+			background: transparent;
+			border: 1px solid #a855f7;
+			border-radius: 6px;
+			padding: 3px 10px;
+			font-family: sans-serif;
+			font-size: 14px;
+			cursor: pointer;
+		}
 	</style>
 </head>
 <body>
 	<a class="home-link" href="index.html">&larr; Home</a>
+	<button class="pause-btn" id="pauseBtn">Pause</button>
 	<div id="pacman"></div>
 
 	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.3/modernizr.min.js"></script>
@@ -1140,8 +1155,23 @@ var PACMAN = (function () {
         timer = window.setInterval(mainLoop, 1000 / Pacman.FPS);
     };
 
+    function togglePause() {
+        if (state === PAUSE) {
+            audio.resume();
+            map.draw(ctx);
+            setState(stored);
+        } else {
+            stored = state;
+            setState(PAUSE);
+            audio.pause();
+            map.draw(ctx);
+            dialog("Paused");
+        }
+    }
+
     return {
-        "init" : init
+        "init" : init,
+        "togglePause" : togglePause
     };
 
 }());
@@ -1329,6 +1359,10 @@ $(function(){
     el.innerHTML = "Sorry, needs a decent browser<br /><small>" +
       "(firefox 3.6+, Chrome 4+, Opera 10+ and Safari 4+)</small>";
   }
+
+  document.getElementById('pauseBtn').addEventListener('click', function() {
+    PACMAN.togglePause();
+  });
 });
 
 

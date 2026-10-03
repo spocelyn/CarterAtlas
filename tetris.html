@@ -120,7 +120,10 @@ canvas {
 <div id="game-container">
   <div class="score-board">Score: <span id="scoreVal">0</span> &nbsp; High Score: <span id="highScoreVal">0</span></div>
   <canvas width="320" height="640" id="game"></canvas>
-  <button class="back-btn" id="backBtn">Exit Game</button>
+  <div>
+    <button class="back-btn" id="pauseBtn">Pause</button>
+    <button class="back-btn" id="backBtn">Exit Game</button>
+  </div>
 </div>
 <script>
 function getRandomInt(min, max) {
@@ -247,6 +250,7 @@ let count = 0;
 let tetromino = null;
 let rAF = null;
 let gameOver = false;
+let paused = false;
 let score = 0;
 let highScore = Number(localStorage.getItem('atlasTetrisHighScore')) || 0;
 document.getElementById('highScoreVal').innerText = highScore;
@@ -263,12 +267,14 @@ function loop() {
     }
   }
   if (tetromino) {
-    if (++count > getDropSpeed()) {
-      tetromino.row++;
-      count = 0;
-      if (!isValidMove(tetromino.matrix, tetromino.row, tetromino.col)) {
-        tetromino.row--;
-        placeTetromino();
+    if (!paused) {
+      if (++count > getDropSpeed()) {
+        tetromino.row++;
+        count = 0;
+        if (!isValidMove(tetromino.matrix, tetromino.row, tetromino.col)) {
+          tetromino.row--;
+          placeTetromino();
+        }
       }
     }
     context.fillStyle = colors[tetromino.name];
@@ -280,9 +286,18 @@ function loop() {
       }
     }
   }
+  if (paused) {
+    context.fillStyle = 'rgba(0,0,0,0.6)';
+    context.fillRect(0, canvas.height / 2 - 30, canvas.width, 60);
+    context.fillStyle = 'white';
+    context.font = '28px monospace';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+  }
 }
 document.addEventListener('keydown', function(e) {
-  if (gameOver || document.getElementById('game-container').style.display !== 'flex') return;
+  if (gameOver || paused || document.getElementById('game-container').style.display !== 'flex') return;
   if (e.which === 37 || e.which === 39) {
     const col = e.which === 37 ? tetromino.col - 1 : tetromino.col + 1;
     if (isValidMove(tetromino.matrix, tetromino.row, col)) {
@@ -313,6 +328,8 @@ document.getElementById('launchBtn').addEventListener('click', function() {
     document.documentElement.requestFullscreen();
   }
   gameOver = false;
+  paused = false;
+  document.getElementById('pauseBtn').innerText = 'Pause';
   count = 0;
   score = 0;
   document.getElementById('scoreVal').innerText = score;
@@ -333,6 +350,11 @@ document.getElementById('backBtn').addEventListener('click', function() {
   document.getElementById('game-container').style.display = 'none';
   document.getElementById('splashTitle').style.display = 'block';
   document.getElementById('launchBtn').style.display = 'block';
+});
+document.getElementById('pauseBtn').addEventListener('click', function() {
+  if (gameOver) return;
+  paused = !paused;
+  this.innerText = paused ? 'Resume' : 'Pause';
 });
 </script>
 </body>
