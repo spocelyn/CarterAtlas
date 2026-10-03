@@ -118,7 +118,7 @@ canvas {
 <div class="title" id="splashTitle">Atlas 2.0</div>
 <button class="launch-btn" id="launchBtn">Launch</button>
 <div id="game-container">
-  <div class="score-board">Score: <span id="scoreVal">0</span></div>
+  <div class="score-board">Score: <span id="scoreVal">0</span> &nbsp; High Score: <span id="highScoreVal">0</span></div>
   <canvas width="320" height="640" id="game"></canvas>
   <button class="back-btn" id="backBtn">Exit Game</button>
 </div>
@@ -191,6 +191,11 @@ function placeTetromino() {
   if (linesCleared > 0) {
     score += linesCleared * 100;
     document.getElementById('scoreVal').innerText = score;
+    if (score > highScore) {
+      highScore = score;
+      document.getElementById('highScoreVal').innerText = highScore;
+      localStorage.setItem('atlasTetrisHighScore', highScore);
+    }
   }
   tetromino = getNextTetromino();
 }
@@ -243,6 +248,8 @@ let tetromino = null;
 let rAF = null;
 let gameOver = false;
 let score = 0;
+let highScore = Number(localStorage.getItem('atlasTetrisHighScore')) || 0;
+document.getElementById('highScoreVal').innerText = highScore;
 function loop() {
   rAF = requestAnimationFrame(loop);
   context.clearRect(0, 0, canvas.width, canvas.height);
