@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Atlas 2.0 - Street Fighter</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: linear-gradient(135deg, #0b0b12, #141427, #1a1330);
+  --border: rgba(168, 85, 247, 0.25);
+  --text: #ffffff;
+  --accent1: #a855f7;
+  --accent2: #6366f1;
+}
+body {
+  font-family: "DM Sans", system-ui, sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+body::before {
+  content: "";
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(168,85,247,0.25), transparent 70%);
+  filter: blur(100px);
+  animation: floatGlow 6s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes floatGlow {
+  from { transform: translate(-50px, -50px); }
+  to { transform: translate(50px, 50px); }
+}
+.title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  opacity: 0.9;
+}
+.hint {
+  font-size: 0.85rem;
+  color: #a9a9c0;
+  margin-top: -20px;
+  text-align: center;
+  line-height: 1.6;
+}
+.launch-btn {
+  position: relative;
+  font-size: 2.3rem;
+  font-weight: 800;
+  padding: 32px 100px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--accent1);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+}
+.launch-btn:hover {
+  transform: translateY(-8px) scale(1.05);
+  box-shadow: 0 25px 70px rgba(0,0,0,0.7);
+  filter: brightness(1.15);
+}
+.mode-toggle {
+  display: flex;
+  gap: 10px;
+  margin-top: -6px;
+}
+.mode-btn {
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  color: #a9a9c0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.mode-btn:hover { background: rgba(255,255,255,0.08); }
+.mode-btn.selected {
+  background: var(--accent1);
+  color: #ffffff;
+  border-color: var(--accent1);
+}
+.color-pickers {
+  display: flex;
+  gap: 50px;
+  margin-top: -14px;
+}
+.color-picker-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.color-picker-label {
+  font-size: 0.85rem;
+  color: #a9a9c0;
+}
+.color-picker-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 300px;
+  justify-content: center;
+}
+.portrait-card {
+  width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 4px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: rgba(255,255,255,0.04);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.portrait-card canvas {
+  display: block;
+  border: none;
+  box-shadow: none;
+  height: auto;
+  max-height: none;
+  width: 56px;
+}
+.portrait-card:hover { transform: translateY(-2px); background: rgba(255,255,255,0.08); }
+.portrait-card.selected {
+  border-color: #ffffff;
+  box-shadow: 0 0 14px rgba(255,255,255,0.4);
+  background: rgba(168,85,247,0.15);
+}
+.portrait-card .portrait-name {
+  font-size: 0.6rem;
+  color: #d1d1db;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.big-preview {
+  display: block;
+  border: none;
+  box-shadow: 0 10px 30px rgba(168,85,247,0.25);
+  border-radius: 12px;
+  height: auto;
+  max-height: none;
+  width: 110px;
+}
+#game-container {
+  display: none;
+  width: 100vw;
+  height: 100vh;
+  background: #0b0b12;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  z-index: 10;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+#canvas-wrap {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+canvas {
+  border: 2px solid var(--border);
+  box-shadow: 0 15px 50px rgba(168,85,247,0.3);
+  background: black;
+  height: 70vh;
+  max-height: 420px;
+  max-width: 95vw;
+  width: auto;
+}
+.overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(0,0,0,0.78);
+}
+.overlay-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+.overlay-score {
+  font-size: 1.1rem;
+  color: var(--accent1);
+  font-weight: 700;
+}
+.play-again-btn {
+  font-size: 1.1rem;
+  font-weight: 800;
+  padding: 14px 36px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--accent1);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.play-again-btn:hover {
+  transform: translateY(-3px) scale(1.03);
+  filter: brightness(1.15);
+}
+.back-btn {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.back-btn:hover { background: rgba(255, 255, 255, 0.2); }
+.home-link {
+  position: fixed;
+  top: 15px;
+  right: 20px;
+  z-index: 10;
+  color: var(--accent1);
+  font-family: inherit;
+  text-decoration: none;
+  font-size: 14px;
+}
+</style>
+</head>
+<body>
+<a class="home-link" href="index.html">&larr; Home</a>
+<div class="title" id="splashTitle">Atlas 2.0</div>
+<div class="hint" id="controlsHint">
+  2 Players, same keyboard. Move, Jump, Block as usual.<br>
+  Double-tap Left/Right: Punch &nbsp; Double-tap Down: Kick &nbsp; Double-tap Up: Uppercut<br>
+  P1: F for Super (when meter is full) &nbsp; P2: / for Super (when meter is full)
+</div>
+<div class="mode-toggle" id="modeToggle">
+  <button class="mode-btn" id="mode2PBtn">2 Players</button>
+  <button class="mode-btn" id="modeAIBtn">1 Player (vs CPU)</button>
+</div>
+<div class="color-pickers" id="colorPickers">
+  <div class="color-picker-col">
+    <canvas class="big-preview" id="p1BigPreview" width="110" height="150"></canvas>
+    <div class="color-picker-label">Player 1: <span id="p1ColorPickerName"></span></div>
+    <div class="color-picker-row" id="p1ColorPicker"></div>
+  </div>
+  <div class="color-picker-col">
+    <canvas class="big-preview" id="p2BigPreview" width="110" height="150"></canvas>
+    <div class="color-picker-label"><span id="p2ColorPickerLabel">Player 2</span>: <span id="p2ColorPickerName"></span></div>
+    <div class="color-picker-row" id="p2ColorPicker"></div>
+  </div>
+</div>
+<button class="launch-btn" id="launchBtn">Launch</button>
+<div id="game-container">
+  <div id="canvas-wrap">
+    <canvas width="760" height="380" id="game"></canvas>
+    <div class="overlay" id="gameOverOverlay">
+      <div class="overlay-title" id="matchResultText">PLAYER 1 WINS</div>
+      <div class="overlay-score" id="finalScoreText"></div>
+      <button class="play-again-btn" id="playAgainBtn">Play Again</button>
+    </div>
+  </div>
+  <div>
+    <button class="back-btn" id="pauseBtn">Pause</button>
+    <button class="back-btn" id="muteBtn">Mute</button>
+    <button class="back-btn" id="backBtn">Exit Game</button>
+  </div>
+</div>
+<script>
+const canvas = document.getElementById('game');
+const context = canvas.getContext('2d');
+const gameOverOverlay = document.getElementById('gameOverOverlay');
+const finalScoreText = document.getElementById('finalScoreText');
+const matchResultText = document.getElementById('matchResultText');
+
+let paused = false;
+let rAF = null;
+let frameCount = 0;
+let hitStopTimer = 0;
+let screenShakeTimer = 0;
+let screenShakeMag = 0;
+let vsAI = localStorage.getItem('atlasFighterVsAI') === 'true';
+
+// --- SOUND ---
+let audioCtx = null;
+let muted = localStorage.getItem('atlasSoundMuted') === 'true';
+function playBeep(freq, duration, type, volume) {
+  if (muted) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type || 'square';
+    osc.frequency.value = freq;
+    gain.gain.value = volume || 0.15;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+    osc.stop(audioCtx.currentTime + duration);
+  } catch (e) {}
+}
+const sound = {
+  punch: () => playBeep(220, 0.08, 'square', 0.12),
+  kick: () => playBeep(160, 0.1, 'square', 0.14),
+  hit: () => playBeep(90, 0.15, 'sawtooth', 0.18),
+  block: () => playBeep(500, 0.05, 'square', 0.1),
+  ko: () => playBeep(80, 0.7, 'sawtooth', 0.22),
+  roundStart: () => playBeep(660, 0.2, 'triangle', 0.15),
+  superReady: () => playBeep(880, 0.15, 'triangle', 0.12),
+  superActivate: () => {
+    playBeep(200, 0.3, 'sawtooth', 0.2);
+    setTimeout(() => playBeep(500, 0.25, 'sawtooth', 0.18), 80);
+    setTimeout(() => playBeep(900, 0.3, 'square', 0.16), 160);
+  }
+};
+
+// --- ARENA ---
+const GROUND_HEIGHT = 50;
+const ARENA_LEFT = 20;
+const ARENA_RIGHT = canvas.width - 20;
+const GRAVITY = 0.8;
+const JUMP_VELOCITY = -15;
+const HITSTUN_FRAMES = 15;
+const BLOCK_STUN_FRAMES = 8;
+
+const ATTACKS = {
+  Blaze: {
+    punch:    { startup: 7,  active: 7, recovery: 10, damage: 8,  range: 60 },
+    kick:     { startup: 9,  active: 7, recovery: 14, damage: 11, range: 65 },
+    uppercut: { startup: 5,  active: 5, recovery: 16, damage: 10, range: 45 }
+  },
+  Titan: {
+    punch:    { startup: 10, active: 8, recovery: 16, damage: 13, range: 55 },
+    kick:     { startup: 13, active: 9, recovery: 20, damage: 17, range: 58 },
+    uppercut: { startup: 8,  active: 6, recovery: 22, damage: 15, range: 42 }
+  },
+  Scout: {
+    punch:    { startup: 4,  active: 5, recovery: 8,  damage: 6,  range: 55 },
+    kick:     { startup: 6,  active: 6, recovery: 11, damage: 8,  range: 58 },
+    uppercut: { startup: 3,  active: 4, recovery: 12, damage: 7,  range: 40 }
+  },
+  Volt: {
+    punch:    { startup: 5,  active: 6, recovery: 9,  damage: 7,  range: 78 },
+    kick:     { startup: 7,  active: 6, recovery: 13, damage: 10, range: 82 },
+    uppercut: { startup: 4,  active: 5, recovery: 15, damage: 9,  range: 50 }
+  },
+  Shadow: {
+    punch:    { startup: 6,  active: 6, recovery: 7,  damage: 8,  range: 58 },
+    kick:     { startup: 8,  active: 6, recovery: 10, damage: 11, range: 62 },
+    uppercut: { startup: 5,  active: 5, recovery: 11, damage: 10, range: 44 }
+  },
+  Crimson: {
+    punch:    { startup: 7,  active: 7, recovery: 9,  damage: 9,  range: 62 },
+    kick:     { startup: 9,  active: 7, recovery: 13, damage: 12, range: 66 },
+    uppercut: { startup: 5,  active: 5, recovery: 15, damage: 11, range: 46 }
+  },
+  Dragon: {
+    punch:    { startup: 6,  active: 7, recovery: 9,  damage: 9,  range: 66 },
+    kick:     { startup: 8,  active: 7, recovery: 12, damage: 12, range: 72 },
+    uppercut: { startup: 5,  active: 5, recovery: 14, damage: 13, range: 50 }
+  },
+  Frost: {
+    punch:    { startup: 7,  active: 7, recovery: 10, damage: 9,  range: 60 },
+    kick:     { startup: 9,  active: 8, recovery: 13, damage: 12, range: 72 },
+    uppercut: { startup: 6,  active: 5, recovery: 15, damage: 12, range: 46 }
+  }
+};
+
+const SUPER_MAX = 100;
+const SUPER_CHARGE_PER_FRAME = SUPER_MAX / (18 * 60);
+
+const SUPERS = {
+  Blaze:   { name: 'Inferno Burst',    startup: 10, active: 14, recovery: 20, damage: 28, range: 150 },
+  Titan:   { name: 'Ground Slam',      startup: 14, active: 10, recovery: 24, damage: 30, range: 170 },
+  Scout:   { name: 'Rapid Flurry',     startup: 6,  active: 20, recovery: 16, damage: 22, range: 70  },
+  Volt:    { name: 'Lightning Strike', startup: 16, active: 8,  recovery: 20, damage: 30, range: 300 },
+  Shadow:  { name: 'Shadow Dash',      startup: 8,  active: 10, recovery: 18, damage: 26, range: 500 },
+  Crimson: { name: 'Power Beam',       startup: 10, active: 12, recovery: 20, damage: 26, range: 300 },
+  Dragon:  { name: 'Spirit Wave',      startup: 10, active: 16, recovery: 18, damage: 27, range: 500 },
+  Frost:   { name: 'Glacial Spike',    startup: 12, active: 12, recovery: 20, damage: 28, range: 280 }
+};
+
+const CHARACTERS = [
+  { name: 'Blaze',   color: '#ef4444', shade: '#b91c1c', width: 50, height: 100, speed: 4   },
+  { name: 'Titan',   color: '#eab308', shade: '#a16207', width: 62, height: 112, speed: 3   },
+  { name: 'Scout',   color: '#22c55e', shade: '#15803d', width: 42, height: 92,  speed: 5.5 },
+  { name: 'Volt',    color: '#06b6d4', shade: '#0e7490', width: 48, height: 98,  speed: 4.5 },
+  { name: 'Shadow',  color: '#a855f7', shade: '#7e22ce', width: 48, height: 100, speed: 4   },
+  { name: 'Crimson', color: '#3b82f6', shade: '#1d4ed8', width: 50, height: 100, speed: 4   },
+  { name: 'Dragon',  color: '#e5e7eb', shade: '#9ca3af', width: 50, height: 102, speed: 4   },
+  { name: 'Frost',   color: '#38bdf8', shade: '#0369a1', width: 50, height: 100, speed: 3.5 }
+];
+let p1CharIndex = Number(localStorage.getItem('atlasFighterP1Character'));
+if (isNaN(p1CharIndex)) p1CharIndex = 5;
+let p2CharIndex = Number(localStorage.getItem('atlasFighterP2Character'));
+if (isNaN(p2CharIndex)) p2CharIndex = 0;
+
+function drawPortraitIcon(pctx, character, scale) {
+  scale = scale || 1;
+  const w = 56 * scale, h = 76 * scale;
+  pctx.clearRect(0, 0, w, h);
+
+  const bg = pctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#1a1330');
+  bg.addColorStop(1, '#0b0b12');
+  pctx.fillStyle = bg;
+  pctx.fillRect(0, 0, w, h);
+
+  const bodyW = 24 * scale, bodyH = 34 * scale;
+  const bodyX = w / 2 - bodyW / 2, bodyY = h - bodyH - 12 * scale;
+
+  pctx.fillStyle = character.shade;
+  pctx.fillRect(bodyX + 1 * scale, bodyY + bodyH - 2 * scale, 7 * scale, 14 * scale);
+  pctx.fillRect(bodyX + bodyW - 8 * scale, bodyY + bodyH - 2 * scale, 7 * scale, 14 * scale);
+  pctx.fillStyle = '#1f2937';
+  pctx.fillRect(bodyX + 1 * scale, bodyY + bodyH + 8 * scale, 7 * scale, 5 * scale);
+  pctx.fillRect(bodyX + bodyW - 8 * scale, bodyY + bodyH + 8 * scale, 7 * scale, 5 * scale);
+
+  const torsoGrad = pctx.createLinearGradient(0, bodyY, 0, bodyY + bodyH);
+  torsoGrad.addColorStop(0, character.color);
+  torsoGrad.addColorStop(1, character.shade);
+  pctx.fillStyle = torsoGrad;
+  pctx.beginPath();
+  if (pctx.roundRect) pctx.roundRect(bodyX, bodyY, bodyW, bodyH, 6 * scale);
+  else pctx.rect(bodyX, bodyY, bodyW, bodyH);
+  pctx.fill();
+  pctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  pctx.lineWidth = 1.3 * scale;
+  pctx.stroke();
+
+  const headR = 9 * scale;
+  const headCx = w / 2, headCy = bodyY - headR + 3 * scale;
+  pctx.fillStyle = character.color;
+  pctx.beginPath();
+  pctx.arc(headCx, headCy, headR, 0, Math.PI * 2);
+  pctx.fill();
+  pctx.stroke();
+
+  pctx.fillStyle = '#111111';
+  pctx.beginPath();
+  pctx.arc(headCx - 2 * scale, headCy - 1 * scale, 1.1 * scale, 0, Math.PI * 2);
+  pctx.arc(headCx + 3 * scale, headCy - 1 * scale, 1.1 * scale, 0, Math.PI * 2);
+  pctx.fill();
+
+  pctx.save();
+  pctx.translate(headCx, headCy);
+  pctx.scale(scale, scale);
+  pctx.translate(-headCx, -headCy);
+  drawPortraitAccessory(pctx, character, headCx, headCy, headR / scale);
+  pctx.restore();
+}
+
+function drawPortraitAccessory(pctx, character, headCx, headCy, headR) {
+  switch (character.name) {
+    case 'Blaze': {
+      pctx.fillStyle = '#fde047';
+      for (let i = -1; i <= 1; i++) {
+        pctx.beginPath();
+        pctx.moveTo(headCx + i * 4, headCy - headR + 2);
+        pctx.lineTo(headCx + i * 4 - 2.5, headCy - headR - 6);
+        pctx.lineTo(headCx + i * 4 + 2.5, headCy - headR + 1);
+        pctx.closePath();
+        pctx.fill();
+      }
+      break;
+    }
+    case 'Titan': {
+      pctx.fillStyle = character.shade;
+      pctx.beginPath();
+      pctx.moveTo(headCx - 2, headCy - headR + 2);
+      pctx.lineTo(headCx, headCy - headR - 8);
+      pctx.lineTo(headCx + 2, headCy - headR + 2);
+      pctx.closePath();
+      pctx.fill();
+      pctx.fillStyle = '#ffffff';
+      pctx.fillRect(headCx - headR, headCy - 3, headR * 2, 2.5);
+      break;
+    }
+    case 'Scout': {
+      pctx.fillStyle = character.shade;
+      pctx.beginPath();
+      pctx.ellipse(headCx - headR - 2, headCy + 1, 3, 5, 0, 0, Math.PI * 2);
+      pctx.fill();
+      pctx.fillStyle = '#ffffff';
+      pctx.fillRect(headCx - headR, headCy - 4, headR * 2, 2);
+      break;
+    }
+    case 'Volt': {
+      pctx.fillStyle = '#fde047';
+      pctx.beginPath();
+      pctx.moveTo(headCx - 1, headCy - headR - 1);
+      pctx.lineTo(headCx + 2, headCy - headR - 1);
+      pctx.lineTo(headCx - 1, headCy - headR + 3);
+      pctx.lineTo(headCx + 1, headCy - headR + 3);
+      pctx.lineTo(headCx - 2.5, headCy - headR + 8);
+      pctx.closePath();
+      pctx.fill();
+      break;
+    }
+    case 'Shadow': {
+      pctx.fillStyle = character.shade;
+      pctx.beginPath();
+      pctx.arc(headCx, headCy - 1, headR + 2, Math.PI, 0);
+      pctx.fill();
+      pctx.fillStyle = '#111111';
+      pctx.fillRect(headCx - headR, headCy + 1, headR * 2, 3);
+      break;
+    }
+    case 'Dragon': {
+      pctx.fillStyle = '#dc2626';
+      pctx.fillRect(headCx - headR, headCy - 3, headR * 2, 2.5);
+      break;
+    }
+    case 'Frost': {
+      pctx.fillStyle = '#e0f2fe';
+      for (let i = -1; i <= 1; i++) {
+        pctx.beginPath();
+        pctx.moveTo(headCx + i * 4 - 2, headCy - headR + 2);
+        pctx.lineTo(headCx + i * 4, headCy - headR - 6 - Math.abs(i) * 2);
+        pctx.lineTo(headCx + i * 4 + 2, headCy - headR + 2);
+        pctx.closePath();
+        pctx.fill();
+      }
+      break;
+    }
+    default: {
+      pctx.fillStyle = '#ffffff';
+      pctx.fillRect(headCx - headR, headCy - 3, headR * 2, 2.5);
+    }
+  }
+}
+
+function updateBigPreview(canvasId, character) {
+  const bigCanvas = document.getElementById(canvasId);
+  drawPortraitIcon(bigCanvas.getContext('2d'), character, 110 / 56);
+}
+
+function buildCharacterPicker(containerId, storageKey, bigPreviewId, getSelected, setSelected) {
+  const picker = document.getElementById(containerId);
+  picker.innerHTML = '';
+  document.getElementById(containerId + 'Name').innerText = CHARACTERS[getSelected()].name;
+  updateBigPreview(bigPreviewId, CHARACTERS[getSelected()]);
+  CHARACTERS.forEach((character, index) => {
+    const card = document.createElement('button');
+    card.className = 'portrait-card' + (index === getSelected() ? ' selected' : '');
+    card.title = character.name;
+
+    const portraitCanvas = document.createElement('canvas');
+    portraitCanvas.width = 56;
+    portraitCanvas.height = 76;
+    drawPortraitIcon(portraitCanvas.getContext('2d'), character);
+    card.appendChild(portraitCanvas);
+
+    const label = document.createElement('div');
+    label.className = 'portrait-name';
+    label.innerText = character.name;
+    card.appendChild(label);
+
+    card.addEventListener('click', function() {
+      setSelected(index);
+      localStorage.setItem(storageKey, index);
+      buildCharacterPicker(containerId, storageKey, bigPreviewId, getSelected, setSelected);
+    });
+    picker.appendChild(card);
+  });
+}
+buildCharacterPicker('p1ColorPicker', 'atlasFighterP1Character', 'p1BigPreview', () => p1CharIndex, (i) => { p1CharIndex = i; });
+buildCharacterPicker('p2ColorPicker', 'atlasFighterP2Character', 'p2BigPreview', () => p2CharIndex, (i) => { p2CharIndex = i; });
+
+function refreshModeUI() {
+  document.getElementById('mode2PBtn').className = 'mode-btn' + (!vsAI ? ' selected' : '');
+  document.getElementById('modeAIBtn').className = 'mode-btn' + (vsAI ? ' selected' : '');
+  document.getElementById('p2ColorPickerLabel').innerText = vsAI ? 'CPU Opponent' : 'Player 2';
+  document.getElementById('controlsHint').innerHTML = vsAI
+    ? 'P1: A/D Move, W Jump, S Block. Double-tap A/D: Punch &nbsp; Double-tap S: Kick &nbsp; Double-tap W: Uppercut<br>F for Super (when meter is full)'
+    : '2 Players, same keyboard. Move, Jump, Block as usual.<br>' +
+      'Double-tap Left/Right: Punch &nbsp; Double-tap Down: Kick &nbsp; Double-tap Up: Uppercut<br>' +
+      'P1: F for Super (when meter is full) &nbsp; P2: / for Super (when meter is full)';
+}
+document.getElementById('mode2PBtn').addEventListener('click', function() {
+  vsAI = false;
+  localStorage.setItem('atlasFighterVsAI', 'false');
+  refreshModeUI();
+});
+document.getElementById('modeAIBtn').addEventListener('click', function() {
+  vsAI = true;
+  localStorage.setItem('atlasFighterVsAI', 'true');
+  refreshModeUI();
+});
+refreshModeUI();
+
+function applyCharacter(f, character) {
+  f.characterName = character.name;
+  f.color = character.color;
+  f.shade = character.shade;
+  f.width = character.width;
+  f.height = character.height;
+  f.moveSpeed = character.speed;
+  f.groundY = canvas.height - GROUND_HEIGHT - character.height;
+}
+
+function createFighter(x, character, controls) {
+  const groundY = canvas.height - GROUND_HEIGHT - character.height;
+  return {
+    x: x, y: groundY, vx: 0, vy: 0,
+    width: character.width, height: character.height,
+    groundY: groundY,
+    moveSpeed: character.speed,
+    characterName: character.name,
+    color: character.color,
+    shade: character.shade,
+    facing: 1,
+    health: 100,
+    maxHealth: 100,
+    isJumping: false,
+    isCrouching: false,
+    isBlocking: false,
+    attackType: null,
+    attackTimer: 0,
+    attackTotal: 0,
+    attackHasHit: false,
+    hitStun: 0,
+    blockStun: 0,
+    impactFlash: 0,
+    pendingAttackType: null,
+    pendingSuper: false,
+    superMeter: 0,
+    controls: controls
+  };
+}
+
+const p1Controls = { left: 'a', right: 'd', up: 'w', down: 's', super: 'f' };
+const p2Controls = { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown', super: '/' };
+const DOUBLE_TAP_WINDOW = 300;
+const lastTapTime = { p1Left: 0, p1Right: 0, p1Up: 0, p1Down: 0, p2Left: 0, p2Right: 0, p2Up: 0, p2Down: 0 };
+
+let p1 = createFighter(150, CHARACTERS[p1CharIndex], p1Controls);
+let p2 = createFighter(canvas.width - 200, CHARACTERS[p2CharIndex], p2Controls);
+
+let phase = 'intro'; // intro, fight, roundEnd, matchEnd
+let round = 1;
+let p1Rounds = 0;
+let p2Rounds = 0;
+let phaseTimer = 0;
+let roundTimeLeft = 60;
+let roundTimerAccum = 0;
+let roundEndMessage = '';
+
+const keys = {};
+
+function resetFighters() {
+  applyCharacter(p1, CHARACTERS[p1CharIndex]);
+  p1.x = 150; p1.y = p1.groundY; p1.vx = 0; p1.vy = 0;
+  p1.health = 100; p1.isJumping = false; p1.isCrouching = false; p1.isBlocking = false;
+  p1.attackType = null; p1.attackTimer = 0; p1.hitStun = 0; p1.blockStun = 0; p1.impactFlash = 0;
+  p1.superMeter = 0; p1.pendingSuper = false;
+
+  applyCharacter(p2, CHARACTERS[p2CharIndex]);
+  p2.x = canvas.width - 200; p2.y = p2.groundY; p2.vx = 0; p2.vy = 0;
+  p2.health = 100; p2.isJumping = false; p2.isCrouching = false; p2.isBlocking = false;
+  p2.attackType = null; p2.attackTimer = 0; p2.hitStun = 0; p2.blockStun = 0; p2.impactFlash = 0;
+  p2.superMeter = 0; p2.pendingSuper = false;
+}
+
+function p2Label() {
+  return vsAI ? 'CPU' : 'PLAYER 2';
+}
+
+function startMatch() {
+  round = 1;
+  p1Rounds = 0;
+  p2Rounds = 0;
+  gameOverOverlay.style.display = 'none';
+  startRound();
+}
+
+function startRound() {
+  resetFighters();
+  roundTimeLeft = 60;
+  roundTimerAccum = 0;
+  phase = 'intro';
+  phaseTimer = 90;
+  sound.roundStart();
+}
+
+function getMoveDef(attacker) {
+  return attacker.attackType === 'super' ? SUPERS[attacker.characterName] : ATTACKS[attacker.characterName][attacker.attackType];
+}
+
+function fighterHitbox(attacker) {
+  const atk = getMoveDef(attacker);
+  if (attacker.facing === 1) {
+    return { x: attacker.x + attacker.width, y: attacker.y, width: atk.range, height: attacker.height };
+  } else {
+    return { x: attacker.x - atk.range, y: attacker.y, width: atk.range, height: attacker.height };
+  }
+}
+
+function boxesOverlap(a, b) {
+  return a.x < b.x + b.width &&
+         a.x + a.width > b.x &&
+         a.y < b.y + b.height &&
+         a.y + a.height > b.y;
+}
+
+function updateAIInput(ai, opponent) {
+  keys[ai.controls.left] = false;
+  keys[ai.controls.right] = false;
+  keys[ai.controls.down] = false;
+  keys[ai.controls.up] = false;
+
+  if (ai.hitStun > 0 || ai.attackTimer > 0 || ai.blockStun > 0) {
+    return;
+  }
+
+  const dx = opponent.x - ai.x;
+  const dist = Math.abs(dx);
+  const dir = dx > 0 ? 1 : -1;
+  const attackRange = 65;
+  const opponentThreat = opponent.attackType && opponent.attackTimer > 0 && dist < 90;
+
+  if (opponentThreat && Math.random() < 0.55) {
+    keys[ai.controls.down] = true;
+    return;
+  }
+
+  if (dist > attackRange) {
+    if (dir === 1) keys[ai.controls.right] = true;
+    else keys[ai.controls.left] = true;
+    if (!ai.isJumping && Math.random() < 0.003) {
+      keys[ai.controls.up] = true;
+    }
+  } else {
+    if (Math.random() < 0.045) {
+      const moves = ['punch', 'kick', 'uppercut'];
+      ai.pendingAttackType = moves[Math.floor(Math.random() * moves.length)];
+    } else if (Math.random() < 0.01) {
+      if (dir === 1) keys[ai.controls.left] = true;
+      else keys[ai.controls.right] = true;
+    }
+  }
+
+  if (ai.superMeter >= SUPER_MAX && dist < 350 && Math.random() < 0.02) {
+    ai.pendingSuper = true;
+  }
+}
+
+function updateFighterPhysics(f, other) {
+  // Facing
+  if (f.attackTimer <= 0) {
+    f.facing = other.x > f.x ? 1 : -1;
+  }
+
+  const isAttackingNow = f.attackTimer > 0;
+  const canMove = f.hitStun <= 0 && f.blockStun <= 0 && !isAttackingNow;
+  const canBlock = f.hitStun <= 0 && !isAttackingNow;
+
+  f.isCrouching = false;
+  f.isBlocking = false;
+
+  if (canBlock && keys[f.controls.down] && !f.isJumping) {
+    f.isCrouching = true;
+    f.isBlocking = true;
+  }
+
+  if (canMove) {
+    let moveInput = 0;
+    if (keys[f.controls.left]) moveInput = -1;
+    if (keys[f.controls.right]) moveInput = 1;
+    f.vx = f.isBlocking ? 0 : moveInput * f.moveSpeed;
+
+    if (f.pendingSuper && f.superMeter >= SUPER_MAX && !f.isJumping) {
+      const sup = SUPERS[f.characterName];
+      f.attackType = 'super';
+      f.isBlocking = false;
+      f.isCrouching = false;
+      f.attackTotal = sup.startup + sup.active + sup.recovery;
+      f.attackTimer = f.attackTotal;
+      f.attackHasHit = false;
+      f.vx = 0;
+      f.superMeter = 0;
+      sound.superActivate();
+    } else if (f.pendingAttackType && (!f.isJumping || f.pendingAttackType === 'uppercut')) {
+      f.attackType = f.pendingAttackType;
+      f.isBlocking = false;
+      f.isCrouching = false;
+      const atk = ATTACKS[f.characterName][f.attackType];
+      f.attackTotal = atk.startup + atk.active + atk.recovery;
+      f.attackTimer = f.attackTotal;
+      f.attackHasHit = false;
+      f.vx = 0;
+      sound.punch();
+    } else if (keys[f.controls.up] && !f.isJumping) {
+      f.vy = JUMP_VELOCITY;
+      f.isJumping = true;
+    }
+  } else {
+    f.vx = 0;
+  }
+
+  if (f.superMeter < SUPER_MAX) {
+    f.superMeter = Math.min(SUPER_MAX, f.superMeter + SUPER_CHARGE_PER_FRAME);
+  }
+
+  // Gravity / vertical movement
+  f.vy += GRAVITY;
+  f.y += f.vy;
+  if (f.y >= f.groundY) {
+    f.y = f.groundY;
+    f.vy = 0;
+    f.isJumping = false;
+  }
+
+  // Horizontal movement
+  f.x += f.vx;
+  f.x = Math.max(ARENA_LEFT, Math.min(ARENA_RIGHT - f.width, f.x));
+
+  // Timers
+  if (f.attackTimer > 0) f.attackTimer--;
+  if (f.attackTimer <= 0) f.attackType = null;
+  if (f.hitStun > 0) f.hitStun--;
+  if (f.blockStun > 0) f.blockStun--;
+  if (f.impactFlash > 0) f.impactFlash--;
+  f.pendingAttackType = null;
+  f.pendingSuper = false;
+}
+
+function preventOverlap(a, b) {
+  if (a.isJumping || b.isJumping) return;
+  const minGap = 15;
+  if (a.x < b.x) {
+    if (a.x + a.width + minGap > b.x) {
+      const overlap = (a.x + a.width + minGap) - b.x;
+      a.x -= overlap / 2;
+      b.x += overlap / 2;
+    }
+  } else {
+    if (b.x + b.width + minGap > a.x) {
+      const overlap = (b.x + b.width + minGap) - a.x;
+      b.x -= overlap / 2;
+      a.x += overlap / 2;
+    }
+  }
+  a.x = Math.max(ARENA_LEFT, Math.min(ARENA_RIGHT - a.width, a.x));
+  b.x = Math.max(ARENA_LEFT, Math.min(ARENA_RIGHT - b.width, b.x));
+}
+
+function checkAttack(attacker, defender) {
+  if (!attacker.attackType || attacker.attackHasHit) return;
+  const atk = getMoveDef(attacker);
+  const elapsed = attacker.attackTotal - attacker.attackTimer;
+  const isActive = elapsed >= atk.startup && elapsed < atk.startup + atk.active;
+  if (!isActive) return;
+
+  const hitbox = fighterHitbox(attacker);
+  const defenderBox = { x: defender.x, y: defender.y, width: defender.width, height: defender.height };
+  if (!boxesOverlap(hitbox, defenderBox)) return;
+
+  attacker.attackHasHit = true;
+
+  const defenderFacingAttacker = (defender.facing === 1 && attacker.x > defender.x) ||
+                                  (defender.facing === -1 && attacker.x < defender.x);
+
+  const isSuper = attacker.attackType === 'super';
+
+  if (defender.isBlocking && defenderFacingAttacker) {
+    defender.blockStun = BLOCK_STUN_FRAMES;
+    defender.vx = attacker.facing * 2;
+    defender.impactFlash = 10;
+    hitStopTimer = 3;
+    sound.block();
+  } else {
+    defender.health -= atk.damage;
+    defender.hitStun = HITSTUN_FRAMES;
+    defender.vx = attacker.facing * 5;
+    defender.impactFlash = 10;
+    hitStopTimer = isSuper ? 10 : 6;
+    screenShakeTimer = isSuper ? 16 : 8;
+    screenShakeMag = isSuper ? 8 : 4;
+    sound.hit();
+  }
+
+  if (defender.health < 0) defender.health = 0;
+}
+
+function update() {
+  if (paused) return;
+
+  if (hitStopTimer > 0) {
+    hitStopTimer--;
+    return;
+  }
+
+  if (phase === 'intro') {
+    phaseTimer--;
+    if (phaseTimer <= 0) phase = 'fight';
+    return;
+  }
+
+  if (phase === 'roundEnd' || phase === 'matchEnd') {
+    if (phase === 'roundEnd') {
+      phaseTimer--;
+      if (phaseTimer <= 0) {
+        if (p1Rounds >= 2 || p2Rounds >= 2) {
+          phase = 'matchEnd';
+          const winner = p1Rounds >= 2 ? 'PLAYER 1' : p2Label();
+          matchResultText.innerText = winner + ' WINS THE MATCH';
+          finalScoreText.innerText = 'Rounds: ' + p1Rounds + ' - ' + p2Rounds;
+          gameOverOverlay.style.display = 'flex';
+        } else {
+          round++;
+          startRound();
+        }
+      }
+    }
+    return;
+  }
+
+  // phase === 'fight'
+  if (vsAI) updateAIInput(p2, p1);
+  updateFighterPhysics(p1, p2);
+  updateFighterPhysics(p2, p1);
+  preventOverlap(p1, p2);
+
+  checkAttack(p1, p2);
+  checkAttack(p2, p1);
+
+  roundTimerAccum++;
+  if (roundTimerAccum >= 60) {
+    roundTimerAccum = 0;
+    roundTimeLeft--;
+  }
+
+  if (p1.health <= 0 || p2.health <= 0) {
+    if (p1.health <= 0 && p2.health <= 0) {
+      roundEndMessage = 'DOUBLE K.O.!';
+      p1Rounds++;
+      p2Rounds++;
+    } else if (p1.health <= 0) {
+      roundEndMessage = 'K.O.! ' + p2Label() + ' WINS';
+      p2Rounds++;
+    } else {
+      roundEndMessage = 'K.O.! PLAYER 1 WINS';
+      p1Rounds++;
+    }
+    sound.ko();
+    phase = 'roundEnd';
+    phaseTimer = 120;
+  } else if (roundTimeLeft <= 0) {
+    if (p1.health > p2.health) {
+      roundEndMessage = 'TIME OVER! PLAYER 1 WINS';
+      p1Rounds++;
+    } else if (p2.health > p1.health) {
+      roundEndMessage = 'TIME OVER! ' + p2Label() + ' WINS';
+      p2Rounds++;
+    } else {
+      roundEndMessage = 'TIME OVER! DRAW';
+      p1Rounds++;
+      p2Rounds++;
+    }
+    phase = 'roundEnd';
+    phaseTimer = 120;
+  }
+}
+
+function drawArenaBackground() {
+  const groundLine = canvas.height - GROUND_HEIGHT;
+
+  const skyGradient = context.createLinearGradient(0, 0, 0, groundLine);
+  skyGradient.addColorStop(0, '#1b1230');
+  skyGradient.addColorStop(0.6, '#3b2458');
+  skyGradient.addColorStop(1, '#6a3f85');
+  context.fillStyle = skyGradient;
+  context.fillRect(0, 0, canvas.width, groundLine);
+
+  // Distant skyline silhouette
+  context.fillStyle = 'rgba(15, 8, 25, 0.6)';
+  const buildingWidths = [60, 40, 75, 50, 90, 45, 65, 55, 80];
+  let bx = -10;
+  buildingWidths.forEach((w, i) => {
+    const bh = 60 + (i % 3) * 35;
+    context.fillRect(bx, groundLine - bh, w, bh);
+    bx += w + 18;
+  });
+
+  // Crowd railing near the back
+  const railY = groundLine - 34;
+  context.fillStyle = 'rgba(0,0,0,0.35)';
+  context.fillRect(0, railY, canvas.width, 34);
+  context.fillStyle = 'rgba(255,255,255,0.15)';
+  for (let cx = 10; cx < canvas.width; cx += 14) {
+    const bob = Math.sin(frameCount * 0.05 + cx) * 2;
+    context.beginPath();
+    context.arc(cx, railY + 10 + bob, 4, 0, Math.PI * 2);
+    context.fill();
+  }
+  context.fillStyle = '#a855f7';
+  context.fillRect(0, railY, canvas.width, 3);
+
+  // Ground
+  const groundGradient = context.createLinearGradient(0, groundLine, 0, canvas.height);
+  groundGradient.addColorStop(0, '#2a1a40');
+  groundGradient.addColorStop(1, '#140d20');
+  context.fillStyle = groundGradient;
+  context.fillRect(0, groundLine, canvas.width, GROUND_HEIGHT);
+
+  context.strokeStyle = 'rgba(168, 85, 247, 0.25)';
+  context.lineWidth = 1;
+  for (let gx = 0; gx < canvas.width; gx += 40) {
+    context.beginPath();
+    context.moveTo(gx, groundLine);
+    context.lineTo(gx - 15, canvas.height);
+    context.stroke();
+  }
+
+  context.fillStyle = '#a855f7';
+  context.fillRect(0, groundLine, canvas.width, 4);
+}
+
+function drawCharacterAccessory(f, headCx, headCy, headR, shadeColor) {
+  const dir = f.facing;
+  switch (f.characterName) {
+    case 'Blaze': {
+      context.fillStyle = '#fde047';
+      for (let i = -1; i <= 1; i++) {
+        context.beginPath();
+        context.moveTo(headCx + i * 7, headCy - headR + 3);
+        context.lineTo(headCx + i * 7 - 4, headCy - headR - 10);
+        context.lineTo(headCx + i * 7 + 4, headCy - headR + 1);
+        context.closePath();
+        context.fill();
+      }
+      break;
+    }
+    case 'Titan': {
+      context.fillStyle = shadeColor;
+      context.beginPath();
+      context.moveTo(headCx - 3, headCy - headR + 4);
+      context.lineTo(headCx, headCy - headR - 14);
+      context.lineTo(headCx + 3, headCy - headR + 4);
+      context.closePath();
+      context.fill();
+      context.fillStyle = '#ffffff';
+      context.fillRect(headCx - headR, headCy - 4, headR * 2, 4);
+      break;
+    }
+    case 'Scout': {
+      context.fillStyle = shadeColor;
+      context.beginPath();
+      context.ellipse(headCx - dir * (headR + 4), headCy + 2, 5, 8, 0, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = '#ffffff';
+      context.fillRect(headCx - headR, headCy - 6, headR * 2, 3);
+      break;
+    }
+    case 'Volt': {
+      context.fillStyle = '#fde047';
+      context.beginPath();
+      context.moveTo(headCx - 2, headCy - headR - 2);
+      context.lineTo(headCx + 3, headCy - headR - 2);
+      context.lineTo(headCx - 1, headCy - headR + 5);
+      context.lineTo(headCx + 2, headCy - headR + 5);
+      context.lineTo(headCx - 4, headCy - headR + 13);
+      context.lineTo(headCx - 1, headCy - headR + 6);
+      context.lineTo(headCx - 4, headCy - headR + 6);
+      context.closePath();
+      context.fill();
+      break;
+    }
+    case 'Shadow': {
+      context.fillStyle = shadeColor;
+      context.beginPath();
+      context.arc(headCx, headCy - 2, headR + 3, Math.PI, 0);
+      context.fill();
+      context.fillStyle = '#111111';
+      context.fillRect(headCx - headR, headCy + 2, headR * 2, 5);
+      break;
+    }
+    case 'Dragon': {
+      context.fillStyle = '#dc2626';
+      context.fillRect(headCx - headR, headCy - 4, headR * 2, 4);
+      const tailX = headCx - dir * (headR - 2);
+      for (let i = 0; i < 2; i++) {
+        context.beginPath();
+        context.moveTo(tailX, headCy - 4 + i * 2);
+        context.quadraticCurveTo(
+          tailX - dir * 10, headCy + 4 + i * 4,
+          tailX - dir * 14, headCy + 12 + i * 5
+        );
+        context.lineWidth = 3;
+        context.strokeStyle = '#dc2626';
+        context.stroke();
+      }
+      break;
+    }
+    case 'Frost': {
+      context.fillStyle = '#e0f2fe';
+      for (let i = -1; i <= 1; i++) {
+        context.beginPath();
+        context.moveTo(headCx + i * 7 - 3, headCy - headR + 3);
+        context.lineTo(headCx + i * 7, headCy - headR - 9 - Math.abs(i) * 3);
+        context.lineTo(headCx + i * 7 + 3, headCy - headR + 3);
+        context.closePath();
+        context.fill();
+        context.strokeStyle = '#0369a1';
+        context.lineWidth = 1;
+        context.stroke();
+      }
+      break;
+    }
+    default: {
+      context.fillStyle = '#ffffff';
+      context.fillRect(headCx - headR, headCy - 4, headR * 2, 4);
+    }
+  }
+}
+
+function drawSuperEffect(f, sup, attackActive, bodyY, torsoHeight, cx) {
+  const groundLine = canvas.height - GROUND_HEIGHT;
+  const dir = f.facing;
+  const originX = dir === 1 ? f.x + f.width : f.x;
+  const originY = bodyY + torsoHeight * 0.4;
+  const pulse = 0.7 + 0.3 * Math.sin(frameCount * 0.5);
+
+  if (!attackActive) {
+    // Charge-up glow before the super fires
+    context.save();
+    context.globalAlpha = 0.6;
+    context.fillStyle = f.color;
+    context.beginPath();
+    context.arc(cx, originY, 20 * pulse, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+    return;
+  }
+
+  switch (f.characterName) {
+    case 'Blaze': {
+      for (let i = 0; i < 10; i++) {
+        const t = i / 10;
+        const fx = originX + dir * t * sup.range;
+        const fy = originY + Math.sin(frameCount * 0.6 + i) * 10;
+        context.fillStyle = i % 2 === 0 ? '#fde047' : '#f97316';
+        context.beginPath();
+        context.arc(fx, fy, 10 - t * 5, 0, Math.PI * 2);
+        context.fill();
+      }
+      break;
+    }
+    case 'Titan': {
+      context.strokeStyle = '#eab308';
+      context.lineWidth = 6;
+      for (let r = 0; r < 3; r++) {
+        context.globalAlpha = 1 - r * 0.3;
+        context.beginPath();
+        context.arc(originX, groundLine, 20 + r * 25 + (frameCount % 10) * 2, Math.PI, 0);
+        context.stroke();
+      }
+      context.globalAlpha = 1;
+      break;
+    }
+    case 'Scout': {
+      for (let i = 0; i < 4; i++) {
+        const fx = originX + dir * (i * 16 + (frameCount * 7 % 16));
+        context.fillStyle = 'rgba(34, 197, 94, 0.8)';
+        context.beginPath();
+        context.arc(fx, originY + (i % 2 === 0 ? -8 : 8), 7, 0, Math.PI * 2);
+        context.fill();
+      }
+      break;
+    }
+    case 'Volt': {
+      const tipX = originX + dir * sup.range;
+      context.strokeStyle = '#fde047';
+      context.lineWidth = 6;
+      context.beginPath();
+      context.moveTo(tipX, 0);
+      let ly = 0;
+      for (let i = 0; i < 6; i++) {
+        ly += (groundLine) / 6;
+        context.lineTo(tipX + (i % 2 === 0 ? -10 : 10), ly);
+      }
+      context.stroke();
+      context.fillStyle = 'rgba(253, 224, 71, 0.3)';
+      context.beginPath();
+      context.arc(tipX, groundLine, 30 * pulse, 0, Math.PI * 2);
+      context.fill();
+      break;
+    }
+    case 'Shadow': {
+      for (let i = 1; i <= 3; i++) {
+        context.globalAlpha = 0.25 * (4 - i);
+        context.fillStyle = f.color;
+        fillRoundRectCtx(f.x - dir * i * 18, bodyY, f.width * 0.84, torsoHeight, 8);
+      }
+      context.globalAlpha = 1;
+      context.strokeStyle = '#ffffff';
+      context.lineWidth = 3;
+      context.beginPath();
+      context.moveTo(originX, originY);
+      context.lineTo(originX + dir * sup.range, originY);
+      context.stroke();
+      break;
+    }
+    case 'Dragon': {
+      const elapsed = f.attackTotal - f.attackTimer;
+      const activeProgress = Math.min(1, Math.max(0, (elapsed - sup.startup) / sup.active));
+      const orbX = originX + dir * activeProgress * sup.range;
+      const orbY = originY;
+
+      for (let i = 1; i <= 4; i++) {
+        context.globalAlpha = 0.5 - i * 0.1;
+        context.fillStyle = '#e5e7eb';
+        context.beginPath();
+        context.arc(orbX - dir * i * 10, orbY, 10 - i, 0, Math.PI * 2);
+        context.fill();
+      }
+      context.globalAlpha = 1;
+
+      const orbGradient = context.createRadialGradient(orbX, orbY, 2, orbX, orbY, 16);
+      orbGradient.addColorStop(0, '#ffffff');
+      orbGradient.addColorStop(0.5, '#bae6fd');
+      orbGradient.addColorStop(1, 'rgba(96, 165, 250, 0.15)');
+      context.fillStyle = orbGradient;
+      context.beginPath();
+      context.arc(orbX, orbY, 16, 0, Math.PI * 2);
+      context.fill();
+      break;
+    }
+    case 'Frost': {
+      const elapsed = f.attackTotal - f.attackTimer;
+      const activeProgress = Math.min(1, Math.max(0, (elapsed - sup.startup) / sup.active));
+      const spikeCount = 8;
+      for (let i = 0; i < spikeCount; i++) {
+        const spikeFrac = i / spikeCount;
+        if (spikeFrac > activeProgress) continue;
+        const popAge = activeProgress - spikeFrac;
+        const spikeH = Math.min(1, popAge * 6) * 34;
+        const sx = originX + dir * spikeFrac * sup.range;
+        context.fillStyle = '#e0f2fe';
+        context.strokeStyle = '#0369a1';
+        context.lineWidth = 1.5;
+        context.beginPath();
+        context.moveTo(sx - 7, groundLine);
+        context.lineTo(sx, groundLine - spikeH);
+        context.lineTo(sx + 7, groundLine);
+        context.closePath();
+        context.fill();
+        context.stroke();
+      }
+      context.fillStyle = 'rgba(224, 242, 254, 0.25)';
+      context.beginPath();
+      context.arc(originX + dir * activeProgress * sup.range, groundLine - 10, 18, 0, Math.PI * 2);
+      context.fill();
+      break;
+    }
+    default: {
+      const beamW = sup.range;
+      const beamGradient = context.createLinearGradient(originX, 0, originX + dir * beamW, 0);
+      beamGradient.addColorStop(0, f.color);
+      beamGradient.addColorStop(1, 'rgba(255,255,255,0.1)');
+      context.fillStyle = beamGradient;
+      context.fillRect(dir === 1 ? originX : originX - beamW, originY - 10, beamW, 20);
+    }
+  }
+}
+
+function drawCharacterBody(f, bodyY, torsoHeight, cx, shadeColor) {
+  const w = f.width;
+  switch (f.characterName) {
+    case 'Blaze': {
+      context.fillStyle = '#fde047';
+      const fx = cx, fy = bodyY + torsoHeight * 0.55;
+      context.beginPath();
+      context.moveTo(fx, fy - 10);
+      context.quadraticCurveTo(fx + 7, fy - 2, fx, fy + 10);
+      context.quadraticCurveTo(fx - 7, fy - 2, fx, fy - 10);
+      context.fill();
+      break;
+    }
+    case 'Titan': {
+      context.fillStyle = shadeColor;
+      fillRoundRectCtx(f.x + w * 0.02, bodyY - 2, w * 0.3, torsoHeight * 0.22, 4);
+      fillRoundRectCtx(f.x + w * 0.68, bodyY - 2, w * 0.3, torsoHeight * 0.22, 4);
+      context.fillStyle = '#374151';
+      context.fillRect(f.x + w * 0.1, bodyY + torsoHeight * 0.6, w * 0.8, torsoHeight * 0.14);
+      break;
+    }
+    case 'Scout': {
+      context.strokeStyle = shadeColor;
+      context.lineWidth = 5;
+      context.beginPath();
+      context.moveTo(f.x + w * 0.15, bodyY + 2);
+      context.lineTo(f.x + w * 0.85, bodyY + torsoHeight * 0.7);
+      context.stroke();
+      break;
+    }
+    case 'Volt': {
+      context.fillStyle = '#fde047';
+      const lx = cx;
+      context.beginPath();
+      context.moveTo(lx - 4, bodyY + 4);
+      context.lineTo(lx + 4, bodyY + torsoHeight * 0.4);
+      context.lineTo(lx - 2, bodyY + torsoHeight * 0.4);
+      context.lineTo(lx + 4, bodyY + torsoHeight - 4);
+      context.lineTo(lx - 5, bodyY + torsoHeight * 0.55);
+      context.lineTo(lx + 1, bodyY + torsoHeight * 0.55);
+      context.closePath();
+      context.fill();
+      break;
+    }
+    case 'Shadow': {
+      context.fillStyle = 'rgba(0,0,0,0.45)';
+      fillRoundRectCtx(f.x - w * 0.12, bodyY - 4, w * 0.3, torsoHeight + 10, 6);
+      fillRoundRectCtx(f.x + w * 1.0 - w * 0.18, bodyY - 4, w * 0.3, torsoHeight + 10, 6);
+      context.strokeStyle = '#111111';
+      context.lineWidth = 4;
+      context.beginPath();
+      context.moveTo(f.x + w * 0.15, bodyY + 2);
+      context.lineTo(f.x + w * 0.85, bodyY + torsoHeight * 0.8);
+      context.moveTo(f.x + w * 0.85, bodyY + 2);
+      context.lineTo(f.x + w * 0.15, bodyY + torsoHeight * 0.8);
+      context.stroke();
+      break;
+    }
+    case 'Dragon': {
+      context.fillStyle = '#dc2626';
+      fillRoundRectCtx(f.x + w * 0.08, bodyY + torsoHeight * 0.62, w * 0.84, torsoHeight * 0.14, 3, true);
+      break;
+    }
+    case 'Frost': {
+      context.fillStyle = '#e0f2fe';
+      context.strokeStyle = '#0369a1';
+      context.lineWidth = 1.5;
+      const fx = cx, fy = bodyY + torsoHeight * 0.52;
+      context.beginPath();
+      context.moveTo(fx, fy - 9);
+      context.lineTo(fx + 7, fy);
+      context.lineTo(fx, fy + 9);
+      context.lineTo(fx - 7, fy);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.fillStyle = shadeColor;
+      fillRoundRectCtx(f.x + w * 0.08, bodyY + torsoHeight * 0.72, w * 0.84, torsoHeight * 0.14, 3, true);
+      break;
+    }
+    default: {
+      context.fillStyle = shadeColor;
+      context.fillRect(f.x + w * 0.08, bodyY + torsoHeight * 0.62, w * 0.84, torsoHeight * 0.14);
+    }
+  }
+}
+
+function drawFighter(f) {
+  const groundLine = canvas.height - GROUND_HEIGHT;
+  const flash = f.hitStun > 0 && frameCount % 6 < 3;
+  const isIdle = !f.isJumping && f.attackTimer <= 0 && f.hitStun <= 0 && Math.abs(f.vx) < 0.1;
+  const idleBob = isIdle ? Math.sin(frameCount * 0.08 + f.x) * 1.5 : 0;
+  const bodyHeight = f.isCrouching ? f.height * 0.6 : f.height;
+  const bodyY = f.y + (f.height - bodyHeight) + idleBob;
+  const cx = f.x + f.width / 2;
+  const mainColor = flash ? '#ffffff' : f.color;
+  const shadeColor = flash ? '#dddddd' : f.shade;
+
+  // Ground shadow
+  context.fillStyle = 'rgba(0,0,0,0.4)';
+  context.beginPath();
+  context.ellipse(cx, groundLine + 6, f.width * 0.55, 8, 0, 0, Math.PI * 2);
+  context.fill();
+
+  const legHeight = bodyHeight * 0.42;
+  const torsoHeight = bodyHeight - legHeight;
+  const legWidth = f.width * 0.28;
+  const legY = bodyY + torsoHeight;
+  const legSpread = f.isCrouching ? 2 : 6;
+  const isKickingNow = f.attackType === 'kick' && f.attackTimer > 0;
+
+  // Legs (the front leg is skipped while kicking - the kick visual replaces it)
+  const leftLegX = f.x + f.width * 0.12 - legSpread;
+  const rightLegX = f.x + f.width - f.width * 0.12 - legWidth + legSpread;
+  const frontIsRight = f.facing === 1;
+  const bootH = legHeight * 0.3;
+  const kneeY = legY + legHeight * 0.52;
+
+  function drawLeg(legX) {
+    const legGradient = context.createLinearGradient(legX, 0, legX + legWidth, 0);
+    legGradient.addColorStop(0, shadeColor);
+    legGradient.addColorStop(0.5, mainColor);
+    legGradient.addColorStop(1, shadeColor);
+    context.fillStyle = legGradient;
+    fillRoundRectCtx(legX, legY, legWidth, legHeight - bootH * 0.6, 4, true);
+
+    // Knee joint
+    context.fillStyle = shadeColor;
+    context.beginPath();
+    context.arc(legX + legWidth / 2, kneeY, legWidth * 0.46, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = OUTLINE_COLOR;
+    context.lineWidth = 1.5;
+    context.stroke();
+
+    // Thin highlight
+    context.fillStyle = 'rgba(255,255,255,0.15)';
+    fillRoundRectCtx(legX + legWidth * 0.18, legY + 3, legWidth * 0.2, legHeight * 0.4, 3);
+
+    // Boot
+    context.fillStyle = '#1f2937';
+    fillRoundRectCtx(legX - 1, legY + legHeight - bootH, legWidth + 2, bootH, 4, true);
+    context.fillStyle = 'rgba(255,255,255,0.12)';
+    fillRoundRectCtx(legX + 1, legY + legHeight - bootH + 2, legWidth - 2, 3, 2);
+  }
+
+  if (!(isKickingNow && !frontIsRight)) drawLeg(leftLegX);
+  if (!(isKickingNow && frontIsRight)) drawLeg(rightLegX);
+
+  // Back arm
+  context.fillStyle = shadeColor;
+  const backArmX = f.facing === 1 ? f.x - 4 : f.x + f.width - 10;
+  context.beginPath();
+  context.arc(backArmX + 7, bodyY + torsoHeight * 0.14, 8, 0, Math.PI * 2);
+  context.fill();
+  fillRoundRectCtx(backArmX, bodyY + torsoHeight * 0.15, 14, torsoHeight * 0.65, 5, true);
+  context.fillStyle = '#ffffff';
+  context.beginPath();
+  context.arc(backArmX + 7, bodyY + torsoHeight * 0.15 + torsoHeight * 0.65, 8, 0, Math.PI * 2);
+  context.fill();
+  context.strokeStyle = OUTLINE_COLOR;
+  context.lineWidth = 2;
+  context.stroke();
+
+  // Torso
+  const torsoGradient = context.createLinearGradient(0, bodyY, 0, bodyY + torsoHeight);
+  torsoGradient.addColorStop(0, mainColor);
+  torsoGradient.addColorStop(1, shadeColor);
+  context.fillStyle = torsoGradient;
+  fillRoundRectCtx(f.x + f.width * 0.08, bodyY, f.width * 0.84, torsoHeight, 8, true);
+
+  // Six-pack ab lines for real muscle definition
+  const absTop = bodyY + torsoHeight * 0.2;
+  const absBottom = bodyY + torsoHeight * 0.68;
+  context.strokeStyle = 'rgba(0,0,0,0.3)';
+  context.lineWidth = 1.8;
+  context.lineCap = 'round';
+  context.beginPath();
+  context.moveTo(cx, absTop);
+  context.lineTo(cx, absBottom);
+  for (let row = 1; row < 3; row++) {
+    const ry = absTop + (row * (absBottom - absTop)) / 3;
+    context.moveTo(f.x + f.width * 0.22, ry);
+    context.lineTo(f.x + f.width * 0.78, ry);
+  }
+  context.stroke();
+  // Faint highlight just above each ab line for a raised look
+  context.strokeStyle = 'rgba(255,255,255,0.12)';
+  context.lineWidth = 1;
+  for (let row = 1; row < 3; row++) {
+    const ry = absTop + (row * (absBottom - absTop)) / 3 - 2;
+    context.beginPath();
+    context.moveTo(f.x + f.width * 0.22, ry);
+    context.lineTo(f.x + f.width * 0.78, ry);
+    context.stroke();
+  }
+
+  // Shorts/trunks for a classic fighter costume look
+  context.fillStyle = shadeColor;
+  fillRoundRectCtx(f.x + f.width * 0.08, bodyY + torsoHeight * 0.72, f.width * 0.84, torsoHeight * 0.28, 6, true);
+  context.strokeStyle = 'rgba(0,0,0,0.2)';
+  context.lineWidth = 1.5;
+  context.beginPath();
+  context.moveTo(f.x + f.width * 0.08, bodyY + torsoHeight * 0.86);
+  context.lineTo(f.x + f.width * 0.92, bodyY + torsoHeight * 0.86);
+  context.stroke();
+
+  // Torso highlight for a bit of shine
+  context.fillStyle = 'rgba(255,255,255,0.18)';
+  fillRoundRectCtx(f.x + f.width * 0.14, bodyY + 3, f.width * 0.18, torsoHeight * 0.4, 4);
+
+  // Diagonal sheen across the whole torso for a less flat, more rendered feel
+  context.save();
+  context.beginPath();
+  if (context.roundRect) {
+    context.roundRect(f.x + f.width * 0.08, bodyY, f.width * 0.84, torsoHeight, 8);
+  } else {
+    context.rect(f.x + f.width * 0.08, bodyY, f.width * 0.84, torsoHeight);
+  }
+  context.clip();
+  const sheen = context.createLinearGradient(f.x, bodyY, f.x + f.width, bodyY + torsoHeight);
+  sheen.addColorStop(0, 'rgba(255,255,255,0.1)');
+  sheen.addColorStop(0.35, 'rgba(255,255,255,0)');
+  sheen.addColorStop(0.55, 'rgba(0,0,0,0.08)');
+  sheen.addColorStop(1, 'rgba(255,255,255,0.05)');
+  context.fillStyle = sheen;
+  context.fillRect(f.x, bodyY, f.width, torsoHeight);
+  context.restore();
+
+  // Fine texture speckle (deterministic so it doesn't flicker frame to frame)
+  context.fillStyle = 'rgba(0,0,0,0.08)';
+  for (let i = 0; i < 10; i++) {
+    const sx = f.x + f.width * 0.12 + ((i * 37) % (f.width * 0.76));
+    const sy = bodyY + torsoHeight * 0.1 + ((i * 53) % (torsoHeight * 0.8));
+    context.beginPath();
+    context.arc(sx, sy, 1, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  drawCharacterBody(f, bodyY, torsoHeight, cx, shadeColor);
+
+  // Neck
+  context.fillStyle = shadeColor;
+  fillRoundRectCtx(cx - 6, bodyY - 6, 12, 10, 2);
+
+  // Head
+  const headR = 15;
+  const headCx = cx;
+  const headCy = bodyY - headR + 4;
+  context.fillStyle = mainColor;
+  context.beginPath();
+  context.arc(headCx, headCy, headR, 0, Math.PI * 2);
+  context.fill();
+
+  // Jaw taper for a less perfectly round head
+  context.beginPath();
+  context.ellipse(headCx, headCy + headR * 0.55, headR * 0.75, headR * 0.5, 0, 0, Math.PI);
+  context.fill();
+
+  context.strokeStyle = OUTLINE_COLOR;
+  context.lineWidth = 2;
+  context.beginPath();
+  context.arc(headCx, headCy, headR, 0, Math.PI * 2);
+  context.stroke();
+
+  // Face
+  const eyeOffsetX = f.facing * 5;
+  context.strokeStyle = '#111111';
+  context.lineWidth = 1.5;
+  context.lineCap = 'round';
+  context.beginPath();
+  context.moveTo(headCx + eyeOffsetX - 6, headCy - 7);
+  context.lineTo(headCx + eyeOffsetX - 1, headCy - 6);
+  context.moveTo(headCx + eyeOffsetX + 8, headCy - 6);
+  context.lineTo(headCx + eyeOffsetX + 3, headCy - 7);
+  context.stroke();
+
+  context.fillStyle = '#ffffff';
+  context.beginPath();
+  context.arc(headCx + eyeOffsetX - 3, headCy - 2, 3.5, 0, Math.PI * 2);
+  context.arc(headCx + eyeOffsetX + 5, headCy - 2, 3.5, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = '#111111';
+  context.beginPath();
+  context.arc(headCx + eyeOffsetX - 3 + f.facing, headCy - 2, 1.6, 0, Math.PI * 2);
+  context.arc(headCx + eyeOffsetX + 5 + f.facing, headCy - 2, 1.6, 0, Math.PI * 2);
+  context.fill();
+
+  context.strokeStyle = '#111111';
+  context.lineWidth = 1.3;
+  context.beginPath();
+  context.moveTo(headCx + eyeOffsetX - 3, headCy + 7);
+  context.lineTo(headCx + eyeOffsetX + 3, headCy + 7);
+  context.stroke();
+
+  // Character-specific hair/headgear
+  drawCharacterAccessory(f, headCx, headCy, headR, shadeColor);
+
+  // Front arm/leg (idle, guard, or attacking)
+  const isAttacking = f.attackType && f.attackTimer > 0;
+  let attackActive = false;
+  if (isAttacking) {
+    const atk = getMoveDef(f);
+    const elapsed = f.attackTotal - f.attackTimer;
+    attackActive = elapsed >= atk.startup && elapsed < atk.startup + atk.active;
+    let reach;
+    if (attackActive) {
+      reach = atk.range;
+    } else if (elapsed < atk.startup) {
+      const windupT = elapsed / atk.startup;
+      reach = -atk.range * 0.22 * windupT;
+    } else {
+      const recoveryT = (elapsed - atk.startup - atk.active) / atk.recovery;
+      reach = atk.range * 0.3 * (1 - recoveryT);
+    }
+
+    if (f.attackType === 'super') {
+      drawSuperEffect(f, atk, attackActive, bodyY, torsoHeight, cx);
+    } else if (f.attackType === 'kick') {
+      const hipX = frontIsRight ? rightLegX + legWidth / 2 : leftLegX + legWidth / 2;
+      const originX = hipX;
+      const originY = legY + legHeight * 0.15;
+      const tipX = originX + f.facing * reach;
+      const tipY = legY + legHeight * 0.45;
+      context.strokeStyle = attackActive ? '#fb923c' : shadeColor;
+      context.lineWidth = 15;
+      context.lineCap = 'round';
+      context.beginPath();
+      context.moveTo(originX, originY);
+      context.lineTo(tipX, tipY);
+      context.stroke();
+      context.fillStyle = attackActive ? '#fb923c' : shadeColor;
+      context.beginPath();
+      context.arc(tipX, tipY, 9, 0, Math.PI * 2);
+      context.fill();
+      context.strokeStyle = OUTLINE_COLOR;
+      context.lineWidth = 2;
+      context.stroke();
+      if (attackActive) drawSpeedLines(tipX, tipY, f.facing, 0, '#fb923c');
+    } else if (f.attackType === 'uppercut') {
+      const originX = f.facing === 1 ? f.x + f.width - 10 : f.x + 10;
+      const originY = bodyY + torsoHeight * 0.75;
+      const tipX = originX + f.facing * reach * 0.6;
+      const tipY = originY - reach * 0.9;
+      context.strokeStyle = attackActive ? '#fde047' : shadeColor;
+      context.lineWidth = 13;
+      context.lineCap = 'round';
+      context.beginPath();
+      context.moveTo(originX, originY);
+      context.lineTo(tipX, tipY);
+      context.stroke();
+      context.fillStyle = attackActive ? '#fde047' : shadeColor;
+      context.beginPath();
+      context.arc(tipX, tipY, 9, 0, Math.PI * 2);
+      context.fill();
+      context.strokeStyle = OUTLINE_COLOR;
+      context.lineWidth = 2;
+      context.stroke();
+      if (attackActive) drawSpeedLines(tipX, tipY, f.facing * 0.5, -0.87, '#fde047');
+    } else {
+      const armY = bodyY + torsoHeight * 0.25;
+      context.fillStyle = attackActive ? '#fde047' : shadeColor;
+      const fistX = f.facing === 1 ? f.x + f.width - 6 + reach : f.x + 6 - reach;
+      if (f.facing === 1) {
+        fillRoundRectCtx(f.x + f.width - 6, armY, reach, 12, 6, true);
+      } else {
+        fillRoundRectCtx(f.x + 6 - reach, armY, reach, 12, 6, true);
+      }
+      context.beginPath();
+      context.arc(fistX, armY + 6, 8, 0, Math.PI * 2);
+      context.fill();
+      context.strokeStyle = OUTLINE_COLOR;
+      context.lineWidth = 2;
+      context.stroke();
+      if (attackActive) drawSpeedLines(fistX, armY + 6, f.facing, 0, '#fde047');
+    }
+  } else if (f.isBlocking) {
+    const guardX = f.facing === 1 ? f.x + f.width - 6 : f.x - 16;
+    context.fillStyle = '#38bdf8';
+    fillRoundRectCtx(guardX, bodyY + 6, 18, torsoHeight * 0.6, 6, true);
+  } else {
+    context.fillStyle = mainColor;
+    const armX = f.facing === 1 ? f.x + f.width - 10 : f.x - 4;
+    context.beginPath();
+    context.arc(armX + 7, bodyY + torsoHeight * 0.14, 8, 0, Math.PI * 2);
+    context.fill();
+    fillRoundRectCtx(armX, bodyY + torsoHeight * 0.15, 14, torsoHeight * 0.65, 5, true);
+    context.fillStyle = '#ffffff';
+    context.beginPath();
+    context.arc(armX + 7, bodyY + torsoHeight * 0.15 + torsoHeight * 0.65, 8, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = OUTLINE_COLOR;
+    context.lineWidth = 2;
+    context.stroke();
+  }
+
+  if (f.isBlocking) {
+    context.strokeStyle = '#38bdf8';
+    context.lineWidth = 3;
+    context.strokeRect(f.x - 3, bodyY - 3, f.width + 6, bodyHeight + 6);
+  }
+
+  // Impact burst
+  if (f.impactFlash > 0) {
+    const t = f.impactFlash / 10;
+    context.save();
+    context.globalAlpha = t;
+    context.strokeStyle = f.blockStun > 0 ? '#38bdf8' : '#fde047';
+    context.lineWidth = 3;
+    const burstX = cx + (-f.facing) * (f.width * 0.5);
+    const burstY = bodyY + torsoHeight * 0.4;
+    for (let i = 0; i < 5; i++) {
+      const angle = (i / 5) * Math.PI * 2 + frameCount * 0.3;
+      const len = 6 + (1 - t) * 14;
+      context.beginPath();
+      context.moveTo(burstX, burstY);
+      context.lineTo(burstX + Math.cos(angle) * len, burstY + Math.sin(angle) * len);
+      context.stroke();
+    }
+    context.restore();
+  }
+}
+
+
+const OUTLINE_COLOR = 'rgba(0,0,0,0.55)';
+
+function drawSpeedLines(tipX, tipY, dirX, dirY, color) {
+  context.save();
+  context.strokeStyle = color;
+  context.lineCap = 'round';
+  for (let i = 0; i < 3; i++) {
+    context.globalAlpha = 0.55 - i * 0.15;
+    context.lineWidth = 3 - i * 0.5;
+    context.beginPath();
+    context.moveTo(tipX - dirX * (8 + i * 9), tipY - dirY * (8 + i * 9));
+    context.lineTo(tipX - dirX * (16 + i * 9), tipY - dirY * (16 + i * 9));
+    context.stroke();
+  }
+  context.restore();
+}
+
+function fillRoundRectCtx(x, y, w, h, r, outline) {
+  context.beginPath();
+  if (context.roundRect) {
+    context.roundRect(x, y, w, h, r);
+  } else {
+    context.rect(x, y, w, h);
+  }
+  context.fill();
+  if (outline) {
+    context.strokeStyle = OUTLINE_COLOR;
+    context.lineWidth = 2;
+    context.stroke();
+  }
+}
+
+function drawHealthBars() {
+  const barWidth = 300, barHeight = 22;
+
+  context.fillStyle = '#3a0d0d';
+  context.fillRect(20, 20, barWidth, barHeight);
+  context.fillStyle = '#22c55e';
+  context.fillRect(20, 20, barWidth * Math.max(0, p1.health / p1.maxHealth), barHeight);
+  context.strokeStyle = '#ffffff';
+  context.lineWidth = 2;
+  context.strokeRect(20, 20, barWidth, barHeight);
+
+  const p2BarX = canvas.width - 20 - barWidth;
+  context.fillStyle = '#3a0d0d';
+  context.fillRect(p2BarX, 20, barWidth, barHeight);
+  const p2FillWidth = barWidth * Math.max(0, p2.health / p2.maxHealth);
+  context.fillStyle = '#22c55e';
+  context.fillRect(p2BarX + (barWidth - p2FillWidth), 20, p2FillWidth, barHeight);
+  context.strokeStyle = '#ffffff';
+  context.strokeRect(p2BarX, 20, barWidth, barHeight);
+
+  // Super meters
+  const superBarHeight = 8;
+  const superBarY = 20 + barHeight + 4;
+  const p1Ready = p1.superMeter >= SUPER_MAX;
+  const p2Ready = p2.superMeter >= SUPER_MAX;
+  const superGlow = 0.6 + 0.4 * Math.sin(frameCount * 0.15);
+
+  context.fillStyle = '#222';
+  context.fillRect(20, superBarY, barWidth, superBarHeight);
+  context.fillStyle = p1Ready ? `rgba(253, 224, 71, ${superGlow})` : '#fde047';
+  context.fillRect(20, superBarY, barWidth * (p1.superMeter / SUPER_MAX), superBarHeight);
+  context.strokeStyle = '#ffffff';
+  context.lineWidth = 1;
+  context.strokeRect(20, superBarY, barWidth, superBarHeight);
+
+  context.fillStyle = '#222';
+  context.fillRect(p2BarX, superBarY, barWidth, superBarHeight);
+  const p2SuperFill = barWidth * (p2.superMeter / SUPER_MAX);
+  context.fillStyle = p2Ready ? `rgba(253, 224, 71, ${superGlow})` : '#fde047';
+  context.fillRect(p2BarX + (barWidth - p2SuperFill), superBarY, p2SuperFill, superBarHeight);
+  context.strokeStyle = '#ffffff';
+  context.strokeRect(p2BarX, superBarY, barWidth, superBarHeight);
+
+  if (p1Ready) {
+    context.fillStyle = '#fde047';
+    context.font = '700 11px "DM Sans", sans-serif';
+    context.textAlign = 'left';
+    context.fillText('SUPER READY!', 20, superBarY + superBarHeight + 14);
+  }
+  if (p2Ready) {
+    context.fillStyle = '#fde047';
+    context.font = '700 11px "DM Sans", sans-serif';
+    context.textAlign = 'right';
+    context.fillText('SUPER READY!', canvas.width - 20, superBarY + superBarHeight + 14);
+  }
+
+  context.fillStyle = '#ffffff';
+  context.font = '700 14px "DM Sans", sans-serif';
+  context.textAlign = 'left';
+  context.fillText('P1', 20, 58);
+  context.textAlign = 'right';
+  context.fillText(vsAI ? 'CPU' : 'P2', canvas.width - 20, 58);
+
+  for (let i = 0; i < 2; i++) {
+    context.fillStyle = i < p1Rounds ? '#a855f7' : 'rgba(255,255,255,0.2)';
+    context.beginPath();
+    context.arc(30 + i * 16, 86, 5, 0, Math.PI * 2);
+    context.fill();
+
+    context.fillStyle = i < p2Rounds ? '#a855f7' : 'rgba(255,255,255,0.2)';
+    context.beginPath();
+    context.arc(canvas.width - 30 - i * 16, 86, 5, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  context.fillStyle = '#ffffff';
+  context.font = '800 22px "DM Sans", sans-serif';
+  context.textAlign = 'center';
+  context.fillText(Math.max(0, roundTimeLeft), canvas.width / 2, 40);
+}
+
+function draw() {
+  context.save();
+  if (screenShakeTimer > 0) {
+    const shakeX = (Math.random() - 0.5) * screenShakeMag;
+    const shakeY = (Math.random() - 0.5) * screenShakeMag;
+    context.translate(shakeX, shakeY);
+    screenShakeTimer--;
+  }
+
+  drawArenaBackground();
+  drawFighter(p1);
+  drawFighter(p2);
+  drawHealthBars();
+
+  if (phase === 'intro') {
+    context.fillStyle = '#ffffff';
+    context.font = '800 36px "DM Sans", sans-serif';
+    context.textAlign = 'center';
+    context.fillText('ROUND ' + round, canvas.width / 2, canvas.height / 2 - 20);
+    if (phaseTimer < 50) {
+      context.fillStyle = '#fde047';
+      context.font = '800 44px "DM Sans", sans-serif';
+      context.fillText('FIGHT!', canvas.width / 2, canvas.height / 2 + 40);
+    }
+  }
+
+  if (phase === 'roundEnd') {
+    context.fillStyle = 'rgba(0,0,0,0.5)';
+    context.fillRect(0, canvas.height / 2 - 40, canvas.width, 80);
+    context.fillStyle = '#ffffff';
+    context.font = '800 28px "DM Sans", sans-serif';
+    context.textAlign = 'center';
+    context.fillText(roundEndMessage, canvas.width / 2, canvas.height / 2);
+  }
+
+  if (paused) {
+    context.fillStyle = 'rgba(0,0,0,0.65)';
+    context.fillRect(0, canvas.height / 2 - 40, canvas.width, 80);
+    context.fillStyle = '#ffffff';
+    context.font = '800 32px "DM Sans", sans-serif';
+    context.textAlign = 'center';
+    context.fillText('PAUSED', canvas.width / 2, canvas.height / 2 + 10);
+  }
+
+  context.restore();
+}
+
+function loop() {
+  rAF = requestAnimationFrame(loop);
+  frameCount++;
+  update();
+  draw();
+}
+
+document.addEventListener('keydown', function(e) {
+  if (document.getElementById('game-container').style.display !== 'flex') return;
+  const trackedKeys = ['a','d','w','s','f','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','/'];
+  if (trackedKeys.includes(e.key)) {
+    e.preventDefault();
+  }
+
+  if (!e.repeat) {
+    const now = performance.now();
+    if (e.key === p1Controls.left) {
+      if (now - lastTapTime.p1Left < DOUBLE_TAP_WINDOW) p1.pendingAttackType = 'punch';
+      lastTapTime.p1Left = now;
+    } else if (e.key === p1Controls.right) {
+      if (now - lastTapTime.p1Right < DOUBLE_TAP_WINDOW) p1.pendingAttackType = 'punch';
+      lastTapTime.p1Right = now;
+    } else if (e.key === p1Controls.down) {
+      if (now - lastTapTime.p1Down < DOUBLE_TAP_WINDOW) p1.pendingAttackType = 'kick';
+      lastTapTime.p1Down = now;
+    } else if (e.key === p1Controls.up) {
+      if (now - lastTapTime.p1Up < DOUBLE_TAP_WINDOW) p1.pendingAttackType = 'uppercut';
+      lastTapTime.p1Up = now;
+    } else if (e.key === p2Controls.left) {
+      if (now - lastTapTime.p2Left < DOUBLE_TAP_WINDOW) p2.pendingAttackType = 'punch';
+      lastTapTime.p2Left = now;
+    } else if (e.key === p2Controls.right) {
+      if (now - lastTapTime.p2Right < DOUBLE_TAP_WINDOW) p2.pendingAttackType = 'punch';
+      lastTapTime.p2Right = now;
+    } else if (e.key === p2Controls.down) {
+      if (now - lastTapTime.p2Down < DOUBLE_TAP_WINDOW) p2.pendingAttackType = 'kick';
+      lastTapTime.p2Down = now;
+    } else if (e.key === p2Controls.up) {
+      if (now - lastTapTime.p2Up < DOUBLE_TAP_WINDOW) p2.pendingAttackType = 'uppercut';
+      lastTapTime.p2Up = now;
+    } else if (e.key === p1Controls.super) {
+      p1.pendingSuper = true;
+    } else if (e.key === p2Controls.super) {
+      p2.pendingSuper = true;
+    }
+  }
+
+  keys[e.key] = true;
+});
+document.addEventListener('keyup', function(e) {
+  keys[e.key] = false;
+});
+
+function startGame() {
+  document.getElementById('splashTitle').style.display = 'none';
+  document.getElementById('controlsHint').style.display = 'none';
+  document.getElementById('colorPickers').style.display = 'none';
+  document.getElementById('launchBtn').style.display = 'none';
+  document.getElementById('game-container').style.display = 'flex';
+  if (document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+  startMatch();
+  if (rAF) cancelAnimationFrame(rAF);
+  rAF = requestAnimationFrame(loop);
+}
+
+document.getElementById('launchBtn').addEventListener('click', startGame);
+
+document.getElementById('playAgainBtn').addEventListener('click', function() {
+  startMatch();
+});
+
+document.getElementById('backBtn').addEventListener('click', function() {
+  cancelAnimationFrame(rAF);
+  if (document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  }
+  document.getElementById('game-container').style.display = 'none';
+  document.getElementById('splashTitle').style.display = 'block';
+  document.getElementById('controlsHint').style.display = 'block';
+  document.getElementById('colorPickers').style.display = 'flex';
+  document.getElementById('launchBtn').style.display = 'block';
+});
+
+document.getElementById('pauseBtn').addEventListener('click', function() {
+  if (phase === 'matchEnd') return;
+  paused = !paused;
+  this.innerText = paused ? 'Resume' : 'Pause';
+});
+
+document.getElementById('muteBtn').innerText = muted ? 'Unmute' : 'Mute';
+document.getElementById('muteBtn').addEventListener('click', function() {
+  muted = !muted;
+  localStorage.setItem('atlasSoundMuted', muted);
+  this.innerText = muted ? 'Unmute' : 'Mute';
+});
+</script>
+</body>
+</html>
