@@ -892,7 +892,8 @@ let p2Rounds = 0;
 let phaseTimer = 0;
 let roundTimeLeft = 60;
 let roundTimerAccum = 0;
-let roundEndMessage = '';
+let roundEndHeadline = '';
+let roundEndSubtext = '';
 
 const keys = {};
 
@@ -1218,28 +1219,32 @@ function update() {
 
   if (p1.health <= 0 || p2.health <= 0) {
     if (p1.health <= 0 && p2.health <= 0) {
-      roundEndMessage = 'DOUBLE K.O.!';
+      roundEndHeadline = 'K.O.';
+      roundEndSubtext = 'DOUBLE K.O.!';
       p1Rounds++;
       p2Rounds++;
     } else if (p1.health <= 0) {
-      roundEndMessage = 'K.O.! ' + p2Label() + ' WINS';
+      roundEndHeadline = 'K.O.';
+      roundEndSubtext = p2Label() + ' WINS';
       p2Rounds++;
     } else {
-      roundEndMessage = 'K.O.! PLAYER 1 WINS';
+      roundEndHeadline = 'K.O.';
+      roundEndSubtext = 'PLAYER 1 WINS';
       p1Rounds++;
     }
     sound.ko();
     phase = 'roundEnd';
     phaseTimer = 120;
   } else if (roundTimeLeft <= 0) {
+    roundEndHeadline = 'TIME OVER';
     if (p1.health > p2.health) {
-      roundEndMessage = 'TIME OVER! PLAYER 1 WINS';
+      roundEndSubtext = 'PLAYER 1 WINS';
       p1Rounds++;
     } else if (p2.health > p1.health) {
-      roundEndMessage = 'TIME OVER! ' + p2Label() + ' WINS';
+      roundEndSubtext = p2Label() + ' WINS';
       p2Rounds++;
     } else {
-      roundEndMessage = 'TIME OVER! DRAW';
+      roundEndSubtext = 'DRAW';
       p1Rounds++;
       p2Rounds++;
     }
@@ -1248,82 +1253,85 @@ function update() {
   }
 }
 
-const ARENA_STARS = (function() {
-  const stars = [];
-  for (let i = 0; i < 40; i++) {
-    stars.push({
+const ARENA_CLOUDS = (function() {
+  const clouds = [];
+  for (let i = 0; i < 6; i++) {
+    clouds.push({
       x: Math.random() * 760,
-      y: Math.random() * 180,
-      r: Math.random() * 1.3 + 0.4,
-      offset: Math.random() * Math.PI * 2
+      y: 20 + Math.random() * 140,
+      scale: 0.6 + Math.random() * 0.9,
+      speed: 0.08 + Math.random() * 0.12
     });
   }
-  return stars;
+  return clouds;
 }());
 
 function drawArenaBackground() {
   const groundLine = canvas.height - GROUND_HEIGHT;
 
-  // Dusk sky: deep indigo fading into warm magenta near the horizon
+  // Bright morning sunrise sky
   const skyGradient = context.createLinearGradient(0, 0, 0, groundLine);
-  skyGradient.addColorStop(0, '#120a24');
-  skyGradient.addColorStop(0.45, '#2a1348');
-  skyGradient.addColorStop(0.8, '#5c2a63');
-  skyGradient.addColorStop(1, '#9b4b6e');
+  skyGradient.addColorStop(0, '#7ec8e3');
+  skyGradient.addColorStop(0.45, '#aee3d8');
+  skyGradient.addColorStop(0.75, '#ffd9a0');
+  skyGradient.addColorStop(1, '#ff9e7d');
   context.fillStyle = skyGradient;
   context.fillRect(0, 0, canvas.width, groundLine);
 
-  // Twinkling stars in the upper sky
-  context.fillStyle = '#ffffff';
-  ARENA_STARS.forEach(star => {
-    const twinkle = 0.3 + 0.5 * Math.abs(Math.sin(frameCount * 0.03 + star.offset));
-    context.globalAlpha = twinkle;
+  // Drifting clouds
+  ARENA_CLOUDS.forEach(cloud => {
+    cloud.x -= cloud.speed;
+    if (cloud.x < -60) cloud.x = canvas.width + 60;
+    const s = cloud.scale;
+    context.fillStyle = 'rgba(255,255,255,0.85)';
     context.beginPath();
-    context.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+    context.arc(cloud.x, cloud.y, 14 * s, 0, Math.PI * 2);
+    context.arc(cloud.x + 16 * s, cloud.y - 7 * s, 17 * s, 0, Math.PI * 2);
+    context.arc(cloud.x + 34 * s, cloud.y, 14 * s, 0, Math.PI * 2);
+    context.arc(cloud.x + 16 * s, cloud.y + 5 * s, 15 * s, 0, Math.PI * 2);
     context.fill();
   });
-  context.globalAlpha = 1;
 
-  // Glowing moon near the horizon
-  const moonX = canvas.width * 0.78, moonY = groundLine * 0.4;
-  const moonGlow = context.createRadialGradient(moonX, moonY, 2, moonX, moonY, 60);
-  moonGlow.addColorStop(0, 'rgba(255, 220, 200, 0.5)');
-  moonGlow.addColorStop(1, 'rgba(255, 220, 200, 0)');
-  context.fillStyle = moonGlow;
-  context.fillRect(moonX - 60, moonY - 60, 120, 120);
-  context.fillStyle = '#fff3e6';
+  // Glowing morning sun near the horizon
+  const sunX = canvas.width * 0.78, sunY = groundLine * 0.42;
+  const sunGlow = context.createRadialGradient(sunX, sunY, 2, sunX, sunY, 75);
+  sunGlow.addColorStop(0, 'rgba(255, 221, 140, 0.7)');
+  sunGlow.addColorStop(1, 'rgba(255, 221, 140, 0)');
+  context.fillStyle = sunGlow;
+  context.fillRect(sunX - 75, sunY - 75, 150, 150);
+  context.fillStyle = '#fff0c2';
   context.beginPath();
-  context.arc(moonX, moonY, 18, 0, Math.PI * 2);
+  context.arc(sunX, sunY, 22, 0, Math.PI * 2);
   context.fill();
 
-  // Far mountain layer
-  context.fillStyle = 'rgba(60, 35, 80, 0.55)';
-  drawRidge(groundLine, 50, [0.15, 0.35, 0.2, 0.4, 0.1]);
+  // Far hill layer
+  context.fillStyle = 'rgba(140, 200, 150, 0.55)';
+  drawRidge(groundLine, 45, [0.15, 0.35, 0.2, 0.4, 0.1]);
 
-  // Near mountain layer
-  context.fillStyle = 'rgba(25, 14, 40, 0.75)';
-  drawRidge(groundLine, 85, [0.3, 0.1, 0.45, 0.2, 0.35]);
+  // Near hill layer
+  context.fillStyle = 'rgba(90, 165, 110, 0.75)';
+  drawRidge(groundLine, 75, [0.3, 0.1, 0.45, 0.2, 0.35]);
 
   // Side pillars framing the stage
   ['left', 'right'].forEach(side => {
     const px = side === 'left' ? 6 : canvas.width - 22;
     const pillarGlow = context.createLinearGradient(0, 0, 0, groundLine);
     pillarGlow.addColorStop(0, 'rgba(168,85,247,0.05)');
-    pillarGlow.addColorStop(0.7, 'rgba(168,85,247,0.35)');
-    pillarGlow.addColorStop(1, 'rgba(168,85,247,0.6)');
+    pillarGlow.addColorStop(0.7, 'rgba(168,85,247,0.3)');
+    pillarGlow.addColorStop(1, 'rgba(168,85,247,0.55)');
     context.fillStyle = pillarGlow;
     context.fillRect(px, 0, 16, groundLine);
-    context.fillStyle = 'rgba(255,255,255,0.25)';
+    context.fillStyle = 'rgba(255,255,255,0.3)';
     context.fillRect(px + 6, 0, 2, groundLine);
   });
 
-  // Ground: checkered tile floor
+  // Ground: warm checkered floor
   const tileSize = 38;
   for (let gy = groundLine; gy < canvas.height; gy += tileSize) {
     for (let gx = 0; gx < canvas.width; gx += tileSize) {
       const row = Math.round((gy - groundLine) / tileSize);
       const col = Math.round(gx / tileSize);
-      context.fillStyle = (row + col) % 2 === 0 ? '#1e1230' : '#150c22';
+      context.fillStyle = (row + col) % 2 === 0 ? '#d9c08f' : '#c9ab74';
       context.fillRect(gx, gy, tileSize, Math.min(tileSize, canvas.height - gy));
     }
   }
@@ -1332,7 +1340,7 @@ function drawArenaBackground() {
   context.save();
   context.shadowColor = '#a855f7';
   context.shadowBlur = 8;
-  context.fillStyle = 'rgba(168,85,247,0.6)';
+  context.fillStyle = 'rgba(168,85,247,0.7)';
   context.fillRect(canvas.width / 2 - 2, groundLine, 4, GROUND_HEIGHT);
   context.restore();
 
@@ -2447,12 +2455,30 @@ function draw() {
   }
 
   if (phase === 'roundEnd') {
-    context.fillStyle = 'rgba(0,0,0,0.5)';
-    context.fillRect(0, canvas.height / 2 - 40, canvas.width, 80);
-    context.fillStyle = '#ffffff';
-    context.font = '800 28px "DM Sans", sans-serif';
+    // Big K.O. / TIME OVER headline, top-center, classic style
+    const koPulse = 1 + 0.08 * Math.sin(frameCount * 0.4);
+    context.save();
+    context.translate(canvas.width / 2, 108);
+    context.scale(koPulse, koPulse);
     context.textAlign = 'center';
-    context.fillText(roundEndMessage, canvas.width / 2, canvas.height / 2);
+    context.textBaseline = 'middle';
+    context.fillStyle = '#1a1330';
+    context.font = '800 54px "DM Sans", sans-serif';
+    context.fillText(roundEndHeadline, 2, 2);
+    context.fillStyle = '#fde047';
+    context.shadowColor = '#ef4444';
+    context.shadowBlur = 14;
+    context.fillText(roundEndHeadline, 0, 0);
+    context.restore();
+
+    // Winner announcement below it
+    context.fillStyle = 'rgba(0,0,0,0.5)';
+    context.fillRect(0, canvas.height / 2 - 30, canvas.width, 60);
+    context.fillStyle = '#ffffff';
+    context.font = '800 24px "DM Sans", sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'alphabetic';
+    context.fillText(roundEndSubtext, canvas.width / 2, canvas.height / 2 + 8);
   }
 
   if (paused) {
