@@ -159,6 +159,38 @@ body::before {
   max-height: none;
   width: 110px;
 }
+.stat-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 110px;
+}
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.stat-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: #a9a9c0;
+  width: 42px;
+  text-align: right;
+  letter-spacing: 0.3px;
+}
+.stat-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.stat-fill {
+  height: 100%;
+  background: var(--accent1);
+  border-radius: 3px;
+  transition: width 0.2s ease;
+}
 #game-container {
   display: none;
   width: 100vw;
@@ -257,15 +289,32 @@ canvas {
   <button class="mode-btn" id="mode2PBtn">2 Players</button>
   <button class="mode-btn" id="modeAIBtn">1 Player (vs CPU)</button>
 </div>
+<div class="mode-toggle" id="difficultyToggle" style="display:none;">
+  <button class="mode-btn" id="diffEasyBtn">Easy</button>
+  <button class="mode-btn" id="diffMediumBtn">Medium</button>
+  <button class="mode-btn" id="diffHardBtn">Hard</button>
+</div>
 <div class="color-pickers" id="colorPickers">
   <div class="color-picker-col">
     <canvas class="big-preview" id="p1BigPreview" width="110" height="150"></canvas>
     <div class="color-picker-label">Player 1: <span id="p1ColorPickerName"></span></div>
+    <div class="stat-panel" id="p1StatPanel">
+      <div class="stat-row"><span class="stat-label">SPEED</span><div class="stat-bar"><div class="stat-fill" id="p1StatSpeed"></div></div></div>
+      <div class="stat-row"><span class="stat-label">POWER</span><div class="stat-bar"><div class="stat-fill" id="p1StatPower"></div></div></div>
+      <div class="stat-row"><span class="stat-label">RANGE</span><div class="stat-bar"><div class="stat-fill" id="p1StatRange"></div></div></div>
+      <div class="stat-row"><span class="stat-label">DEFENSE</span><div class="stat-bar"><div class="stat-fill" id="p1StatDefense"></div></div></div>
+    </div>
     <div class="color-picker-row" id="p1ColorPicker"></div>
   </div>
   <div class="color-picker-col">
     <canvas class="big-preview" id="p2BigPreview" width="110" height="150"></canvas>
     <div class="color-picker-label"><span id="p2ColorPickerLabel">Player 2</span>: <span id="p2ColorPickerName"></span></div>
+    <div class="stat-panel" id="p2StatPanel">
+      <div class="stat-row"><span class="stat-label">SPEED</span><div class="stat-bar"><div class="stat-fill" id="p2StatSpeed"></div></div></div>
+      <div class="stat-row"><span class="stat-label">POWER</span><div class="stat-bar"><div class="stat-fill" id="p2StatPower"></div></div></div>
+      <div class="stat-row"><span class="stat-label">RANGE</span><div class="stat-bar"><div class="stat-fill" id="p2StatRange"></div></div></div>
+      <div class="stat-row"><span class="stat-label">DEFENSE</span><div class="stat-bar"><div class="stat-fill" id="p2StatDefense"></div></div></div>
+    </div>
     <div class="color-picker-row" id="p2ColorPicker"></div>
   </div>
 </div>
@@ -299,6 +348,7 @@ let hitStopTimer = 0;
 let screenShakeTimer = 0;
 let screenShakeMag = 0;
 let vsAI = localStorage.getItem('atlasFighterVsAI') === 'true';
+let aiDifficulty = localStorage.getItem('atlasFighterAIDifficulty') || 'medium';
 
 // --- SOUND ---
 let audioCtx = null;
@@ -331,7 +381,8 @@ const sound = {
     playBeep(200, 0.3, 'sawtooth', 0.2);
     setTimeout(() => playBeep(500, 0.25, 'sawtooth', 0.18), 80);
     setTimeout(() => playBeep(900, 0.3, 'square', 0.16), 160);
-  }
+  },
+  combo: () => playBeep(700, 0.06, 'square', 0.1)
 };
 
 // --- ARENA ---
@@ -342,6 +393,8 @@ const GRAVITY = 0.8;
 const JUMP_VELOCITY = -15;
 const HITSTUN_FRAMES = 15;
 const BLOCK_STUN_FRAMES = 8;
+const COMBO_WINDOW = 50;
+const COMBO_DAMAGE_BONUS = 0.12;
 
 const ATTACKS = {
   Blaze: {
@@ -383,6 +436,26 @@ const ATTACKS = {
     punch:    { startup: 7,  active: 7, recovery: 10, damage: 9,  range: 60 },
     kick:     { startup: 9,  active: 8, recovery: 13, damage: 12, range: 72 },
     uppercut: { startup: 6,  active: 5, recovery: 15, damage: 12, range: 46 }
+  },
+  Gale: {
+    punch:    { startup: 5,  active: 6, recovery: 8,  damage: 7,  range: 62 },
+    kick:     { startup: 7,  active: 6, recovery: 11, damage: 9,  range: 68 },
+    uppercut: { startup: 4,  active: 5, recovery: 12, damage: 11, range: 52 }
+  },
+  Boulder: {
+    punch:    { startup: 11, active: 8, recovery: 16, damage: 14, range: 48 },
+    kick:     { startup: 14, active: 9, recovery: 20, damage: 18, range: 50 },
+    uppercut: { startup: 9,  active: 6, recovery: 22, damage: 16, range: 38 }
+  },
+  Viper: {
+    punch:    { startup: 5,  active: 6, recovery: 9,  damage: 8,  range: 64 },
+    kick:     { startup: 7,  active: 6, recovery: 12, damage: 10, range: 70 },
+    uppercut: { startup: 4,  active: 5, recovery: 13, damage: 10, range: 48 }
+  },
+  Nova: {
+    punch:    { startup: 6,  active: 7, recovery: 9,  damage: 9,  range: 66 },
+    kick:     { startup: 8,  active: 7, recovery: 12, damage: 12, range: 72 },
+    uppercut: { startup: 5,  active: 5, recovery: 14, damage: 11, range: 50 }
   }
 };
 
@@ -397,7 +470,11 @@ const SUPERS = {
   Shadow:  { name: 'Shadow Dash',      startup: 8,  active: 10, recovery: 18, damage: 26, range: 500 },
   Crimson: { name: 'Power Beam',       startup: 10, active: 12, recovery: 20, damage: 26, range: 300 },
   Dragon:  { name: 'Spirit Wave',      startup: 10, active: 16, recovery: 18, damage: 27, range: 500 },
-  Frost:   { name: 'Glacial Spike',    startup: 12, active: 12, recovery: 20, damage: 28, range: 280 }
+  Frost:   { name: 'Glacial Spike',    startup: 12, active: 12, recovery: 20, damage: 28, range: 280 },
+  Gale:    { name: 'Cyclone Strike',   startup: 8,  active: 16, recovery: 18, damage: 24, range: 120 },
+  Boulder: { name: 'Seismic Crush',    startup: 16, active: 10, recovery: 26, damage: 32, range: 140 },
+  Viper:   { name: 'Toxic Surge',      startup: 9,  active: 14, recovery: 18, damage: 25, range: 160 },
+  Nova:    { name: 'Starfall',         startup: 14, active: 14, recovery: 20, damage: 29, range: 260 }
 };
 
 const CHARACTERS = [
@@ -408,7 +485,11 @@ const CHARACTERS = [
   { name: 'Shadow',  color: '#a855f7', shade: '#7e22ce', width: 48, height: 100, speed: 4   },
   { name: 'Crimson', color: '#3b82f6', shade: '#1d4ed8', width: 50, height: 100, speed: 4   },
   { name: 'Dragon',  color: '#e5e7eb', shade: '#9ca3af', width: 50, height: 102, speed: 4   },
-  { name: 'Frost',   color: '#38bdf8', shade: '#0369a1', width: 50, height: 100, speed: 3.5 }
+  { name: 'Frost',   color: '#38bdf8', shade: '#0369a1', width: 50, height: 100, speed: 3.5 },
+  { name: 'Gale',    color: '#2dd4bf', shade: '#0f766e', width: 46, height: 98,  speed: 5   },
+  { name: 'Boulder', color: '#78716c', shade: '#44403c', width: 58, height: 106, speed: 2.8 },
+  { name: 'Viper',   color: '#84cc16', shade: '#4d7c0f', width: 46, height: 96,  speed: 4.8 },
+  { name: 'Nova',    color: '#f472b6', shade: '#be185d', width: 48, height: 100, speed: 4.3 }
 ];
 let p1CharIndex = Number(localStorage.getItem('atlasFighterP1Character'));
 if (isNaN(p1CharIndex)) p1CharIndex = 5;
@@ -417,7 +498,8 @@ if (isNaN(p2CharIndex)) p2CharIndex = 0;
 
 function drawPortraitIcon(pctx, character, scale) {
   scale = scale || 1;
-  const w = 56 * scale, h = 76 * scale;
+  const s = scale;
+  const w = 56 * s, h = 76 * s;
   pctx.clearRect(0, 0, w, h);
 
   const bg = pctx.createLinearGradient(0, 0, 0, h);
@@ -426,47 +508,86 @@ function drawPortraitIcon(pctx, character, scale) {
   pctx.fillStyle = bg;
   pctx.fillRect(0, 0, w, h);
 
-  const bodyW = 24 * scale, bodyH = 34 * scale;
-  const bodyX = w / 2 - bodyW / 2, bodyY = h - bodyH - 12 * scale;
+  const bodyW = 24 * s, bodyH = 34 * s;
+  const bodyX = w / 2 - bodyW / 2, bodyY = h - bodyH - 12 * s;
+  const groundY = bodyY + bodyH + 19 * s;
 
+  // Ground shadow
+  pctx.fillStyle = 'rgba(0,0,0,0.35)';
+  pctx.beginPath();
+  pctx.ellipse(w / 2, groundY + 2 * s, 13 * s, 2.5 * s, 0, 0, Math.PI * 2);
+  pctx.fill();
+
+  // Legs + boots
   pctx.fillStyle = character.shade;
-  pctx.fillRect(bodyX + 1 * scale, bodyY + bodyH - 2 * scale, 7 * scale, 14 * scale);
-  pctx.fillRect(bodyX + bodyW - 8 * scale, bodyY + bodyH - 2 * scale, 7 * scale, 14 * scale);
+  pctx.fillRect(bodyX + 1 * s, bodyY + bodyH - 2 * s, 7 * s, 14 * s);
+  pctx.fillRect(bodyX + bodyW - 8 * s, bodyY + bodyH - 2 * s, 7 * s, 14 * s);
   pctx.fillStyle = '#1f2937';
-  pctx.fillRect(bodyX + 1 * scale, bodyY + bodyH + 8 * scale, 7 * scale, 5 * scale);
-  pctx.fillRect(bodyX + bodyW - 8 * scale, bodyY + bodyH + 8 * scale, 7 * scale, 5 * scale);
+  pctx.fillRect(bodyX + 1 * s, bodyY + bodyH + 8 * s, 7 * s, 5 * s);
+  pctx.fillRect(bodyX + bodyW - 8 * s, bodyY + bodyH + 8 * s, 7 * s, 5 * s);
+  pctx.fillStyle = 'rgba(255,255,255,0.15)';
+  pctx.fillRect(bodyX + 1.5 * s, bodyY + bodyH + 9 * s, 6 * s, 1.2 * s);
+  pctx.fillRect(bodyX + bodyW - 7.5 * s, bodyY + bodyH + 9 * s, 6 * s, 1.2 * s);
 
+  // Arms + gloves
+  pctx.fillStyle = character.shade;
+  pctx.fillRect(bodyX - 5 * s, bodyY + 3 * s, 5.5 * s, 20 * s);
+  pctx.fillRect(bodyX + bodyW - 0.5 * s, bodyY + 3 * s, 5.5 * s, 20 * s);
+  pctx.fillStyle = '#ffffff';
+  pctx.beginPath();
+  pctx.arc(bodyX - 2.3 * s, bodyY + 24 * s, 3.5 * s, 0, Math.PI * 2);
+  pctx.arc(bodyX + bodyW + 2.3 * s, bodyY + 24 * s, 3.5 * s, 0, Math.PI * 2);
+  pctx.fill();
+  pctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  pctx.lineWidth = 1 * s;
+  pctx.stroke();
+
+  // Torso
   const torsoGrad = pctx.createLinearGradient(0, bodyY, 0, bodyY + bodyH);
   torsoGrad.addColorStop(0, character.color);
   torsoGrad.addColorStop(1, character.shade);
   pctx.fillStyle = torsoGrad;
   pctx.beginPath();
-  if (pctx.roundRect) pctx.roundRect(bodyX, bodyY, bodyW, bodyH, 6 * scale);
+  if (pctx.roundRect) pctx.roundRect(bodyX, bodyY, bodyW, bodyH, 6 * s);
   else pctx.rect(bodyX, bodyY, bodyW, bodyH);
   pctx.fill();
   pctx.strokeStyle = 'rgba(0,0,0,0.5)';
-  pctx.lineWidth = 1.3 * scale;
+  pctx.lineWidth = 1.3 * s;
   pctx.stroke();
 
-  const headR = 9 * scale;
-  const headCx = w / 2, headCy = bodyY - headR + 3 * scale;
+  // Shorts
+  pctx.fillStyle = character.shade;
+  pctx.fillRect(bodyX, bodyY + bodyH * 0.72, bodyW, bodyH * 0.28);
+
+  // Shine
+  pctx.fillStyle = 'rgba(255,255,255,0.18)';
+  pctx.fillRect(bodyX + bodyW * 0.18, bodyY + 2 * s, bodyW * 0.2, bodyH * 0.35);
+
+  // Neck
+  pctx.fillStyle = character.shade;
+  pctx.fillRect(w / 2 - 3 * s, bodyY - 4 * s, 6 * s, 6 * s);
+
+  const headR = 9 * s;
+  const headCx = w / 2, headCy = bodyY - headR + 3 * s;
   pctx.fillStyle = character.color;
   pctx.beginPath();
   pctx.arc(headCx, headCy, headR, 0, Math.PI * 2);
   pctx.fill();
+  pctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  pctx.lineWidth = 1.3 * s;
   pctx.stroke();
 
   pctx.fillStyle = '#111111';
   pctx.beginPath();
-  pctx.arc(headCx - 2 * scale, headCy - 1 * scale, 1.1 * scale, 0, Math.PI * 2);
-  pctx.arc(headCx + 3 * scale, headCy - 1 * scale, 1.1 * scale, 0, Math.PI * 2);
+  pctx.arc(headCx - 2 * s, headCy - 1 * s, 1.1 * s, 0, Math.PI * 2);
+  pctx.arc(headCx + 3 * s, headCy - 1 * s, 1.1 * s, 0, Math.PI * 2);
   pctx.fill();
 
   pctx.save();
   pctx.translate(headCx, headCy);
-  pctx.scale(scale, scale);
+  pctx.scale(s, s);
   pctx.translate(-headCx, -headCy);
-  drawPortraitAccessory(pctx, character, headCx, headCy, headR / scale);
+  drawPortraitAccessory(pctx, character, headCx, headCy, headR / s);
   pctx.restore();
 }
 
@@ -543,6 +664,58 @@ function drawPortraitAccessory(pctx, character, headCx, headCy, headR) {
       }
       break;
     }
+    case 'Gale': {
+      pctx.strokeStyle = '#99f6e4';
+      pctx.lineWidth = 1.2;
+      for (let i = 0; i < 2; i++) {
+        pctx.beginPath();
+        pctx.moveTo(headCx - headR + 2, headCy - 2 + i * 3);
+        pctx.quadraticCurveTo(headCx - headR - 5, headCy - 5 + i * 3, headCx - headR - 8, headCy - 1 + i * 3);
+        pctx.stroke();
+      }
+      break;
+    }
+    case 'Boulder': {
+      pctx.fillStyle = '#a8a29e';
+      pctx.beginPath();
+      pctx.moveTo(headCx - 4, headCy - headR + 2);
+      pctx.lineTo(headCx - 1, headCy - headR - 5);
+      pctx.lineTo(headCx + 2, headCy - headR + 1);
+      pctx.lineTo(headCx + 5, headCy - headR - 4);
+      pctx.lineTo(headCx + 3, headCy - headR + 2);
+      pctx.closePath();
+      pctx.fill();
+      break;
+    }
+    case 'Viper': {
+      pctx.fillStyle = '#bef264';
+      pctx.beginPath();
+      pctx.moveTo(headCx - 1, headCy + headR - 1);
+      pctx.lineTo(headCx - 2, headCy + headR + 3);
+      pctx.moveTo(headCx + 1, headCy + headR - 1);
+      pctx.lineTo(headCx + 2, headCy + headR + 3);
+      pctx.strokeStyle = '#bef264';
+      pctx.lineWidth = 1;
+      pctx.stroke();
+      pctx.fillStyle = '#4d7c0f';
+      pctx.fillRect(headCx - headR, headCy - 3, headR * 2, 2.5);
+      break;
+    }
+    case 'Nova': {
+      pctx.fillStyle = '#fde047';
+      const starCx = headCx, starCy = headCy - headR - 2;
+      for (let i = 0; i < 5; i++) {
+        const angle = -Math.PI / 2 + (i * Math.PI * 2) / 5;
+        const r = i === 0 ? 4.5 : 3;
+        pctx.beginPath();
+        pctx.arc(starCx + Math.cos(angle) * r, starCy + Math.sin(angle) * r, 1, 0, Math.PI * 2);
+        pctx.fill();
+      }
+      pctx.beginPath();
+      pctx.arc(starCx, starCy, 2, 0, Math.PI * 2);
+      pctx.fill();
+      break;
+    }
     default: {
       pctx.fillStyle = '#ffffff';
       pctx.fillRect(headCx - headR, headCy - 3, headR * 2, 2.5);
@@ -555,11 +728,44 @@ function updateBigPreview(canvasId, character) {
   drawPortraitIcon(bigCanvas.getContext('2d'), character, 110 / 56);
 }
 
-function buildCharacterPicker(containerId, storageKey, bigPreviewId, getSelected, setSelected) {
+function getCharacterStats(character) {
+  const atk = ATTACKS[character.name];
+  const avgDamage = (atk.punch.damage + atk.kick.damage + atk.uppercut.damage) / 3;
+  const avgRange = (atk.punch.range + atk.kick.range + atk.uppercut.range) / 3;
+  const sizeScore = character.width * character.height;
+  return { speed: character.speed, power: avgDamage, range: avgRange, defense: sizeScore };
+}
+
+const STAT_RANGES = (function() {
+  const allStats = CHARACTERS.map(getCharacterStats);
+  const ranges = {};
+  ['speed', 'power', 'range', 'defense'].forEach(key => {
+    const values = allStats.map(s => s[key]);
+    ranges[key] = { min: Math.min(...values), max: Math.max(...values) };
+  });
+  return ranges;
+}());
+
+function statPercent(key, value) {
+  const r = STAT_RANGES[key];
+  if (r.max === r.min) return 60;
+  return 15 + ((value - r.min) / (r.max - r.min)) * 85;
+}
+
+function updateStatPanel(prefix, character) {
+  const stats = getCharacterStats(character);
+  ['speed', 'power', 'range', 'defense'].forEach(key => {
+    const el = document.getElementById(prefix + 'Stat' + key.charAt(0).toUpperCase() + key.slice(1));
+    if (el) el.style.width = statPercent(key, stats[key]) + '%';
+  });
+}
+
+function buildCharacterPicker(containerId, storageKey, bigPreviewId, statPrefix, getSelected, setSelected) {
   const picker = document.getElementById(containerId);
   picker.innerHTML = '';
   document.getElementById(containerId + 'Name').innerText = CHARACTERS[getSelected()].name;
   updateBigPreview(bigPreviewId, CHARACTERS[getSelected()]);
+  updateStatPanel(statPrefix, CHARACTERS[getSelected()]);
   CHARACTERS.forEach((character, index) => {
     const card = document.createElement('button');
     card.className = 'portrait-card' + (index === getSelected() ? ' selected' : '');
@@ -579,13 +785,13 @@ function buildCharacterPicker(containerId, storageKey, bigPreviewId, getSelected
     card.addEventListener('click', function() {
       setSelected(index);
       localStorage.setItem(storageKey, index);
-      buildCharacterPicker(containerId, storageKey, bigPreviewId, getSelected, setSelected);
+      buildCharacterPicker(containerId, storageKey, bigPreviewId, statPrefix, getSelected, setSelected);
     });
     picker.appendChild(card);
   });
 }
-buildCharacterPicker('p1ColorPicker', 'atlasFighterP1Character', 'p1BigPreview', () => p1CharIndex, (i) => { p1CharIndex = i; });
-buildCharacterPicker('p2ColorPicker', 'atlasFighterP2Character', 'p2BigPreview', () => p2CharIndex, (i) => { p2CharIndex = i; });
+buildCharacterPicker('p1ColorPicker', 'atlasFighterP1Character', 'p1BigPreview', 'p1', () => p1CharIndex, (i) => { p1CharIndex = i; });
+buildCharacterPicker('p2ColorPicker', 'atlasFighterP2Character', 'p2BigPreview', 'p2', () => p2CharIndex, (i) => { p2CharIndex = i; });
 
 function refreshModeUI() {
   document.getElementById('mode2PBtn').className = 'mode-btn' + (!vsAI ? ' selected' : '');
@@ -596,6 +802,10 @@ function refreshModeUI() {
     : '2 Players, same keyboard. Move, Jump, Block as usual.<br>' +
       'Double-tap Left/Right: Punch &nbsp; Double-tap Down: Kick &nbsp; Double-tap Up: Uppercut<br>' +
       'P1: F for Super (when meter is full) &nbsp; P2: / for Super (when meter is full)';
+  document.getElementById('difficultyToggle').style.display = vsAI ? 'flex' : 'none';
+  document.getElementById('diffEasyBtn').className = 'mode-btn' + (aiDifficulty === 'easy' ? ' selected' : '');
+  document.getElementById('diffMediumBtn').className = 'mode-btn' + (aiDifficulty === 'medium' ? ' selected' : '');
+  document.getElementById('diffHardBtn').className = 'mode-btn' + (aiDifficulty === 'hard' ? ' selected' : '');
 }
 document.getElementById('mode2PBtn').addEventListener('click', function() {
   vsAI = false;
@@ -605,6 +815,21 @@ document.getElementById('mode2PBtn').addEventListener('click', function() {
 document.getElementById('modeAIBtn').addEventListener('click', function() {
   vsAI = true;
   localStorage.setItem('atlasFighterVsAI', 'true');
+  refreshModeUI();
+});
+document.getElementById('diffEasyBtn').addEventListener('click', function() {
+  aiDifficulty = 'easy';
+  localStorage.setItem('atlasFighterAIDifficulty', 'easy');
+  refreshModeUI();
+});
+document.getElementById('diffMediumBtn').addEventListener('click', function() {
+  aiDifficulty = 'medium';
+  localStorage.setItem('atlasFighterAIDifficulty', 'medium');
+  refreshModeUI();
+});
+document.getElementById('diffHardBtn').addEventListener('click', function() {
+  aiDifficulty = 'hard';
+  localStorage.setItem('atlasFighterAIDifficulty', 'hard');
   refreshModeUI();
 });
 refreshModeUI();
@@ -645,6 +870,9 @@ function createFighter(x, character, controls) {
     pendingAttackType: null,
     pendingSuper: false,
     superMeter: 0,
+    comboCount: 0,
+    comboTimer: 0,
+    comboFlashTimer: 0,
     controls: controls
   };
 }
@@ -674,12 +902,14 @@ function resetFighters() {
   p1.health = 100; p1.isJumping = false; p1.isCrouching = false; p1.isBlocking = false;
   p1.attackType = null; p1.attackTimer = 0; p1.hitStun = 0; p1.blockStun = 0; p1.impactFlash = 0;
   p1.superMeter = 0; p1.pendingSuper = false;
+  p1.comboCount = 0; p1.comboTimer = 0; p1.comboFlashTimer = 0;
 
   applyCharacter(p2, CHARACTERS[p2CharIndex]);
   p2.x = canvas.width - 200; p2.y = p2.groundY; p2.vx = 0; p2.vy = 0;
   p2.health = 100; p2.isJumping = false; p2.isCrouching = false; p2.isBlocking = false;
   p2.attackType = null; p2.attackTimer = 0; p2.hitStun = 0; p2.blockStun = 0; p2.impactFlash = 0;
   p2.superMeter = 0; p2.pendingSuper = false;
+  p2.comboCount = 0; p2.comboTimer = 0; p2.comboFlashTimer = 0;
 }
 
 function p2Label() {
@@ -691,7 +921,9 @@ function startMatch() {
   p1Rounds = 0;
   p2Rounds = 0;
   gameOverOverlay.style.display = 'none';
-  startRound();
+  resetFighters();
+  phase = 'vs';
+  phaseTimer = 130;
 }
 
 function startRound() {
@@ -723,7 +955,15 @@ function boxesOverlap(a, b) {
          a.y + a.height > b.y;
 }
 
+const AI_DIFFICULTY_SETTINGS = {
+  easy:   { jumpChance: 0.0015, attackChance: 0.022, blockChance: 0.25, superChance: 0.008, repositionChance: 0.015 },
+  medium: { jumpChance: 0.003,  attackChance: 0.045, blockChance: 0.5,  superChance: 0.02,  repositionChance: 0.01  },
+  hard:   { jumpChance: 0.005,  attackChance: 0.075, blockChance: 0.72, superChance: 0.035, repositionChance: 0.005 }
+};
+
 function updateAIInput(ai, opponent) {
+  const settings = AI_DIFFICULTY_SETTINGS[aiDifficulty] || AI_DIFFICULTY_SETTINGS.medium;
+
   keys[ai.controls.left] = false;
   keys[ai.controls.right] = false;
   keys[ai.controls.down] = false;
@@ -739,7 +979,7 @@ function updateAIInput(ai, opponent) {
   const attackRange = 65;
   const opponentThreat = opponent.attackType && opponent.attackTimer > 0 && dist < 90;
 
-  if (opponentThreat && Math.random() < 0.55) {
+  if (opponentThreat && Math.random() < settings.blockChance) {
     keys[ai.controls.down] = true;
     return;
   }
@@ -747,20 +987,20 @@ function updateAIInput(ai, opponent) {
   if (dist > attackRange) {
     if (dir === 1) keys[ai.controls.right] = true;
     else keys[ai.controls.left] = true;
-    if (!ai.isJumping && Math.random() < 0.003) {
+    if (!ai.isJumping && Math.random() < settings.jumpChance) {
       keys[ai.controls.up] = true;
     }
   } else {
-    if (Math.random() < 0.045) {
+    if (Math.random() < settings.attackChance) {
       const moves = ['punch', 'kick', 'uppercut'];
       ai.pendingAttackType = moves[Math.floor(Math.random() * moves.length)];
-    } else if (Math.random() < 0.01) {
+    } else if (Math.random() < settings.repositionChance) {
       if (dir === 1) keys[ai.controls.left] = true;
       else keys[ai.controls.right] = true;
     }
   }
 
-  if (ai.superMeter >= SUPER_MAX && dist < 350 && Math.random() < 0.02) {
+  if (ai.superMeter >= SUPER_MAX && dist < 350 && Math.random() < settings.superChance) {
     ai.pendingSuper = true;
   }
 }
@@ -841,6 +1081,11 @@ function updateFighterPhysics(f, other) {
   if (f.hitStun > 0) f.hitStun--;
   if (f.blockStun > 0) f.blockStun--;
   if (f.impactFlash > 0) f.impactFlash--;
+  if (f.comboTimer > 0) {
+    f.comboTimer--;
+    if (f.comboTimer <= 0) f.comboCount = 0;
+  }
+  if (f.comboFlashTimer > 0) f.comboFlashTimer--;
   f.pendingAttackType = null;
   f.pendingSuper = false;
 }
@@ -888,9 +1133,20 @@ function checkAttack(attacker, defender) {
     defender.vx = attacker.facing * 2;
     defender.impactFlash = 10;
     hitStopTimer = 3;
+    defender.comboCount = 0;
+    defender.comboTimer = 0;
     sound.block();
   } else {
-    defender.health -= atk.damage;
+    if (defender.comboTimer > 0) {
+      defender.comboCount++;
+    } else {
+      defender.comboCount = 1;
+    }
+    defender.comboTimer = COMBO_WINDOW;
+    defender.comboFlashTimer = 45;
+    const comboMultiplier = Math.min(1.6, 1 + (defender.comboCount - 1) * COMBO_DAMAGE_BONUS);
+
+    defender.health -= atk.damage * comboMultiplier;
     defender.hitStun = HITSTUN_FRAMES;
     defender.vx = attacker.facing * 5;
     defender.impactFlash = 10;
@@ -898,6 +1154,7 @@ function checkAttack(attacker, defender) {
     screenShakeTimer = isSuper ? 16 : 8;
     screenShakeMag = isSuper ? 8 : 4;
     sound.hit();
+    if (defender.comboCount >= 2) sound.combo();
   }
 
   if (defender.health < 0) defender.health = 0;
@@ -908,6 +1165,14 @@ function update() {
 
   if (hitStopTimer > 0) {
     hitStopTimer--;
+    return;
+  }
+
+  if (phase === 'vs') {
+    phaseTimer--;
+    if (phaseTimer <= 0) {
+      startRound();
+    }
     return;
   }
 
@@ -983,58 +1248,108 @@ function update() {
   }
 }
 
+const ARENA_STARS = (function() {
+  const stars = [];
+  for (let i = 0; i < 40; i++) {
+    stars.push({
+      x: Math.random() * 760,
+      y: Math.random() * 180,
+      r: Math.random() * 1.3 + 0.4,
+      offset: Math.random() * Math.PI * 2
+    });
+  }
+  return stars;
+}());
+
 function drawArenaBackground() {
   const groundLine = canvas.height - GROUND_HEIGHT;
 
+  // Dusk sky: deep indigo fading into warm magenta near the horizon
   const skyGradient = context.createLinearGradient(0, 0, 0, groundLine);
-  skyGradient.addColorStop(0, '#1b1230');
-  skyGradient.addColorStop(0.6, '#3b2458');
-  skyGradient.addColorStop(1, '#6a3f85');
+  skyGradient.addColorStop(0, '#120a24');
+  skyGradient.addColorStop(0.45, '#2a1348');
+  skyGradient.addColorStop(0.8, '#5c2a63');
+  skyGradient.addColorStop(1, '#9b4b6e');
   context.fillStyle = skyGradient;
   context.fillRect(0, 0, canvas.width, groundLine);
 
-  // Distant skyline silhouette
-  context.fillStyle = 'rgba(15, 8, 25, 0.6)';
-  const buildingWidths = [60, 40, 75, 50, 90, 45, 65, 55, 80];
-  let bx = -10;
-  buildingWidths.forEach((w, i) => {
-    const bh = 60 + (i % 3) * 35;
-    context.fillRect(bx, groundLine - bh, w, bh);
-    bx += w + 18;
+  // Twinkling stars in the upper sky
+  context.fillStyle = '#ffffff';
+  ARENA_STARS.forEach(star => {
+    const twinkle = 0.3 + 0.5 * Math.abs(Math.sin(frameCount * 0.03 + star.offset));
+    context.globalAlpha = twinkle;
+    context.beginPath();
+    context.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+    context.fill();
+  });
+  context.globalAlpha = 1;
+
+  // Glowing moon near the horizon
+  const moonX = canvas.width * 0.78, moonY = groundLine * 0.4;
+  const moonGlow = context.createRadialGradient(moonX, moonY, 2, moonX, moonY, 60);
+  moonGlow.addColorStop(0, 'rgba(255, 220, 200, 0.5)');
+  moonGlow.addColorStop(1, 'rgba(255, 220, 200, 0)');
+  context.fillStyle = moonGlow;
+  context.fillRect(moonX - 60, moonY - 60, 120, 120);
+  context.fillStyle = '#fff3e6';
+  context.beginPath();
+  context.arc(moonX, moonY, 18, 0, Math.PI * 2);
+  context.fill();
+
+  // Far mountain layer
+  context.fillStyle = 'rgba(60, 35, 80, 0.55)';
+  drawRidge(groundLine, 50, [0.15, 0.35, 0.2, 0.4, 0.1]);
+
+  // Near mountain layer
+  context.fillStyle = 'rgba(25, 14, 40, 0.75)';
+  drawRidge(groundLine, 85, [0.3, 0.1, 0.45, 0.2, 0.35]);
+
+  // Side pillars framing the stage
+  ['left', 'right'].forEach(side => {
+    const px = side === 'left' ? 6 : canvas.width - 22;
+    const pillarGlow = context.createLinearGradient(0, 0, 0, groundLine);
+    pillarGlow.addColorStop(0, 'rgba(168,85,247,0.05)');
+    pillarGlow.addColorStop(0.7, 'rgba(168,85,247,0.35)');
+    pillarGlow.addColorStop(1, 'rgba(168,85,247,0.6)');
+    context.fillStyle = pillarGlow;
+    context.fillRect(px, 0, 16, groundLine);
+    context.fillStyle = 'rgba(255,255,255,0.25)';
+    context.fillRect(px + 6, 0, 2, groundLine);
   });
 
-  // Crowd railing near the back
-  const railY = groundLine - 34;
-  context.fillStyle = 'rgba(0,0,0,0.35)';
-  context.fillRect(0, railY, canvas.width, 34);
-  context.fillStyle = 'rgba(255,255,255,0.15)';
-  for (let cx = 10; cx < canvas.width; cx += 14) {
-    const bob = Math.sin(frameCount * 0.05 + cx) * 2;
-    context.beginPath();
-    context.arc(cx, railY + 10 + bob, 4, 0, Math.PI * 2);
-    context.fill();
+  // Ground: checkered tile floor
+  const tileSize = 38;
+  for (let gy = groundLine; gy < canvas.height; gy += tileSize) {
+    for (let gx = 0; gx < canvas.width; gx += tileSize) {
+      const row = Math.round((gy - groundLine) / tileSize);
+      const col = Math.round(gx / tileSize);
+      context.fillStyle = (row + col) % 2 === 0 ? '#1e1230' : '#150c22';
+      context.fillRect(gx, gy, tileSize, Math.min(tileSize, canvas.height - gy));
+    }
   }
-  context.fillStyle = '#a855f7';
-  context.fillRect(0, railY, canvas.width, 3);
 
-  // Ground
-  const groundGradient = context.createLinearGradient(0, groundLine, 0, canvas.height);
-  groundGradient.addColorStop(0, '#2a1a40');
-  groundGradient.addColorStop(1, '#140d20');
-  context.fillStyle = groundGradient;
-  context.fillRect(0, groundLine, canvas.width, GROUND_HEIGHT);
-
-  context.strokeStyle = 'rgba(168, 85, 247, 0.25)';
-  context.lineWidth = 1;
-  for (let gx = 0; gx < canvas.width; gx += 40) {
-    context.beginPath();
-    context.moveTo(gx, groundLine);
-    context.lineTo(gx - 15, canvas.height);
-    context.stroke();
-  }
+  // Glowing center divider line
+  context.save();
+  context.shadowColor = '#a855f7';
+  context.shadowBlur = 8;
+  context.fillStyle = 'rgba(168,85,247,0.6)';
+  context.fillRect(canvas.width / 2 - 2, groundLine, 4, GROUND_HEIGHT);
+  context.restore();
 
   context.fillStyle = '#a855f7';
   context.fillRect(0, groundLine, canvas.width, 4);
+}
+
+function drawRidge(groundLine, baseHeight, heights) {
+  const segW = canvas.width / (heights.length - 1);
+  context.beginPath();
+  context.moveTo(0, groundLine);
+  heights.forEach((h, i) => {
+    context.lineTo(i * segW, groundLine - baseHeight - h * baseHeight * 2);
+  });
+  context.lineTo(canvas.width, groundLine);
+  context.closePath();
+  context.fill();
 }
 
 function drawCharacterAccessory(f, headCx, headCy, headR, shadeColor) {
@@ -1126,6 +1441,68 @@ function drawCharacterAccessory(f, headCx, headCy, headR, shadeColor) {
         context.lineWidth = 1;
         context.stroke();
       }
+      break;
+    }
+    case 'Gale': {
+      context.strokeStyle = '#99f6e4';
+      context.lineWidth = 2;
+      context.lineCap = 'round';
+      for (let i = 0; i < 3; i++) {
+        context.beginPath();
+        context.moveTo(headCx - headR + 3, headCy - 3 + i * 4);
+        context.quadraticCurveTo(headCx - headR - 9, headCy - 8 + i * 4, headCx - headR - 14, headCy - 2 + i * 4);
+        context.stroke();
+      }
+      break;
+    }
+    case 'Boulder': {
+      context.fillStyle = '#a8a29e';
+      context.beginPath();
+      context.moveTo(headCx - 7, headCy - headR + 3);
+      context.lineTo(headCx - 2, headCy - headR - 9);
+      context.lineTo(headCx + 3, headCy - headR + 1);
+      context.lineTo(headCx + 8, headCy - headR - 7);
+      context.lineTo(headCx + 5, headCy - headR + 3);
+      context.closePath();
+      context.fill();
+      context.strokeStyle = OUTLINE_COLOR;
+      context.lineWidth = 1.5;
+      context.stroke();
+      break;
+    }
+    case 'Viper': {
+      context.strokeStyle = '#bef264';
+      context.lineWidth = 2;
+      context.lineCap = 'round';
+      context.beginPath();
+      context.moveTo(headCx - 2, headCy + headR - 1);
+      context.lineTo(headCx - 3, headCy + headR + 6);
+      context.moveTo(headCx + 2, headCy + headR - 1);
+      context.lineTo(headCx + 3, headCy + headR + 6);
+      context.stroke();
+      context.fillStyle = '#4d7c0f';
+      context.fillRect(headCx - headR, headCy - 4, headR * 2, 4);
+      break;
+    }
+    case 'Nova': {
+      context.fillStyle = '#fde047';
+      const starCx = headCx, starCy = headCy - headR - 4;
+      context.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const outerAngle = -Math.PI / 2 + (i * Math.PI * 2) / 5;
+        const innerAngle = outerAngle + Math.PI / 5;
+        const ox = starCx + Math.cos(outerAngle) * 7;
+        const oy = starCy + Math.sin(outerAngle) * 7;
+        const ix = starCx + Math.cos(innerAngle) * 3;
+        const iy = starCy + Math.sin(innerAngle) * 3;
+        if (i === 0) context.moveTo(ox, oy); else context.lineTo(ox, oy);
+        context.lineTo(ix, iy);
+      }
+      context.closePath();
+      context.fill();
+      context.strokeStyle = OUTLINE_COLOR;
+      context.lineWidth = 1;
+      context.stroke();
       break;
     }
     default: {
@@ -1274,6 +1651,118 @@ function drawSuperEffect(f, sup, attackActive, bodyY, torsoHeight, cx) {
       context.fill();
       break;
     }
+    case 'Gale': {
+      const elapsed = f.attackTotal - f.attackTimer;
+      const activeProgress = Math.min(1, Math.max(0, (elapsed - sup.startup) / sup.active));
+      const cycloneX = originX + dir * activeProgress * sup.range * 0.7;
+      const cycloneY = originY;
+      for (let ring = 0; ring < 3; ring++) {
+        const ringR = 10 + ring * 7;
+        const spin = frameCount * (0.3 + ring * 0.1);
+        context.strokeStyle = 'rgba(153, 246, 228, ' + (0.7 - ring * 0.15) + ')';
+        context.lineWidth = 3;
+        context.beginPath();
+        context.arc(cycloneX, cycloneY, ringR, spin, spin + Math.PI * 1.3);
+        context.stroke();
+      }
+      for (let i = 0; i < 3; i++) {
+        const angle = frameCount * 0.4 + (i / 3) * Math.PI * 2;
+        context.fillStyle = '#2dd4bf';
+        context.beginPath();
+        context.arc(cycloneX + Math.cos(angle) * 20, cycloneY + Math.sin(angle) * 20, 3, 0, Math.PI * 2);
+        context.fill();
+      }
+      break;
+    }
+    case 'Boulder': {
+      const elapsed = f.attackTotal - f.attackTimer;
+      const activeProgress = Math.min(1, Math.max(0, (elapsed - sup.startup) / sup.active));
+      const rockCount = 4;
+      for (let i = 0; i < rockCount; i++) {
+        const rockFrac = i / rockCount;
+        if (rockFrac > activeProgress) continue;
+        const popAge = activeProgress - rockFrac;
+        const rockH = Math.min(1, popAge * 5) * 44;
+        const rx = originX + dir * (30 + rockFrac * sup.range * 0.8);
+        context.fillStyle = '#78716c';
+        context.strokeStyle = OUTLINE_COLOR;
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(rx - 12, groundLine);
+        context.lineTo(rx - 7, groundLine - rockH);
+        context.lineTo(rx, groundLine - rockH - 6);
+        context.lineTo(rx + 7, groundLine - rockH);
+        context.lineTo(rx + 12, groundLine);
+        context.closePath();
+        context.fill();
+        context.stroke();
+      }
+      context.fillStyle = 'rgba(120, 113, 108, 0.3)';
+      context.beginPath();
+      context.arc(originX + dir * 20, groundLine - 5, 28 * (0.5 + activeProgress * 0.5), 0, Math.PI * 2);
+      context.fill();
+      break;
+    }
+    case 'Viper': {
+      const elapsed = f.attackTotal - f.attackTimer;
+      const activeProgress = Math.min(1, Math.max(0, (elapsed - sup.startup) / sup.active));
+      const cloudX = originX + dir * activeProgress * sup.range;
+      for (let i = 0; i < 14; i++) {
+        const seed = i * 13.7;
+        const px = cloudX + (Math.sin(seed + frameCount * 0.05) * 30);
+        const py = originY + (Math.cos(seed + frameCount * 0.04) * 24);
+        context.fillStyle = 'rgba(132, 204, 22, ' + (0.15 + (i % 3) * 0.1) + ')';
+        context.beginPath();
+        context.arc(px, py, 6 + (i % 3) * 3, 0, Math.PI * 2);
+        context.fill();
+      }
+      context.fillStyle = '#bef264';
+      context.beginPath();
+      context.arc(cloudX, originY, 8, 0, Math.PI * 2);
+      context.fill();
+      break;
+    }
+    case 'Nova': {
+      const elapsed = f.attackTotal - f.attackTimer;
+      const activeProgress = Math.min(1, Math.max(0, (elapsed - sup.startup) / sup.active));
+      const starCount = 5;
+      for (let i = 0; i < starCount; i++) {
+        const starFrac = i / starCount;
+        const fallDelay = starFrac * 0.5;
+        const fallProgress = Math.min(1, Math.max(0, (activeProgress - fallDelay) / 0.5));
+        if (fallProgress <= 0) continue;
+        const targetX = originX + dir * (40 + starFrac * sup.range * 0.8);
+        const sx = targetX + Math.sin(i * 7) * 15;
+        const sy = fallProgress * groundLine;
+        context.save();
+        context.translate(sx, sy);
+        context.rotate(frameCount * 0.1 + i);
+        context.fillStyle = '#fde047';
+        context.shadowColor = '#f472b6';
+        context.shadowBlur = 10;
+        context.beginPath();
+        for (let p = 0; p < 5; p++) {
+          const outerAngle = -Math.PI / 2 + (p * Math.PI * 2) / 5;
+          const innerAngle = outerAngle + Math.PI / 5;
+          const ox = Math.cos(outerAngle) * 8;
+          const oy = Math.sin(outerAngle) * 8;
+          const ix = Math.cos(innerAngle) * 3.5;
+          const iy = Math.sin(innerAngle) * 3.5;
+          if (p === 0) context.moveTo(ox, oy); else context.lineTo(ox, oy);
+          context.lineTo(ix, iy);
+        }
+        context.closePath();
+        context.fill();
+        context.restore();
+        if (fallProgress >= 0.98) {
+          context.fillStyle = 'rgba(244, 114, 182, 0.3)';
+          context.beginPath();
+          context.arc(sx, groundLine, 16, 0, Math.PI * 2);
+          context.fill();
+        }
+      }
+      break;
+    }
     default: {
       const beamW = sup.range;
       const beamGradient = context.createLinearGradient(originX, 0, originX + dir * beamW, 0);
@@ -1363,6 +1852,74 @@ function drawCharacterBody(f, bodyY, torsoHeight, cx, shadeColor) {
       context.stroke();
       context.fillStyle = shadeColor;
       fillRoundRectCtx(f.x + w * 0.08, bodyY + torsoHeight * 0.72, w * 0.84, torsoHeight * 0.14, 3, true);
+      break;
+    }
+    case 'Gale': {
+      context.strokeStyle = '#99f6e4';
+      context.lineWidth = 2.5;
+      context.lineCap = 'round';
+      context.beginPath();
+      context.arc(cx, bodyY + torsoHeight * 0.5, 9, 0.3, Math.PI * 1.6);
+      context.stroke();
+      context.beginPath();
+      context.arc(cx, bodyY + torsoHeight * 0.5, 5, 0.9, Math.PI * 1.2);
+      context.stroke();
+      context.fillStyle = shadeColor;
+      fillRoundRectCtx(f.x + w * 0.08, bodyY + torsoHeight * 0.74, w * 0.84, torsoHeight * 0.12, 3, true);
+      break;
+    }
+    case 'Boulder': {
+      context.strokeStyle = 'rgba(0,0,0,0.3)';
+      context.lineWidth = 2;
+      context.beginPath();
+      context.moveTo(cx - w * 0.2, bodyY + torsoHeight * 0.15);
+      context.lineTo(cx - w * 0.05, bodyY + torsoHeight * 0.35);
+      context.lineTo(cx - w * 0.15, bodyY + torsoHeight * 0.5);
+      context.moveTo(cx + w * 0.15, bodyY + torsoHeight * 0.2);
+      context.lineTo(cx + w * 0.25, bodyY + torsoHeight * 0.4);
+      context.stroke();
+      context.fillStyle = '#44403c';
+      fillRoundRectCtx(f.x + w * 0.04, bodyY + torsoHeight * 0.68, w * 0.92, torsoHeight * 0.18, 3, true);
+      break;
+    }
+    case 'Viper': {
+      context.fillStyle = '#bef264';
+      context.strokeStyle = '#4d7c0f';
+      context.lineWidth = 1.5;
+      const vx = cx, vy = bodyY + torsoHeight * 0.5;
+      context.beginPath();
+      context.moveTo(vx, vy - 8);
+      context.lineTo(vx + 6, vy);
+      context.lineTo(vx, vy + 8);
+      context.lineTo(vx - 6, vy);
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.fillStyle = shadeColor;
+      fillRoundRectCtx(f.x + w * 0.08, bodyY + torsoHeight * 0.74, w * 0.84, torsoHeight * 0.12, 3, true);
+      break;
+    }
+    case 'Nova': {
+      const nx = cx, ny = bodyY + torsoHeight * 0.5;
+      context.fillStyle = '#fde047';
+      context.shadowColor = '#f472b6';
+      context.shadowBlur = 6;
+      context.beginPath();
+      for (let p = 0; p < 5; p++) {
+        const outerAngle = -Math.PI / 2 + (p * Math.PI * 2) / 5;
+        const innerAngle = outerAngle + Math.PI / 5;
+        const ox = nx + Math.cos(outerAngle) * 8;
+        const oy = ny + Math.sin(outerAngle) * 8;
+        const ix = nx + Math.cos(innerAngle) * 3.5;
+        const iy = ny + Math.sin(innerAngle) * 3.5;
+        if (p === 0) context.moveTo(ox, oy); else context.lineTo(ox, oy);
+        context.lineTo(ix, iy);
+      }
+      context.closePath();
+      context.fill();
+      context.shadowBlur = 0;
+      context.fillStyle = shadeColor;
+      fillRoundRectCtx(f.x + w * 0.08, bodyY + torsoHeight * 0.74, w * 0.84, torsoHeight * 0.12, 3, true);
       break;
     }
     default: {
@@ -1706,6 +2263,20 @@ function drawFighter(f) {
     }
     context.restore();
   }
+
+  // Combo counter
+  if (f.comboFlashTimer > 0 && f.comboCount >= 2) {
+    const t = f.comboFlashTimer / 45;
+    context.save();
+    context.globalAlpha = Math.min(1, t * 2);
+    context.textAlign = 'center';
+    context.fillStyle = '#fde047';
+    context.font = '800 ' + (16 + Math.min(4, f.comboCount)) + 'px "DM Sans", sans-serif';
+    context.shadowColor = '#000000';
+    context.shadowBlur = 4;
+    context.fillText(f.comboCount + ' HIT COMBO!', cx, bodyY - 38 - (1 - t) * 10);
+    context.restore();
+  }
 }
 
 
@@ -1835,6 +2406,33 @@ function draw() {
   drawFighter(p1);
   drawFighter(p2);
   drawHealthBars();
+
+  if (phase === 'vs') {
+    context.fillStyle = 'rgba(0,0,0,0.55)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    const slideIn = Math.min(1, (130 - phaseTimer) / 20);
+    context.textAlign = 'left';
+    context.fillStyle = p1.color;
+    context.font = '800 28px "DM Sans", sans-serif';
+    context.fillText(p1.characterName.toUpperCase(), -80 + 110 * slideIn, canvas.height / 2);
+
+    context.textAlign = 'right';
+    context.fillStyle = p2.color;
+    context.fillText((vsAI ? 'CPU · ' : '') + p2.characterName.toUpperCase(), canvas.width + 80 - 110 * slideIn, canvas.height / 2);
+
+    context.textAlign = 'center';
+    context.fillStyle = '#ffffff';
+    context.font = '800 50px "DM Sans", sans-serif';
+    const vsPulse = 1 + 0.12 * Math.sin(frameCount * 0.3);
+    context.save();
+    context.translate(canvas.width / 2, canvas.height / 2);
+    context.scale(vsPulse, vsPulse);
+    context.shadowColor = '#a855f7';
+    context.shadowBlur = 20;
+    context.fillText('VS', 0, 0);
+    context.restore();
+  }
 
   if (phase === 'intro') {
     context.fillStyle = '#ffffff';
