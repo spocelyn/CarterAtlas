@@ -182,6 +182,20 @@ canvas {
   border-color: var(--accent1);
   background: rgba(168,85,247,0.2);
 }
+.char-swatch.locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.locked-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
 .char-swatch-dot {
   width: 26px;
   height: 26px;
@@ -203,7 +217,7 @@ canvas {
   <canvas id="game" width="760" height="460"></canvas>
   <div class="overlay" id="startOverlay">
     <h2>ZOMBIE SHOOTER</h2>
-    <p>Pick your gun below for each character. Player 1: <b>Shift</b> to roll, <b>Q</b> to throw a grenade, <b>E</b> for your class ability. Player 2: <b>Enter</b> to roll, <b>Ctrl</b> to throw a grenade, <b>'</b> for ability. Watch for yellow Boomers that explode when killed, and green Venom zombies that poison you. Every 5th wave is a BOSS WAVE, every 3rd brings a HORDE. If a teammate goes down, stay close to revive them!</p>
+    <p>Pick your gun below for each character. Player 1: <b>Shift</b> to roll, <b>Q</b> for grenade, <b>E</b> for your class ability, <b>F</b> to loot. Player 2: <b>Enter</b> to roll, <b>Ctrl</b> for grenade, <b>'</b> for ability, <b>;</b> to loot. Find gas stations, bunkers and radio towers and hold your loot key nearby for ammo, armor, or a supply drop. Watch for yellow Boomers that explode when killed, and green Venom zombies that poison you. Every 5th wave is a BOSS WAVE, every 3rd brings a HORDE.</p>
     <div class="mode-toggle">
       <button class="mode-btn active" id="mode1Btn">1 PLAYER</button>
       <button class="mode-btn" id="mode2Btn">2 PLAYERS</button>
@@ -241,6 +255,7 @@ canvas {
     <p id="finalStats">Score: 0 &mdash; Wave: 1</p>
     <p id="highScoreNote" style="color:#fde047;"></p>
     <p id="bestWaveNote" style="color:#86efac;"></p>
+    <p id="runSummary" style="color:#c9c9da; font-size:0.85rem; line-height:1.6;"></p>
     <button class="btn" id="restartBtn">PLAY AGAIN</button>
   </div>
   <div class="overlay hidden" id="pauseOverlay">
@@ -266,6 +281,7 @@ const pauseBtn = document.getElementById('pauseBtn');
 const finalStats = document.getElementById('finalStats');
 const highScoreNote = document.getElementById('highScoreNote');
 const bestWaveNote = document.getElementById('bestWaveNote');
+const runSummary = document.getElementById('runSummary');
 const mode1Btn = document.getElementById('mode1Btn');
 const mode2Btn = document.getElementById('mode2Btn');
 const diffEasyBtn = document.getElementById('diffEasyBtn');
@@ -298,6 +314,52 @@ function ensureAudio() {
   if (audioCtx.state === 'suspended') audioCtx.resume();
 }
 
+const AMBIENT_VOLUME = 0.11;
+let ambientNodes = null;
+function startAmbientMusic() {
+  if (!audioCtx || ambientNodes) return;
+  const masterGain = audioCtx.createGain();
+  masterGain.gain.value = muted ? 0 : AMBIENT_VOLUME;
+  masterGain.connect(audioCtx.destination);
+
+  // frequencies kept above ~100Hz so they're actually reproducible on
+  // laptop/phone speakers, not just subwoofers
+  const osc1 = audioCtx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.value = 110;
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = 116;
+  const osc3 = audioCtx.createOscillator();
+  osc3.type = 'triangle';
+  osc3.frequency.value = 220;
+  const osc3Gain = audioCtx.createGain();
+  osc3Gain.gain.value = 0.3;
+  const lfo = audioCtx.createOscillator();
+  lfo.frequency.value = 0.07;
+  const lfoGain = audioCtx.createGain();
+  lfoGain.gain.value = 0.05;
+  lfo.connect(lfoGain);
+  lfoGain.connect(masterGain.gain);
+
+  osc1.connect(masterGain);
+  osc2.connect(masterGain);
+  osc3.connect(osc3Gain);
+  osc3Gain.connect(masterGain);
+  osc1.start();
+  osc2.start();
+  osc3.start();
+  lfo.start();
+
+  ambientNodes = { masterGain };
+}
+function setAmbientMuted(isMuted) {
+  if (ambientNodes) ambientNodes.masterGain.gain.value = isMuted ? 0 : AMBIENT_VOLUME;
+}
+function playDistantMoan() {
+  beep(140 + Math.random() * 40, 1.0, 'sawtooth', 0.09, 180 + Math.random() * 30);
+}
+
 function beep(freq, duration, type, volume, startFreq) {
   if (muted || !audioCtx) return;
   const osc = audioCtx.createOscillator();
@@ -317,6 +379,7 @@ function playShoot(weaponKey) {
   if (weaponKey === 'shotgun') beep(180, 0.15, 'square', 0.16, 260);
   else if (weaponKey === 'rifle') beep(500, 0.05, 'square', 0.07, 650);
   else if (weaponKey === 'rocket') beep(90, 0.3, 'sawtooth', 0.2, 170);
+  else if (weaponKey === 'smg') beep(380, 0.04, 'square', 0.07, 460);
   else beep(420, 0.07, 'square', 0.09, 520);
 }
 function playZombieHit() { beep(140, 0.07, 'square', 0.06, 90); }
@@ -352,6 +415,7 @@ muteBtn.addEventListener('click', () => {
   muted = !muted;
   localStorage.setItem(SOUND_MUTE_KEY, String(muted));
   updateMuteBtn();
+  setAmbientMuted(muted);
 });
 updateMuteBtn();
 
@@ -372,18 +436,25 @@ window.addEventListener('keydown', (e) => {
 
 const CHARACTERS = [
   { name: 'Jake',  light: '#93c5fd', dark: '#3b82f6', cap: '#1e293b', headwear: 'cap',     startWeapon: 'pistol',
-    role: 'Scout', roleDesc: '+Speed, faster dash' },
+    role: 'Scout', roleDesc: '+Speed, faster dash', unlockWave: 0 },
   { name: 'Maria', light: '#fca5a5', dark: '#dc2626', cap: '#7f1d1d', headwear: 'bandana', startWeapon: 'shotgun',
-    role: 'Gunner', roleDesc: '+Max health, -damage taken' },
+    role: 'Gunner', roleDesc: '+Max health, -damage taken', unlockWave: 5 },
   { name: 'Diego', light: '#86efac', dark: '#16a34a', cap: '#052e16', headwear: 'beanie',  startWeapon: 'rifle',
-    role: 'Medic', roleDesc: 'Faster revives, +healing' },
+    role: 'Medic', roleDesc: 'Faster revives, +healing', unlockWave: 10 },
   { name: 'Riley', light: '#d8b4fe', dark: '#9333ea', cap: '#4c1d95', headwear: 'ponytail', startWeapon: 'rocket',
-    role: 'Demolitions', roleDesc: '+Blast radius, +max ammo' }
+    role: 'Demolitions', roleDesc: '+Blast radius, +max ammo', unlockWave: 15 }
 ];
+
+function getBestWave() {
+  return Number(localStorage.getItem(BEST_WAVE_KEY)) || 0;
+}
+function isCharacterUnlocked(idx) {
+  return getBestWave() >= CHARACTERS[idx].unlockWave;
+}
 
 let numPlayers = 1;
 let selectedP1Character = 0;
-let selectedP2Character = 1;
+let selectedP2Character = isCharacterUnlocked(1) ? 1 : 0;
 
 function renderCharPreview(ctx, canvasEl, characterIndex) {
   ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
@@ -393,10 +464,17 @@ function renderCharPreview(ctx, canvasEl, characterIndex) {
 function buildCharOptions(container, getSelected, onSelect, previewCtx, previewCanvas, roleDescEl) {
   container.innerHTML = '';
   CHARACTERS.forEach((ch, idx) => {
+    const unlocked = isCharacterUnlocked(idx);
     const btn = document.createElement('button');
-    btn.className = 'char-swatch' + (idx === getSelected() ? ' selected' : '');
-    btn.innerHTML = '<span class="char-swatch-dot" style="background:' + ch.dark + ';"></span><span class="char-swatch-name">' + ch.name + '</span>';
+    btn.className = 'char-swatch' + (idx === getSelected() ? ' selected' : '') + (unlocked ? '' : ' locked');
+    if (unlocked) {
+      btn.innerHTML = '<span class="char-swatch-dot" style="background:' + ch.dark + ';"></span><span class="char-swatch-name">' + ch.name + '</span>';
+    } else {
+      btn.innerHTML = '<span class="char-swatch-dot locked-dot">&#128274;</span><span class="char-swatch-name">Wave ' + ch.unlockWave + '</span>';
+      btn.title = 'Reach wave ' + ch.unlockWave + ' to unlock ' + ch.name;
+    }
     btn.addEventListener('click', () => {
+      if (!isCharacterUnlocked(idx)) return;
       onSelect(idx);
       container.querySelectorAll('.char-swatch').forEach(el => el.classList.remove('selected'));
       btn.classList.add('selected');
@@ -459,25 +537,26 @@ function makeControls(index, totalPlayers) {
   if (totalPlayers === 1) {
     return {
       up: ['w', 'arrowup'], down: ['s', 'arrowdown'], left: ['a', 'arrowleft'], right: ['d', 'arrowright'],
-      dash: ['shift', 'enter'], grenade: ['q', 'control'], ability: ['e', "'"]
+      dash: ['shift', 'enter'], grenade: ['q', 'control'], ability: ['e', "'"], interact: ['f', ';']
     };
   }
   if (index === 0) {
-    return { up: ['w'], down: ['s'], left: ['a'], right: ['d'], dash: ['shift'], grenade: ['q'], ability: ['e'] };
+    return { up: ['w'], down: ['s'], left: ['a'], right: ['d'], dash: ['shift'], grenade: ['q'], ability: ['e'], interact: ['f'] };
   }
-  // P2's grenade/ability keys are kept off to the side of the arrow cluster -
+  // P2's grenade/ability/interact keys are kept off to the side of the arrow cluster -
   // keys immediately next to the arrows (like "/" or ".") can fail to register
   // together with arrow presses on some keyboards (ghosting).
-  return { up: ['arrowup'], down: ['arrowdown'], left: ['arrowleft'], right: ['arrowright'], dash: ['enter'], grenade: ['control'], ability: ["'"] };
+  return { up: ['arrowup'], down: ['arrowdown'], left: ['arrowleft'], right: ['arrowright'], dash: ['enter'], grenade: ['control'], ability: ["'"], interact: [';'] };
 }
 
 const WEAPON_TYPES = {
   pistol:  { name: 'Pistol',  color: '#fde047', cooldown: 6,  damage: 1, pellets: 1, spread: 0,    ammoCost: 1, maxAmmo: 30, bulletRadius: 6 },
+  smg:     { name: 'SMG',     color: '#22d3ee', cooldown: 4,  damage: 1, pellets: 1, spread: 0.12, ammoCost: 1, maxAmmo: 50, bulletRadius: 4 },
   shotgun: { name: 'Shotgun', color: '#f97316', cooldown: 22, damage: 1, pellets: 4, spread: 0.3,  ammoCost: 2, maxAmmo: 20, bulletRadius: 5 },
   rifle:   { name: 'Rifle',   color: '#38bdf8', cooldown: 3,  damage: 1, pellets: 1, spread: 0.06, ammoCost: 1, maxAmmo: 40, bulletRadius: 5 },
   rocket:  { name: 'Rocket',  color: '#a855f7', cooldown: 40, damage: 3, pellets: 1, spread: 0,    ammoCost: 1, maxAmmo: 6,  bulletRadius: 9, splashRadius: 55 }
 };
-const WEAPON_ORDER = ['pistol', 'shotgun', 'rifle', 'rocket'];
+const WEAPON_ORDER = ['pistol', 'smg', 'shotgun', 'rifle', 'rocket'];
 let selectedP1Weapon = CHARACTERS[selectedP1Character].startWeapon;
 let selectedP2Weapon = CHARACTERS[selectedP2Character].startWeapon;
 
@@ -501,7 +580,7 @@ buildWeaponOptions(p1WeaponOptions, () => selectedP1Weapon, (key) => { selectedP
 buildWeaponOptions(p2WeaponOptions, () => selectedP2Weapon, (key) => { selectedP2Weapon = key; });
 
 const AMMO_PICKUP_AMOUNT = 10;
-const MAX_PICKUPS_ON_FIELD = 4;
+const MAX_PICKUPS_ON_FIELD = 6;
 
 let players = [];
 let bullets = [];
@@ -516,6 +595,78 @@ function triggerScreenShake(mag, duration) {
 }
 let explosions = [];
 let grenades = [];
+
+// day/night cycle: a smooth sine wave from 0 (full day) to 1 (full night)
+const DAY_NIGHT_PERIOD = 2400;
+function getNightFactor() {
+  return (1 - Math.cos((frameCount / DAY_NIGHT_PERIOD) * Math.PI * 2)) / 2;
+}
+function getNightStatMultiplier() {
+  return 1 + getNightFactor() * 0.5;
+}
+function getNightSpeedMultiplier() {
+  return 1 + getNightFactor() * 0.25;
+}
+
+let dustStormTimer = 0;
+let dustStormCooldownTimer = 1800;
+let moanTimer = 300;
+let bonusDamage = 0;
+let totalZombiesKilled = 0;
+let shotsFired = 0;
+let shotsHit = 0;
+let legendaryFireRateMult = 1;
+let legendaryAnnounceDelay = 0;
+let legendaryAnnounceText = '';
+const LEGENDARY_POOL = [
+  { label: '+40% Fire Rate', apply: () => { legendaryFireRateMult *= 0.6; } },
+  { label: '+2 Bullet Damage', apply: () => { bonusDamage += 2; } },
+  { label: '+40 Max Armor', apply: () => { for (const p of players) p.maxArmor += 40; } },
+  { label: '+30 Max HP', apply: () => { for (const p of players) { p.maxHealth += 30; p.health += 30; } } }
+];
+
+// between-wave shop: spend score on permanent run upgrades
+let shopOffers = [];
+let shopGeneratedForThisBreak = false;
+const SHOP_POOL = [
+  { id: 'health', label: '+20 Max HP (Team)', baseCost: 60,
+    apply: () => { for (const p of players) { p.maxHealth += 20; p.health = Math.min(p.maxHealth, p.health + 20); } } },
+  { id: 'ammo', label: '+25% Ammo Capacity', baseCost: 70,
+    apply: () => { for (const p of players) p.maxAmmoMult *= 1.25; } },
+  { id: 'dash', label: '-20% Roll Cooldown', baseCost: 65,
+    apply: () => { for (const p of players) p.dashCooldownMax = Math.max(15, Math.round(p.dashCooldownMax * 0.8)); } },
+  { id: 'damage', label: '+1 Bullet Damage', baseCost: 90,
+    apply: () => { bonusDamage += 1; } }
+];
+
+function generateShopOffers() {
+  const shuffled = SHOP_POOL.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+  shopOffers = shuffled.map(o => ({ ...o, cost: o.baseCost + wave * 5 }));
+}
+
+function purchaseShopOffer(index) {
+  const offer = shopOffers[index];
+  if (!offer || score < offer.cost) return;
+  score -= offer.cost;
+  offer.apply();
+  shopOffers.splice(index, 1);
+  playPickup();
+}
+function updateDustStorm() {
+  if (dustStormTimer > 0) {
+    dustStormTimer--;
+  } else {
+    dustStormCooldownTimer--;
+    if (dustStormCooldownTimer <= 0) {
+      if (Math.random() < 0.4) {
+        dustStormTimer = 400 + Math.random() * 300;
+        waveMessage = 'DUST STORM!';
+        waveMessageTimer = 90;
+      }
+      dustStormCooldownTimer = 900 + Math.random() * 900;
+    }
+  }
+}
 const GRENADE_COOLDOWN = 300;
 const GRENADE_FUSE = 50;
 const GRENADE_RADIUS = 50;
@@ -530,7 +681,7 @@ let ammoSpawnTimer = 0;
 
 let medKits = [];
 const HEAL_AMOUNT = 30;
-const MAX_MED_KITS_ON_FIELD = 3;
+const MAX_MED_KITS_ON_FIELD = 4;
 let medKitSpawnTimer = 0;
 
 let score = 0;
@@ -558,7 +709,9 @@ const ZOMBIE_TIERS = [
   { name: 'Venom', minWave: 5, radius: 14, speedMult: 0.95, healthBase: 2, damage: 4, color: '#5f8a1f', glow: '#aef23a',
     poisonOnHit: true, poisonDamage: 2, poisonDuration: 180 },
   { name: 'Toxic', minWave: 8, radius: 18, speedMult: 1.2, healthBase: 4, damage: 18, color: '#7c3aed', glow: '#a855f7',
-    canBreakObstacles: true }
+    canBreakObstacles: true },
+  { name: 'Armored', minWave: 9, radius: 20, speedMult: 0.65, healthBase: 5, damage: 16, color: '#4a4a52', glow: null,
+    damageReduction: 0.4 }
 ];
 let tierSeen = {};
 
@@ -672,6 +825,13 @@ function pruneDistantChunks() {
     const cx = Number(parts[0]), cy = Number(parts[1]);
     if (Math.abs(cx - ccx) > 6 || Math.abs(cy - ccy) > 6) delete obstacleChunks[key];
   }
+  const lccx = Math.floor(camera.x / LANDMARK_CHUNK_SIZE);
+  const lccy = Math.floor(camera.y / LANDMARK_CHUNK_SIZE);
+  for (const key in landmarkChunks) {
+    const parts = key.split(',');
+    const cx = Number(parts[0]), cy = Number(parts[1]);
+    if (Math.abs(cx - lccx) > 3 || Math.abs(cy - lccy) > 3) delete landmarkChunks[key];
+  }
 }
 
 function spawnPointAroundCamera(radius) {
@@ -679,6 +839,44 @@ function spawnPointAroundCamera(radius) {
   return { x: camera.x + Math.cos(angle) * radius, y: camera.y + Math.sin(angle) * radius };
 }
 const ZOMBIE_SPAWN_RADIUS = 520;
+
+// sparse, purely decorative points of interest scattered across the wasteland
+const LANDMARK_TYPES = ['gasStation', 'radioTower', 'bunker'];
+const LANDMARK_CHUNK_SIZE = 800;
+let landmarkChunks = {};
+let activeLandmarks = [];
+
+function generateLandmarkChunk(cx, cy) {
+  const key = cx + ',' + cy;
+  if (landmarkChunks[key]) return landmarkChunks[key];
+  const list = [];
+  if (!(cx === 0 && cy === 0)) {
+    const rand = seededRandom(hashSeed(cx * 7919 + 1, cy * 104729 + 1));
+    if (rand() < 0.85) {
+      const type = LANDMARK_TYPES[Math.floor(rand() * LANDMARK_TYPES.length)];
+      const margin = 220;
+      const lx = cx * LANDMARK_CHUNK_SIZE + margin + rand() * (LANDMARK_CHUNK_SIZE - margin * 2);
+      const ly = cy * LANDMARK_CHUNK_SIZE + margin + rand() * (LANDMARK_CHUNK_SIZE - margin * 2);
+      // loot is claimed by holding the interact key nearby, not granted automatically
+      list.push({ x: lx, y: ly, landmarkType: type, looted: false, lootProgress: 0 });
+    }
+  }
+  landmarkChunks[key] = list;
+  return list;
+}
+
+function getActiveLandmarks() {
+  const range = 2;
+  const ccx = Math.floor(camera.x / LANDMARK_CHUNK_SIZE);
+  const ccy = Math.floor(camera.y / LANDMARK_CHUNK_SIZE);
+  let result = [];
+  for (let cx = ccx - range; cx <= ccx + range; cx++) {
+    for (let cy = ccy - range; cy <= ccy + range; cy++) {
+      result = result.concat(generateLandmarkChunk(cx, cy));
+    }
+  }
+  return result;
+}
 
 function isPointInsideObstacle(x, y) {
   return activeObstacles.some(o => !o.destroyed && x > o.x && x < o.x + o.w && y > o.y && y < o.y + o.h);
@@ -730,6 +928,8 @@ function resolveObstacleCollision(entity, canBreak) {
 }
 
 function startWave() {
+  shopOffers = [];
+  shopGeneratedForThisBreak = false;
   const countMult = DIFFICULTY_SETTINGS[difficulty].zombieCountMult;
   isBossWave = wave % 5 === 0;
   isHordeWave = !isBossWave && wave % 3 === 0;
@@ -798,7 +998,9 @@ function createPlayer(index, characterIndex, totalPlayers, chosenWeapon) {
     abilityCooldown: 0,
     adrenalineTimer: 0,
     fortifyTimer: 0,
-    muzzleFlashTimer: 0
+    muzzleFlashTimer: 0,
+    armor: 0,
+    maxArmor: 100
   };
 }
 
@@ -813,10 +1015,24 @@ const REVIVE_HEAL_FRACTION = 0.5;
 const REVIVE_HOLD_TIME = 75;
 
 function resetGame() {
+  frameCount = 0;
+  dustStormTimer = 0;
+  dustStormCooldownTimer = 1800;
+  moanTimer = 300;
+  bonusDamage = 0;
+  totalZombiesKilled = 0;
+  shotsFired = 0;
+  shotsHit = 0;
+  legendaryFireRateMult = 1;
+  legendaryAnnounceDelay = 0;
+  shopOffers = [];
+  shopGeneratedForThisBreak = false;
   camera.x = 0;
   camera.y = 0;
   obstacleChunks = {};
   activeObstacles = [];
+  landmarkChunks = {};
+  activeLandmarks = [];
   players = [];
   const charIndices = [selectedP1Character, selectedP2Character];
   const weaponChoices = [selectedP1Weapon, selectedP2Weapon];
@@ -845,22 +1061,24 @@ function resetGame() {
 
 function spawnBoss() {
   const diff = DIFFICULTY_SETTINGS[difficulty];
+  const nightMult = getNightStatMultiplier();
   const bossNumber = Math.floor(wave / 5);
-  const bossHealth = Math.round((25 + bossNumber * 15) * Math.max(1, players.length) * diff.zombieHealthMult);
+  const bossHealth = Math.round((25 + bossNumber * 15) * Math.max(1, players.length) * diff.zombieHealthMult * nightMult);
   zombies.push({
     x: camera.x,
     y: camera.y - ZOMBIE_SPAWN_RADIUS,
     tierName: 'Boss',
     radius: 34,
-    speed: 0.6,
+    speed: 0.6 * getNightSpeedMultiplier(),
     health: bossHealth,
     maxHealth: bossHealth,
-    damage: Math.round(28 * diff.zombieDamageMult),
+    damage: Math.round(28 * diff.zombieDamageMult * nightMult),
     hitFlash: 0,
     bobPhase: 0,
     bodyColor: '#5c0a0a',
     glow: '#ff5533',
-    isBoss: true
+    isBoss: true,
+    damageReduction: 0
   });
 }
 
@@ -872,14 +1090,15 @@ function spawnMiniRunner() {
     x, y,
     tierName: 'Runner',
     radius: 12,
-    speed: 1.9 + Math.random() * 0.3,
+    speed: (1.9 + Math.random() * 0.3) * getNightSpeedMultiplier(),
     health: 1,
     maxHealth: 1,
-    damage: Math.round(8 * DIFFICULTY_SETTINGS[difficulty].zombieDamageMult),
+    damage: Math.round(8 * DIFFICULTY_SETTINGS[difficulty].zombieDamageMult * getNightStatMultiplier()),
     hitFlash: 0,
     bobPhase: Math.random() * Math.PI * 2,
     bodyColor: '#a4de3c',
-    glow: null
+    glow: null,
+    damageReduction: 0
   });
 }
 
@@ -891,27 +1110,40 @@ function spawnHordeZombie() {
     x, y,
     tierName: 'Horde',
     radius: 11,
-    speed: 1.6 + Math.random() * 0.4,
+    speed: (1.6 + Math.random() * 0.4) * getNightSpeedMultiplier(),
     health: 1,
     maxHealth: 1,
-    damage: Math.round(6 * DIFFICULTY_SETTINGS[difficulty].zombieDamageMult),
+    damage: Math.round(6 * DIFFICULTY_SETTINGS[difficulty].zombieDamageMult * getNightStatMultiplier()),
     hitFlash: 0,
     bobPhase: Math.random() * Math.PI * 2,
     bodyColor: '#d4a017',
-    glow: null
+    glow: null,
+    damageReduction: 0
   });
 }
 
 function findClearSpot() {
-  const halfW = canvas.width / 2 - 40;
-  const halfH = canvas.height / 2 - 40;
+  // keep pickups within easy reach and out of zombie-packed spots, so they
+  // don't get stranded off-screen or buried under a horde
+  const halfW = Math.min(canvas.width / 2 - 40, 260);
+  const halfH = Math.min(canvas.height / 2 - 40, 170);
   let x, y, tries = 0;
+  let bestSpot = null;
+  let bestNearbyZombies = Infinity;
   do {
     x = camera.x + (Math.random() * 2 - 1) * halfW;
     y = camera.y + (Math.random() * 2 - 1) * halfH;
     tries++;
-  } while (isPointInsideObstacle(x, y) && tries < 10);
-  return { x, y };
+    if (!isPointInsideObstacle(x, y)) {
+      const nearbyZombies = zombies.filter(z => Math.hypot(z.x - x, z.y - y) < 45).length;
+      if (nearbyZombies < bestNearbyZombies) {
+        bestNearbyZombies = nearbyZombies;
+        bestSpot = { x, y };
+        if (nearbyZombies === 0) break;
+      }
+    }
+  } while (tries < 10);
+  return bestSpot || { x, y };
 }
 
 function spawnAmmoPickup() {
@@ -939,20 +1171,21 @@ function spawnZombie() {
   const x = spot.x, y = spot.y;
 
   const diff = DIFFICULTY_SETTINGS[difficulty];
+  const nightMult = getNightStatMultiplier();
   const eligible = ZOMBIE_TIERS.filter(t => wave >= t.minWave);
   const unseen = eligible.find(t => !tierSeen[t.name]);
   const tier = unseen || pickZombieTier();
   tierSeen[tier.name] = true;
   const speedBonus = Math.min(0.9, (wave - 1) * 0.12);
-  const baseHealth = Math.max(1, Math.round((tier.healthBase + Math.floor((wave - 1) / 4)) * diff.zombieHealthMult));
+  const baseHealth = Math.max(1, Math.round((tier.healthBase + Math.floor((wave - 1) / 4)) * diff.zombieHealthMult * nightMult));
   zombies.push({
     x, y,
     tierName: tier.name,
     radius: tier.radius,
-    speed: (0.9 + speedBonus + Math.random() * 0.3) * tier.speedMult,
+    speed: (0.9 + speedBonus + Math.random() * 0.3) * tier.speedMult * getNightSpeedMultiplier(),
     health: baseHealth,
     maxHealth: baseHealth,
-    damage: Math.round(tier.damage * diff.zombieDamageMult),
+    damage: Math.round(tier.damage * diff.zombieDamageMult * nightMult),
     hitFlash: 0,
     bobPhase: Math.random() * Math.PI * 2,
     bodyColor: tier.color || ZOMBIE_COLORS[Math.floor(Math.random() * ZOMBIE_COLORS.length)],
@@ -963,7 +1196,8 @@ function spawnZombie() {
     poisonOnHit: tier.poisonOnHit || false,
     poisonDamage: tier.poisonDamage || 0,
     poisonDuration: tier.poisonDuration || 0,
-    canBreakObstacles: tier.canBreakObstacles || false
+    canBreakObstacles: tier.canBreakObstacles || false,
+    damageReduction: tier.damageReduction || 0
   });
 }
 
@@ -1005,7 +1239,13 @@ function damagePlayer(p, amount) {
   if (!p.alive) return;
   let dmgMult = p.character.role === 'Gunner' ? 0.8 : 1;
   if (p.fortifyTimer > 0) dmgMult *= 0.3;
-  p.health -= Math.round(amount * dmgMult);
+  let dmg = amount * dmgMult;
+  if (p.armor > 0) {
+    const absorbed = Math.min(p.armor, dmg);
+    p.armor -= absorbed;
+    dmg -= absorbed;
+  }
+  p.health -= Math.round(dmg);
   if (p.health <= 0) {
     p.health = 0;
     p.alive = false;
@@ -1050,12 +1290,12 @@ function spawnBloodDecal(x, y, scale) {
 }
 
 function getShootCooldownFrames(weapon) {
-  const base = Math.max(3, weapon.cooldown - Math.floor((wave - 1) / 4));
-  return rapidFireTimer > 0 ? Math.max(2, Math.round(base * 0.5)) : base;
+  const base = Math.max(3, weapon.cooldown - Math.floor((wave - 1) / 4)) * legendaryFireRateMult;
+  return rapidFireTimer > 0 ? Math.max(2, Math.round(base * 0.5)) : Math.max(2, Math.round(base));
 }
 
 function getBulletDamage(weapon) {
-  return weapon.damage + Math.floor((wave - 1) / 3);
+  return weapon.damage + Math.floor((wave - 1) / 3) + bonusDamage;
 }
 
 function shoot(p) {
@@ -1068,6 +1308,7 @@ function shoot(p) {
   const dmg = getBulletDamage(weapon);
   const speed = 11;
   const splashMult = p.character.role === 'Demolitions' ? 1.3 : 1;
+  shotsFired += weapon.pellets;
   for (let i = 0; i < weapon.pellets; i++) {
     const spreadOffset = weapon.pellets > 1
       ? (i - (weapon.pellets - 1) / 2) * weapon.spread
@@ -1096,7 +1337,7 @@ function meleeAttack(p) {
   const dmg = 1 + Math.floor((wave - 1) / 3);
   for (const z of zombies) {
     if (Math.hypot(z.x - p.x, z.y - p.y) < p.radius + MELEE_RANGE) {
-      z.health -= dmg;
+      z.health -= dmg * (1 - z.damageReduction);
       z.hitFlash = 8;
       makeParticles(z.x, z.y, '#e8e8e8', 6);
     }
@@ -1123,7 +1364,7 @@ function detonateGrenade(g) {
   triggerScreenShake(5, 8);
   for (const z of zombies) {
     if (Math.hypot(z.x - g.x, z.y - g.y) < GRENADE_RADIUS + z.radius) {
-      z.health -= GRENADE_DAMAGE;
+      z.health -= GRENADE_DAMAGE * (1 - z.damageReduction);
       z.hitFlash = 8;
     }
   }
@@ -1157,7 +1398,53 @@ function update() {
   frameCount++;
   updateCamera();
   activeObstacles = getActiveObstacles();
+  activeLandmarks = getActiveLandmarks();
   pruneDistantChunks();
+  updateDustStorm();
+  moanTimer--;
+  if (moanTimer <= 0) {
+    moanTimer = 400 + Math.random() * 600;
+    playDistantMoan();
+  }
+  if (legendaryAnnounceDelay > 0) {
+    legendaryAnnounceDelay--;
+    if (legendaryAnnounceDelay <= 0) {
+      waveMessage = legendaryAnnounceText;
+      waveMessageTimer = 110;
+      playAbilityActivate();
+    }
+  }
+
+  // landmarks are looted by holding the interact key nearby
+  const LOOT_RANGE = 55;
+  const LOOT_HOLD_TIME = 70;
+  for (const lm of activeLandmarks) {
+    if (lm.looted) continue;
+    const holder = players.find(p => p.alive && keyActive(p.controls.interact) &&
+      Math.hypot(p.x - lm.x, p.y - lm.y) < LOOT_RANGE);
+    if (holder) {
+      lm.lootProgress++;
+      if (lm.lootProgress >= LOOT_HOLD_TIME) {
+        lm.looted = true;
+        if (lm.landmarkType === 'gasStation') {
+          for (const p of players) p.ammo = Math.round(WEAPON_TYPES[p.currentWeaponKey].maxAmmo * p.maxAmmoMult);
+          waveMessage = 'AMMO REFILLED!';
+        } else if (lm.landmarkType === 'bunker') {
+          for (const p of players) p.armor = Math.min(p.maxArmor, p.armor + 50);
+          waveMessage = 'ARMOR ACQUIRED!';
+        } else {
+          ammoPickups.push({ x: lm.x - 20, y: lm.y + 30, radius: 12, bobPhase: 0 });
+          medKits.push({ x: lm.x + 20, y: lm.y + 30, radius: 12, bobPhase: 0 });
+          waveMessage = 'SUPPLY DROP!';
+        }
+        waveMessageTimer = 90;
+        playLevelUp();
+        makeParticles(lm.x, lm.y, '#fde047', 20);
+      }
+    } else {
+      lm.lootProgress = Math.max(0, lm.lootProgress - 2);
+    }
+  }
 
   // players: movement, aim, shooting
   for (const p of players) {
@@ -1290,6 +1577,11 @@ function update() {
       spawnTimer = Math.round(baseInterval * DIFFICULTY_SETTINGS[difficulty].spawnIntervalMult);
     }
   } else if (zombies.length === 0) {
+    if (!shopGeneratedForThisBreak) {
+      generateShopOffers();
+      shopGeneratedForThisBreak = true;
+      waveBreakTimer = 300;
+    }
     waveBreakTimer--;
     if (waveBreakTimer <= 0) {
       wave++;
@@ -1302,7 +1594,7 @@ function update() {
   ammoSpawnTimer--;
   if (ammoSpawnTimer <= 0 && ammoPickups.length < MAX_PICKUPS_ON_FIELD) {
     spawnAmmoPickup();
-    ammoSpawnTimer = 130;
+    ammoSpawnTimer = 90;
   }
   for (let i = ammoPickups.length - 1; i >= 0; i--) {
     const pickup = ammoPickups[i];
@@ -1321,7 +1613,7 @@ function update() {
   medKitSpawnTimer--;
   if (medKitSpawnTimer <= 0 && medKits.length < MAX_MED_KITS_ON_FIELD) {
     spawnMedKit();
-    medKitSpawnTimer = 220;
+    medKitSpawnTimer = 160;
   }
   for (let i = medKits.length - 1; i >= 0; i--) {
     const kit = medKits[i];
@@ -1371,7 +1663,8 @@ function update() {
       const b = bullets[j];
       if (Math.hypot(b.x - z.x, b.y - z.y) < z.radius + b.radius + 5) {
         bullets.splice(j, 1);
-        z.health -= b.damage;
+        shotsHit++;
+        z.health -= b.damage * (1 - z.damageReduction);
         z.hitFlash = 8;
         makeParticles(b.x, b.y, b.color || '#86e686', 6);
         playZombieHit();
@@ -1384,7 +1677,7 @@ function update() {
           triggerScreenShake(6, 10);
           for (const other of zombies) {
             if (other !== z && Math.hypot(other.x - z.x, other.y - z.y) < b.splash) {
-              other.health -= b.damage;
+              other.health -= b.damage * (1 - other.damageReduction);
               other.hitFlash = 8;
             }
           }
@@ -1398,6 +1691,7 @@ function update() {
   for (let i = zombies.length - 1; i >= 0; i--) {
     const dead = zombies[i];
     if (dead.health <= 0) {
+      totalZombiesKilled++;
       makeParticles(dead.x, dead.y, '#4caf50', 16);
       spawnBloodDecal(dead.x, dead.y, dead.isBoss ? 2 : 1);
       playZombieDeath();
@@ -1412,6 +1706,13 @@ function update() {
         waveMessageTimer = 100;
         playBossDown();
         triggerScreenShake(9, 22);
+
+        if (Math.random() < 0.25) {
+          const pick = LEGENDARY_POOL[Math.floor(Math.random() * LEGENDARY_POOL.length)];
+          pick.apply();
+          legendaryAnnounceDelay = 90;
+          legendaryAnnounceText = 'LEGENDARY DROP: ' + pick.label + '!';
+        }
       }
 
       // Boomers burst into a damaging cloud when killed - careful up close!
@@ -1506,6 +1807,14 @@ function endGame() {
   finalStats.textContent = 'Score: ' + score + '  —  Wave: ' + wave;
   highScoreNote.textContent = noteText;
   bestWaveNote.textContent = waveNote;
+
+  const totalSeconds = Math.floor(frameCount / 60);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  const timeText = mins + ':' + String(secs).padStart(2, '0');
+  const accuracy = shotsFired > 0 ? Math.round((shotsHit / shotsFired) * 100) : 0;
+  runSummary.textContent = 'Zombies Killed: ' + totalZombiesKilled + '  •  Time Survived: ' + timeText + '  •  Accuracy: ' + accuracy + '%';
+
   gameOverOverlay.classList.remove('hidden');
 }
 
@@ -1595,6 +1904,143 @@ function drawBackground() {
   vignette.addColorStop(1, 'rgba(25, 15, 8, 0.6)');
   context.fillStyle = vignette;
   context.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawLandmark(lm) {
+  context.save();
+  context.translate(lm.x, lm.y);
+  context.fillStyle = 'rgba(0,0,0,0.3)';
+  if (lm.landmarkType === 'gasStation') {
+    context.fillRect(-45, -30, 94, 64);
+    // canopy posts
+    context.fillStyle = '#c23b3b';
+    context.fillRect(-42, -40, 6, 50);
+    context.fillRect(36, -40, 6, 50);
+    // red & white striped canopy roof
+    context.fillStyle = '#e8e8e2';
+    context.fillRect(-50, -48, 100, 14);
+    context.fillStyle = '#d13b3b';
+    for (let s = -48; s < 48; s += 16) {
+      context.fillRect(s, -48, 8, 14);
+    }
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 2;
+    context.strokeRect(-50, -48, 100, 14);
+    // building body, vivid teal
+    context.fillStyle = '#2f9e8f';
+    context.fillRect(-45, -32, 90, 56);
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.strokeRect(-45, -32, 90, 56);
+    context.fillStyle = 'rgba(140,220,240,0.5)';
+    context.fillRect(-38, -20, 32, 24);
+    context.strokeStyle = 'rgba(0,0,0,0.4)';
+    context.strokeRect(-38, -20, 32, 24);
+    // fuel pump with a glowing display
+    context.fillStyle = '#e8e8e2';
+    context.fillRect(10, 2, 14, 26);
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.strokeRect(10, 2, 14, 26);
+    context.fillStyle = '#4ade80';
+    context.fillRect(12, 5, 10, 6);
+    context.fillStyle = '#1f1f1a';
+    context.fillRect(13, 14, 8, 10);
+    // glowing sign
+    context.fillStyle = '#fde047';
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 2;
+    context.fillRect(-24, -66, 48, 16);
+    context.strokeRect(-24, -66, 48, 16);
+    context.fillStyle = '#d13b3b';
+    context.font = '800 12px "DM Sans", sans-serif';
+    context.textAlign = 'center';
+    context.fillText('FUEL', 0, -55);
+  } else if (lm.landmarkType === 'radioTower') {
+    context.strokeStyle = '#d13b3b';
+    context.lineWidth = 4;
+    context.beginPath();
+    context.moveTo(-30, 85); context.lineTo(0, -125);
+    context.moveTo(30, 85); context.lineTo(0, -125);
+    context.stroke();
+    context.strokeStyle = '#e8e8e2';
+    context.lineWidth = 3;
+    context.beginPath();
+    context.moveTo(-18, 45); context.lineTo(18, 45);
+    context.moveTo(-10, 5); context.lineTo(10, 5);
+    context.moveTo(-5, -38); context.lineTo(5, -38);
+    context.stroke();
+    // cross-bracing for a vivid lattice look
+    context.strokeStyle = 'rgba(255,255,255,0.3)';
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.moveTo(-24, 65); context.lineTo(14, 25);
+    context.moveTo(24, 65); context.lineTo(-14, 25);
+    context.stroke();
+    const pulse = 0.5 + 0.5 * Math.sin(frameCount * 0.15);
+    context.fillStyle = 'rgba(255,59,59,' + (0.6 + pulse * 0.4) + ')';
+    context.beginPath();
+    context.arc(0, -125, 4.5, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = 'rgba(96,165,250,0.8)';
+    context.beginPath();
+    context.arc(0, -70, 3, 0, Math.PI * 2);
+    context.fill();
+  } else if (lm.landmarkType === 'bunker') {
+    context.beginPath();
+    context.ellipse(2, 14, 56, 36, 0, Math.PI, Math.PI * 2);
+    context.fill();
+    const bunkerGrad = context.createRadialGradient(-10, -10, 10, 0, 10, 60);
+    bunkerGrad.addColorStop(0, '#7a8a5a');
+    bunkerGrad.addColorStop(1, '#4a5a3a');
+    context.fillStyle = bunkerGrad;
+    context.beginPath();
+    context.ellipse(0, 10, 56, 36, 0, Math.PI, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 2;
+    context.beginPath();
+    context.ellipse(0, 10, 56, 36, 0, Math.PI, Math.PI * 2);
+    context.stroke();
+    // yellow/black hazard stripe around the door
+    context.fillStyle = '#fde047';
+    context.fillRect(-18, -16, 36, 8);
+    context.fillStyle = '#1f1f1a';
+    for (let s = -18; s < 18; s += 8) {
+      context.fillRect(s, -16, 4, 8);
+    }
+    context.fillStyle = '#1f1f1a';
+    context.fillRect(-12, -10, 24, 20);
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.strokeRect(-12, -10, 24, 20);
+    // warm glow leaking from the doorway
+    context.fillStyle = 'rgba(255,180,80,0.5)';
+    context.fillRect(-9, -3, 18, 12);
+  }
+
+  // loot prompt + progress bar
+  if (!lm.looted) {
+    const nearHolder = players.some(p => p.alive && keyActive(p.controls.interact) &&
+      Math.hypot(p.x - lm.x, p.y - lm.y) < 55);
+    const nearAny = players.some(p => p.alive && Math.hypot(p.x - lm.x, p.y - lm.y) < 90);
+    if (lm.lootProgress > 0 || nearAny) {
+      context.textAlign = 'center';
+      context.textBaseline = 'alphabetic';
+      context.fillStyle = '#fde047';
+      context.font = '800 11px "DM Sans", sans-serif';
+      context.fillText(nearHolder ? 'LOOTING...' : 'HOLD F TO LOOT', 0, -145);
+    }
+    if (lm.lootProgress > 0) {
+      const barW = 50;
+      context.fillStyle = 'rgba(0,0,0,0.5)';
+      context.fillRect(-barW / 2, -138, barW, 6);
+      context.fillStyle = '#4ade80';
+      context.fillRect(-barW / 2, -138, barW * (lm.lootProgress / 70), 6);
+      context.strokeStyle = 'rgba(255,255,255,0.4)';
+      context.lineWidth = 1;
+      context.strokeRect(-barW / 2, -138, barW, 6);
+    }
+  }
+
+  context.restore();
 }
 
 function drawBloodDecal(d) {
@@ -1757,6 +2203,15 @@ function drawPlayer(p) {
     context.stroke();
   }
 
+  // steady blue ring while carrying armor
+  if (!downed && p.armor > 0) {
+    context.strokeStyle = 'rgba(96, 165, 250, 0.55)';
+    context.lineWidth = 2;
+    context.beginPath();
+    context.arc(0, 4, p.radius + 4, 0, Math.PI * 2);
+    context.stroke();
+  }
+
   // soft warm light pool under the player for atmosphere
   if (!downed) {
     const glow = context.createRadialGradient(0, 4, 4, 0, 4, p.radius * 2.8);
@@ -1824,6 +2279,81 @@ function drawPlayer(p) {
   context.stroke();
   context.fillStyle = '#1e293b';
   context.fillRect(-3, 7, 6, 5);
+
+  // worn armor plating: gets bulkier and more decked-out the more armor you're carrying
+  if (!downed && p.armor > 0) {
+    const tier = p.armor >= 90 ? 3 : p.armor >= 40 ? 2 : 1;
+    const wear = p.armor / p.maxArmor;
+    const plateAlpha = 0.6 + 0.35 * wear;
+    const padScale = tier === 3 ? 1.3 : tier === 2 ? 1 : 0.75;
+
+    if (tier === 3) {
+      context.save();
+      context.shadowColor = 'rgba(96,165,250,0.7)';
+      context.shadowBlur = 10;
+    }
+
+    // shoulder pads: present at every tier, bigger and bulkier the more armor you have
+    context.fillStyle = 'rgba(90, 105, 130, ' + plateAlpha + ')';
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.ellipse(-torsoRX * 0.72, -torsoRY * 0.25, torsoRX * 0.32 * padScale, torsoRY * 0.4 * padScale, -0.2, 0, Math.PI * 2);
+    context.fill();
+    context.stroke();
+    context.beginPath();
+    context.ellipse(torsoRX * 0.72, -torsoRY * 0.25, torsoRX * 0.32 * padScale, torsoRY * 0.4 * padScale, 0.2, 0, Math.PI * 2);
+    context.fill();
+    context.stroke();
+
+    if (tier >= 2) {
+      // riveted chest plate
+      const plateGrad = context.createLinearGradient(0, -torsoRY, 0, torsoRY);
+      plateGrad.addColorStop(0, 'rgba(165, 185, 215, ' + plateAlpha + ')');
+      plateGrad.addColorStop(1, 'rgba(70, 85, 110, ' + plateAlpha + ')');
+      context.fillStyle = plateGrad;
+      context.beginPath();
+      context.moveTo(-torsoRX * 0.55, -torsoRY * 0.5);
+      context.lineTo(torsoRX * 0.55, -torsoRY * 0.5);
+      context.lineTo(torsoRX * 0.42, torsoRY * 0.65);
+      context.lineTo(-torsoRX * 0.42, torsoRY * 0.65);
+      context.closePath();
+      context.fill();
+      context.strokeStyle = tier === 3 ? 'rgba(165,210,255,0.9)' : 'rgba(0,0,0,0.5)';
+      context.lineWidth = tier === 3 ? 2 : 1.5;
+      context.stroke();
+
+      context.strokeStyle = 'rgba(0,0,0,0.3)';
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(0, -torsoRY * 0.45);
+      context.lineTo(0, torsoRY * 0.55);
+      context.moveTo(-torsoRX * 0.5, -torsoRY * 0.15);
+      context.lineTo(torsoRX * 0.5, -torsoRY * 0.15);
+      context.stroke();
+      context.fillStyle = 'rgba(30,30,35,0.5)';
+      [[-0.3, -0.25], [0.3, -0.25], [-0.25, 0.3], [0.25, 0.3]].forEach(([rx, ry]) => {
+        context.beginPath();
+        context.arc(torsoRX * rx, torsoRY * ry, 1.6, 0, Math.PI * 2);
+        context.fill();
+      });
+    }
+
+    if (tier === 3) {
+      // extra trim + a chest emblem for the fully-armored look
+      context.restore();
+      context.strokeStyle = 'rgba(96,165,250,0.8)';
+      context.lineWidth = 1.5;
+      context.beginPath();
+      context.moveTo(-torsoRX * 0.5, -torsoRY * 0.35);
+      context.lineTo(torsoRX * 0.5, -torsoRY * 0.35);
+      context.stroke();
+      context.fillStyle = 'rgba(147,197,253,0.9)';
+      context.beginPath();
+      context.arc(0, torsoRY * 0.05, 3, 0, Math.PI * 2);
+      context.fill();
+    }
+  }
 
   // head (smaller circle set apart from the torso, so it's a person, not two balls)
   const headR = p.radius * 0.5;
@@ -2107,7 +2637,15 @@ function drawHeldWeapon(r, weaponKey, color, outOfAmmo, knifeColor) {
     return;
   }
 
-  if (weaponKey === 'shotgun') {
+  if (weaponKey === 'smg') {
+    context.fillStyle = '#3a3a3a';
+    context.fillRect(r - 2, -3, 20, 6);
+    context.fillRect(r + 16, -2, 8, 4);
+    context.fillStyle = '#1a1a1a';
+    context.fillRect(r + 2, 3, 6, 9);
+    context.fillStyle = color;
+    context.fillRect(r + 8, -7, 6, 4);
+  } else if (weaponKey === 'shotgun') {
     context.fillStyle = '#3a3a3a';
     context.fillRect(r - 2, -4, 24, 8);
     context.fillRect(r + 18, -3, 10, 6);
@@ -2391,6 +2929,15 @@ function drawExplosion(e) {
 
 function drawPlayerHUD(p, barY) {
   const barW = 180, barH = 16;
+  if (p.armor > 0) {
+    context.fillStyle = 'rgba(0,0,0,0.5)';
+    context.fillRect(14, barY - 7, barW, 5);
+    context.fillStyle = '#60a5fa';
+    context.fillRect(14, barY - 7, barW * (p.armor / p.maxArmor), 5);
+    context.strokeStyle = 'rgba(255,255,255,0.3)';
+    context.lineWidth = 1;
+    context.strokeRect(14, barY - 7, barW, 5);
+  }
   context.fillStyle = 'rgba(0,0,0,0.5)';
   context.fillRect(14, barY, barW, barH);
   context.fillStyle = p.health > 30 ? '#4caf50' : '#ef4444';
@@ -2442,6 +2989,74 @@ function drawPlayerHUD(p, barY) {
   context.fillText(abilityText, 14, nextLineY);
 }
 
+const MINIMAP_RADIUS = 62;
+const MINIMAP_WORLD_RANGE = 700;
+
+function drawMinimap() {
+  const cx = canvas.width - 80;
+  const cy = canvas.height - 80;
+  const scale = MINIMAP_RADIUS / MINIMAP_WORLD_RANGE;
+
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,0.55)';
+  context.beginPath();
+  context.arc(cx, cy, MINIMAP_RADIUS, 0, Math.PI * 2);
+  context.fill();
+
+  context.save();
+  context.beginPath();
+  context.arc(cx, cy, MINIMAP_RADIUS, 0, Math.PI * 2);
+  context.clip();
+
+  for (const lm of activeLandmarks) {
+    const dx = (lm.x - camera.x) * scale, dy = (lm.y - camera.y) * scale;
+    context.fillStyle = '#60a5fa';
+    context.beginPath();
+    context.arc(cx + dx, cy + dy, 3, 0, Math.PI * 2);
+    context.fill();
+  }
+  for (const z of zombies) {
+    const dx = (z.x - camera.x) * scale, dy = (z.y - camera.y) * scale;
+    context.fillStyle = z.isBoss ? '#ff2222' : '#ef4444';
+    context.beginPath();
+    context.arc(cx + dx, cy + dy, z.isBoss ? 4 : 2, 0, Math.PI * 2);
+    context.fill();
+  }
+  for (const pk of ammoPickups) {
+    const dx = (pk.x - camera.x) * scale, dy = (pk.y - camera.y) * scale;
+    context.fillStyle = '#fde047';
+    context.beginPath();
+    context.arc(cx + dx, cy + dy, 2.5, 0, Math.PI * 2);
+    context.fill();
+  }
+  for (const mk of medKits) {
+    const dx = (mk.x - camera.x) * scale, dy = (mk.y - camera.y) * scale;
+    context.fillStyle = '#4ade80';
+    context.beginPath();
+    context.arc(cx + dx, cy + dy, 2.5, 0, Math.PI * 2);
+    context.fill();
+  }
+  for (const p of players) {
+    if (!p.alive) continue;
+    const dx = (p.x - camera.x) * scale, dy = (p.y - camera.y) * scale;
+    context.fillStyle = p.character.dark;
+    context.strokeStyle = '#ffffff';
+    context.lineWidth = 1;
+    context.beginPath();
+    context.arc(cx + dx, cy + dy, 3.5, 0, Math.PI * 2);
+    context.fill();
+    context.stroke();
+  }
+
+  context.restore();
+  context.strokeStyle = 'rgba(255,255,255,0.35)';
+  context.lineWidth = 2;
+  context.beginPath();
+  context.arc(cx, cy, MINIMAP_RADIUS, 0, Math.PI * 2);
+  context.stroke();
+  context.restore();
+}
+
 function drawHUD() {
   if (players[0]) drawPlayerHUD(players[0], 14);
   if (players[1]) drawPlayerHUD(players[1], canvas.height - 100);
@@ -2471,6 +3086,18 @@ function drawHUD() {
   context.fillStyle = '#c9c9da';
   context.fillText('WAVE ' + wave, canvas.width / 2, 24);
 
+  const nightFactor = getNightFactor();
+  if (nightFactor > 0.3) {
+    context.font = '700 11px "DM Sans", sans-serif';
+    context.fillStyle = '#a5b4fc';
+    context.fillText(nightFactor > 0.7 ? 'NIGHT - ZOMBIES STRONGER' : 'DUSK', canvas.width / 2, 40);
+  }
+  if (dustStormTimer > 0) {
+    context.font = '700 11px "DM Sans", sans-serif';
+    context.fillStyle = '#d9a86c';
+    context.fillText('DUST STORM', canvas.width / 2, nightFactor > 0.3 ? 54 : 40);
+  }
+
   if (waveMessageTimer > 0) {
     context.textAlign = 'center';
     context.textBaseline = 'middle';
@@ -2499,6 +3126,40 @@ function drawHUD() {
     context.textBaseline = 'middle';
     context.fillText('BOSS ZOMBIE', canvas.width / 2, bossBarY + bossBarH / 2);
   }
+
+  drawMinimap();
+  drawShop();
+}
+
+function drawShop() {
+  if (shopOffers.length === 0) return;
+  const panelW = 360, panelH = 36 + shopOffers.length * 30;
+  const panelX = canvas.width / 2 - panelW / 2;
+  const panelY = canvas.height / 2 + 50;
+
+  context.fillStyle = 'rgba(0,0,0,0.65)';
+  context.fillRect(panelX, panelY, panelW, panelH);
+  context.strokeStyle = 'rgba(255,255,255,0.3)';
+  context.lineWidth = 1;
+  context.strokeRect(panelX, panelY, panelW, panelH);
+
+  context.textAlign = 'center';
+  context.textBaseline = 'alphabetic';
+  context.font = '800 13px "DM Sans", sans-serif';
+  context.fillStyle = '#fde047';
+  context.fillText('WAVE CLEAR! SPEND SCORE (press 1/2/3)', canvas.width / 2, panelY + 20);
+
+  shopOffers.forEach((offer, i) => {
+    const y = panelY + 44 + i * 30;
+    const affordable = score >= offer.cost;
+    context.textAlign = 'left';
+    context.font = '700 13px "DM Sans", sans-serif';
+    context.fillStyle = affordable ? '#ffffff' : '#6b6b80';
+    context.fillText((i + 1) + '. ' + offer.label, panelX + 16, y);
+    context.textAlign = 'right';
+    context.fillStyle = affordable ? '#4ade80' : '#ef4444';
+    context.fillText(offer.cost + ' pts', panelX + panelW - 16, y);
+  });
 }
 
 function draw() {
@@ -2507,6 +3168,7 @@ function draw() {
   const shakeX = screenShakeTimer > 0 ? (Math.random() * 2 - 1) * screenShakeMag : 0;
   const shakeY = screenShakeTimer > 0 ? (Math.random() * 2 - 1) * screenShakeMag : 0;
   context.translate(canvas.width / 2 - camera.x + shakeX, canvas.height / 2 - camera.y + shakeY);
+  activeLandmarks.forEach(drawLandmark);
   activeObstacles.filter(o => !o.destroyed).forEach(drawObstacle);
   bloodDecals.forEach(drawBloodDecal);
   zombies.forEach(drawZombie);
@@ -2518,7 +3180,20 @@ function draw() {
   explosions.forEach(drawExplosion);
   players.forEach(drawPlayer);
   context.restore();
+  drawAtmosphereOverlay();
   drawHUD();
+}
+
+function drawAtmosphereOverlay() {
+  const nightFactor = getNightFactor();
+  if (nightFactor > 0.02) {
+    context.fillStyle = 'rgba(8, 10, 35, ' + (nightFactor * 0.55) + ')';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  if (dustStormTimer > 0) {
+    context.fillStyle = 'rgba(150, 110, 60, 0.3)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
 }
 
 function loop() {
@@ -2530,19 +3205,25 @@ function loop() {
 }
 
 window.addEventListener('keydown', (e) => {
-  keys[e.key.toLowerCase()] = true;
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+  if (phase === 'playing' && (k === '1' || k === '2' || k === '3')) {
+    purchaseShopOffer(Number(k) - 1);
+  }
 });
 window.addEventListener('keyup', (e) => {
   keys[e.key.toLowerCase()] = false;
 });
 startBtn.addEventListener('click', () => {
   ensureAudio();
+  startAmbientMusic();
   startOverlay.classList.add('hidden');
   resetGame();
   phase = 'playing';
 });
 restartBtn.addEventListener('click', () => {
   ensureAudio();
+  startAmbientMusic();
   gameOverOverlay.classList.add('hidden');
   resetGame();
   phase = 'playing';
