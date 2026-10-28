@@ -143,6 +143,45 @@ canvas {
   background: var(--accent1);
   border-color: var(--accent1);
 }
+.mode-btn.locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.stat-card {
+  width: 100%;
+  max-width: 340px;
+  margin: 16px 0;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+}
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.9rem;
+}
+.stat-row:last-child { border-bottom: none; }
+.stat-row span:first-child { color: #9a9ab0; }
+.stat-row span:last-child { font-weight: 800; color: var(--text); }
+.stat-card-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.stat-badge {
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 6px 10px;
+  border-radius: 8px;
+  text-align: center;
+}
+.stat-badge.gold { background: rgba(253, 224, 71, 0.15); color: #fde047; }
+.stat-badge.green { background: rgba(134, 239, 172, 0.15); color: #86efac; }
 .char-select {
   display: flex;
   flex-direction: column;
@@ -210,6 +249,8 @@ canvas {
 <div class="title">ZOMBIE SHOOTER</div>
 <div class="subtitle" id="subtitleText">Pick your character below, then jump in. Your gun auto-aims and auto-fires at the nearest zombie &mdash; you just move and dodge!</div>
 <div class="toolbar">
+  <button class="icon-btn" id="helpBtn" title="How to play">?</button>
+  <button class="icon-btn" id="settingsBtn" title="Settings">&#9881;</button>
   <button class="icon-btn" id="muteBtn" title="Mute sound">&#128266;</button>
   <button class="icon-btn" id="pauseBtn" title="Pause">&#10074;&#10074;</button>
 </div>
@@ -227,6 +268,10 @@ canvas {
       <button class="mode-btn" id="diffEasyBtn">EASY</button>
       <button class="mode-btn active" id="diffNormalBtn">NORMAL</button>
       <button class="mode-btn" id="diffHardBtn">HARD</button>
+      <button class="mode-btn" id="diffNightmareBtn">NIGHTMARE</button>
+    </div>
+    <div class="mode-toggle" id="ngPlusRow" style="display:none;">
+      <button class="mode-btn" id="ngPlusBtn">NEW GAME+ (OFF)</button>
     </div>
     <div class="char-select">
       <div class="char-select-label">PLAYER 1 &mdash; WASD</div>
@@ -256,19 +301,57 @@ canvas {
     <div class="role-desc" id="loadoutDesc"></div>
     <div class="char-select-label">ACHIEVEMENTS</div>
     <div id="achievementsList" style="font-size:0.7rem; color:#9a9ab0; max-width:480px; text-align:center; line-height:1.8;"></div>
-    <button class="btn" id="startBtn">START</button>
+    <div style="display:flex; gap:10px; margin-top:4px;">
+      <button class="btn" id="startBtn">START</button>
+      <button class="btn" id="codexBtn" style="background:rgba(255,255,255,0.08);">CODEX</button>
+    </div>
   </div>
   <div class="overlay hidden" id="gameOverOverlay">
     <h2 style="color:#ef4444;">YOU DIED</h2>
-    <p id="finalStats">Score: 0 &mdash; Wave: 1</p>
-    <p id="highScoreNote" style="color:#fde047;"></p>
-    <p id="bestWaveNote" style="color:#86efac;"></p>
-    <p id="runSummary" style="color:#c9c9da; font-size:0.85rem; line-height:1.6;"></p>
+    <div class="stat-card" id="statCard">
+      <div class="stat-card-badges" id="statBadges"></div>
+      <div class="stat-row"><span>Score</span><span id="statScore">0</span></div>
+      <div class="stat-row"><span>Wave Reached</span><span id="statWave">1</span></div>
+      <div class="stat-row"><span>Zombies Killed</span><span id="statKills">0</span></div>
+      <div class="stat-row"><span>Time Survived</span><span id="statTime">0:00</span></div>
+      <div class="stat-row"><span>Accuracy</span><span id="statAccuracy">0%</span></div>
+    </div>
     <button class="btn" id="restartBtn">PLAY AGAIN</button>
   </div>
   <div class="overlay hidden" id="pauseOverlay">
     <h2>PAUSED</h2>
+    <div id="pauseBuildInfo" style="font-size:0.8rem; color:#c9c9da; line-height:1.7; text-align:left; max-width:420px; margin:10px 0;"></div>
     <button class="btn" id="resumeBtn">RESUME</button>
+  </div>
+  <div class="overlay hidden" id="settingsOverlay">
+    <h2>SETTINGS</h2>
+    <div style="display:flex; flex-direction:column; gap:18px; width:100%; max-width:340px; margin:16px 0;">
+      <div style="text-align:left;">
+        <label for="volumeSlider" style="font-size:0.85rem; color:#c9c9da;">Sound Volume</label>
+        <input type="range" id="volumeSlider" min="0" max="100" value="100" style="width:100%;">
+      </div>
+      <button class="mode-btn" id="screenShakeToggle" style="width:100%;">SCREEN SHAKE: ON</button>
+    </div>
+    <button class="btn" id="closeSettingsBtn">CLOSE</button>
+  </div>
+  <div class="overlay hidden" id="tutorialOverlay">
+    <h2>HOW TO PLAY</h2>
+    <div style="text-align:left; font-size:0.82rem; color:#c9c9da; line-height:1.8; max-width:460px; margin:10px 0;">
+      <p><b>Moving:</b> WASD (or Arrow Keys). Your gun aims and fires at the nearest zombie by itself &mdash; you just move and dodge.</p>
+      <p><b>Roll:</b> Shift (P1) / Enter (P2) &mdash; a quick dash with a short invincible moment.</p>
+      <p><b>Grenade:</b> Q (P1) / Ctrl (P2) &mdash; throws whatever grenade type is selected. Press R (P1) / ] (P2) to cycle between Frag, Molotov, Flashbang, Stun, and Turret.</p>
+      <p><b>Ability:</b> E (P1) / ' (P2) &mdash; your character's special move, on a cooldown.</p>
+      <p><b>Loot / Interact:</b> F (P1) / ; (P2) &mdash; hold near a landmark (gas station, hospital, trader, etc.) to use it.</p>
+      <p><b>SOS Flare:</b> G (P1) / [ (P2) &mdash; once per run, calls in an airstrike a few seconds after you use it.</p>
+      <p>Every 5th wave is a BOSS WAVE. Every 3rd wave brings a HORDE. Watch for dust storms, rain, and night &mdash; they all change how the game plays.</p>
+    </div>
+    <button class="btn" id="closeTutorialBtn">GOT IT</button>
+  </div>
+  <div class="overlay hidden" id="codexOverlay">
+    <h2>ZOMBIE CODEX</h2>
+    <p style="color:#9a9ab0; font-size:0.8rem; margin-top:-8px;">Entries unlock as you encounter them in-game.</p>
+    <div id="codexList" style="max-height:360px; overflow-y:auto; width:100%; max-width:460px; display:flex; flex-direction:column; gap:8px; margin:14px 0;"></div>
+    <button class="btn" id="closeCodexBtn">CLOSE</button>
   </div>
 </div>
 
@@ -282,20 +365,36 @@ function getDiffHighScoreKey(diff) { return 'atlasZombieShooterHighScore_' + dif
 const startOverlay = document.getElementById('startOverlay');
 const gameOverOverlay = document.getElementById('gameOverOverlay');
 const pauseOverlay = document.getElementById('pauseOverlay');
+const codexOverlay = document.getElementById('codexOverlay');
+const codexBtn = document.getElementById('codexBtn');
+const closeCodexBtn = document.getElementById('closeCodexBtn');
+const codexList = document.getElementById('codexList');
+const pauseBuildInfo = document.getElementById('pauseBuildInfo');
+const tutorialOverlay = document.getElementById('tutorialOverlay');
+const closeTutorialBtn = document.getElementById('closeTutorialBtn');
+const helpBtn = document.getElementById('helpBtn');
+const settingsOverlay = document.getElementById('settingsOverlay');
+const settingsBtn = document.getElementById('settingsBtn');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+const volumeSlider = document.getElementById('volumeSlider');
+const screenShakeToggle = document.getElementById('screenShakeToggle');
 const startBtn = document.getElementById('startBtn');
 const restartBtn = document.getElementById('restartBtn');
 const resumeBtn = document.getElementById('resumeBtn');
 const muteBtn = document.getElementById('muteBtn');
 const pauseBtn = document.getElementById('pauseBtn');
-const finalStats = document.getElementById('finalStats');
-const highScoreNote = document.getElementById('highScoreNote');
-const bestWaveNote = document.getElementById('bestWaveNote');
-const runSummary = document.getElementById('runSummary');
+const statBadges = document.getElementById('statBadges');
+const statScore = document.getElementById('statScore');
+const statWave = document.getElementById('statWave');
+const statKills = document.getElementById('statKills');
+const statTime = document.getElementById('statTime');
+const statAccuracy = document.getElementById('statAccuracy');
 const mode1Btn = document.getElementById('mode1Btn');
 const mode2Btn = document.getElementById('mode2Btn');
 const diffEasyBtn = document.getElementById('diffEasyBtn');
 const diffNormalBtn = document.getElementById('diffNormalBtn');
 const diffHardBtn = document.getElementById('diffHardBtn');
+const diffNightmareBtn = document.getElementById('diffNightmareBtn');
 const p1CharOptions = document.getElementById('p1CharOptions');
 const p2CharOptions = document.getElementById('p2CharOptions');
 const p1WeaponOptions = document.getElementById('p1WeaponOptions');
@@ -329,49 +428,83 @@ function ensureAudio() {
 }
 
 const AMBIENT_VOLUME = 0.11;
+const SOUND_VOLUME_KEY = 'atlasSoundVolume';
+let soundVolumeMult = localStorage.getItem(SOUND_VOLUME_KEY) !== null ? Number(localStorage.getItem(SOUND_VOLUME_KEY)) : 1;
+const SCREEN_SHAKE_KEY = 'atlasScreenShakeEnabled';
+let screenShakeEnabled = localStorage.getItem(SCREEN_SHAKE_KEY) !== 'false';
 let ambientNodes = null;
 function startAmbientMusic() {
   if (!audioCtx || ambientNodes) return;
   const masterGain = audioCtx.createGain();
-  masterGain.gain.value = muted ? 0 : AMBIENT_VOLUME;
+  masterGain.gain.value = muted ? 0 : AMBIENT_VOLUME * soundVolumeMult;
   masterGain.connect(audioCtx.destination);
 
-  // frequencies kept above ~100Hz so they're actually reproducible on
-  // laptop/phone speakers, not just subwoofers
+  // a low, close-detuned drone (the slow beat between them is unsettling on
+  // its own) plus a tritone layered on top - the classic "wrong interval"
+  // horror movies use - for real dread instead of a neutral pad
   const osc1 = audioCtx.createOscillator();
   osc1.type = 'sine';
-  osc1.frequency.value = 110;
+  osc1.frequency.value = 82;
   const osc2 = audioCtx.createOscillator();
   osc2.type = 'sine';
-  osc2.frequency.value = 116;
+  osc2.frequency.value = 87;
+  const tritone = audioCtx.createOscillator();
+  tritone.type = 'sine';
+  tritone.frequency.value = 116;
+  const tritoneGain = audioCtx.createGain();
+  tritoneGain.gain.value = 0.14;
   const osc3 = audioCtx.createOscillator();
   osc3.type = 'triangle';
-  osc3.frequency.value = 220;
+  osc3.frequency.value = 164;
   const osc3Gain = audioCtx.createGain();
-  osc3Gain.gain.value = 0.3;
+  osc3Gain.gain.value = 0.22;
   const lfo = audioCtx.createOscillator();
-  lfo.frequency.value = 0.07;
+  lfo.frequency.value = 0.045;
   const lfoGain = audioCtx.createGain();
-  lfoGain.gain.value = 0.05;
+  lfoGain.gain.value = 0.045;
   lfo.connect(lfoGain);
   lfoGain.connect(masterGain.gain);
 
   osc1.connect(masterGain);
   osc2.connect(masterGain);
+  tritone.connect(tritoneGain);
+  tritoneGain.connect(masterGain);
   osc3.connect(osc3Gain);
   osc3Gain.connect(masterGain);
   osc1.start();
   osc2.start();
   osc3.start();
+  tritone.start();
   lfo.start();
 
   ambientNodes = { masterGain };
+  scareStingTimer = 400 + Math.random() * 800;
+}
+function updateAmbientVolume() {
+  if (!ambientNodes || !audioCtx) return;
+  const isIntense = (typeof isBossWave !== 'undefined' && isBossWave) ||
+    (typeof isHordeWave !== 'undefined' && isHordeWave) ||
+    (typeof activeEvent !== 'undefined' && activeEvent !== null) ||
+    (typeof zombies !== 'undefined' && zombies.length > 12);
+  const target = muted ? 0 : AMBIENT_VOLUME * soundVolumeMult * (isIntense ? 1.9 : 1);
+  ambientNodes.masterGain.gain.setTargetAtTime(target, audioCtx.currentTime, 1.0);
 }
 function setAmbientMuted(isMuted) {
-  if (ambientNodes) ambientNodes.masterGain.gain.value = isMuted ? 0 : AMBIENT_VOLUME;
+  updateAmbientVolume();
 }
 function playDistantMoan() {
   beep(140 + Math.random() * 40, 1.0, 'sawtooth', 0.09, 180 + Math.random() * 30);
+}
+// a sparse, random dissonant sting in the distance - keeps the ambience
+// from ever feeling safe even when nothing is actually happening
+let scareStingTimer = 600;
+function updateScareSting() {
+  if (!ambientNodes) return;
+  scareStingTimer--;
+  if (scareStingTimer <= 0) {
+    scareStingTimer = 600 + Math.random() * 1200;
+    beep(850 + Math.random() * 350, 1.6, 'sine', 0.022, 1500 + Math.random() * 500);
+  }
 }
 
 function beep(freq, duration, type, volume, startFreq) {
@@ -381,7 +514,7 @@ function beep(freq, duration, type, volume, startFreq) {
   osc.type = type;
   osc.frequency.setValueAtTime(startFreq || freq, audioCtx.currentTime);
   if (startFreq) osc.frequency.exponentialRampToValueAtTime(freq, audioCtx.currentTime + duration);
-  gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+  gain.gain.setValueAtTime(volume * soundVolumeMult, audioCtx.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
@@ -394,6 +527,7 @@ function playShoot(weaponKey) {
   else if (weaponKey === 'rifle') beep(500, 0.05, 'square', 0.07, 650);
   else if (weaponKey === 'rocket') beep(90, 0.3, 'sawtooth', 0.2, 170);
   else if (weaponKey === 'smg') beep(380, 0.04, 'square', 0.07, 460);
+  else if (weaponKey === 'crossbow') beep(250, 0.06, 'sine', 0.04, 150);
   else beep(420, 0.07, 'square', 0.09, 520);
 }
 function playZombieHit() { beep(140, 0.07, 'square', 0.06, 90); }
@@ -410,6 +544,10 @@ function playBossDown() {
   setTimeout(() => beep(450, 0.25, 'sine', 0.2, 650), 120);
 }
 function playDash() { beep(600, 0.1, 'sine', 0.1, 300); }
+function playHeartbeat() {
+  beep(60, 0.12, 'sine', 0.16, 75);
+  setTimeout(() => beep(55, 0.1, 'sine', 0.12, 65), 140);
+}
 function playExplosion() { beep(60, 0.35, 'sawtooth', 0.22, 220); }
 function playGrenadeThrow() { beep(350, 0.08, 'sine', 0.1, 250); }
 function playAbilityActivate() {
@@ -433,9 +571,32 @@ muteBtn.addEventListener('click', () => {
 });
 updateMuteBtn();
 
+function buildPauseInfo() {
+  const lines = [];
+  lines.push('<b>Difficulty:</b> ' + difficulty.toUpperCase());
+  const perk = PERKS.find(pk => pk.id === selectedPerkId);
+  if (perk) lines.push('<b>Perk:</b> ' + perk.label);
+  const loadout = LOADOUT_UNLOCKS.find(lo => lo.id === selectedLoadoutId);
+  if (loadout && loadout.id !== 'none') lines.push('<b>Loadout:</b> ' + loadout.label);
+  players.forEach((p, i) => {
+    lines.push('<b>P' + (i + 1) + ' Grenade:</b> ' + GRENADE_TYPES[p.grenadeTypeIndex].label);
+  });
+  const upgrades = [];
+  if (bonusDamage > 0) upgrades.push('+' + bonusDamage + ' Dmg');
+  if (bulletPierceCount > 0) upgrades.push('+' + bulletPierceCount + ' Pierce');
+  if (bulletSplashBonus > 0) upgrades.push('+Blast');
+  if (spreadMult < 1) upgrades.push('Scope');
+  if (cooldownMult < 1) upgrades.push('Rapid Trigger');
+  if (bulletFreezeDuration > 0) upgrades.push('Cryo Rounds');
+  if (molotovLineLevel > 0) upgrades.push('Molotov Line x' + molotovLineLevel);
+  lines.push('<b>Shop Upgrades:</b> ' + (upgrades.length ? upgrades.join(', ') : 'None yet'));
+  return lines.join('<br>');
+}
+
 function togglePause() {
   if (phase === 'playing') {
     phase = 'paused';
+    pauseBuildInfo.innerHTML = buildPauseInfo();
     pauseOverlay.classList.remove('hidden');
   } else if (phase === 'paused') {
     phase = 'playing';
@@ -458,7 +619,11 @@ const CHARACTERS = [
   { name: 'Riley', light: '#d8b4fe', dark: '#9333ea', cap: '#4c1d95', headwear: 'ponytail', startWeapon: 'rocket',
     role: 'Demolitions', roleDesc: '+Blast radius, +max ammo', unlockWave: 15 },
   { name: 'Nina',  light: '#fde68a', dark: '#ca8a04', cap: '#422006', headwear: 'cap', startWeapon: 'sniper',
-    role: 'Sharpshooter', roleDesc: '+2 Bullet damage, +1 Pierce', unlockWave: 50 }
+    role: 'Sharpshooter', roleDesc: '+2 Bullet damage, +1 Pierce', unlockWave: 20 },
+  { name: 'Marcus', light: '#fdba74', dark: '#c2410c', cap: '#431407', headwear: 'bandana', startWeapon: 'flamethrower',
+    role: 'Pyro', roleDesc: '+50% Burn Damage, -15% Grenade Cooldown', unlockWave: 30 },
+  { name: 'Zara',  light: '#a5f3fc', dark: '#0e7490', cap: '#083344', headwear: 'beanie', startWeapon: 'crossbow',
+    role: 'Engineer', roleDesc: '+50% Turret Damage, +50% Turret Duration', unlockWave: 40 }
 ];
 
 function getBestWave() {
@@ -466,6 +631,16 @@ function getBestWave() {
 }
 function isCharacterUnlocked(idx) {
   return getBestWave() >= CHARACTERS[idx].unlockWave;
+}
+
+// New Game+: once unlocked (by reaching a high wave), you can start a fresh
+// run as if you were already further in - zombies are tougher from wave 1
+const NGPLUS_UNLOCK_WAVE = 30;
+const NGPLUS_BONUS_WAVES = 20;
+const NGPLUS_BONUS_SCORE = 100;
+let newGamePlusEnabled = false;
+function isNewGamePlusUnlocked() {
+  return getBestWave() >= NGPLUS_UNLOCK_WAVE;
 }
 
 let numPlayers = 1;
@@ -502,18 +677,21 @@ function buildCharOptions(container, getSelected, onSelect, previewCtx, previewC
   roleDescEl.textContent = CHARACTERS[getSelected()].role.toUpperCase() + ' — ' + CHARACTERS[getSelected()].roleDesc;
 }
 
-buildCharOptions(p1CharOptions, () => selectedP1Character, (idx) => {
-  selectedP1Character = idx;
-  selectedP1Weapon = CHARACTERS[idx].startWeapon;
-  buildWeaponOptions(p1WeaponOptions, () => selectedP1Weapon, (key) => { selectedP1Weapon = key; });
-}, p1PreviewCtx, p1PreviewCanvas, p1RoleDesc);
-buildCharOptions(p2CharOptions, () => selectedP2Character, (idx) => {
-  selectedP2Character = idx;
-  selectedP2Weapon = CHARACTERS[idx].startWeapon;
-  buildWeaponOptions(p2WeaponOptions, () => selectedP2Weapon, (key) => { selectedP2Weapon = key; });
-}, p2PreviewCtx, p2PreviewCanvas, p2RoleDesc);
-renderCharPreview(p1PreviewCtx, p1PreviewCanvas, selectedP1Character);
-renderCharPreview(p2PreviewCtx, p2PreviewCanvas, selectedP2Character);
+function buildCharOptionsRefresh() {
+  buildCharOptions(p1CharOptions, () => selectedP1Character, (idx) => {
+    selectedP1Character = idx;
+    selectedP1Weapon = CHARACTERS[idx].startWeapon;
+    buildWeaponOptions(p1WeaponOptions, () => selectedP1Weapon, (key) => { selectedP1Weapon = key; });
+  }, p1PreviewCtx, p1PreviewCanvas, p1RoleDesc);
+  buildCharOptions(p2CharOptions, () => selectedP2Character, (idx) => {
+    selectedP2Character = idx;
+    selectedP2Weapon = CHARACTERS[idx].startWeapon;
+    buildWeaponOptions(p2WeaponOptions, () => selectedP2Weapon, (key) => { selectedP2Weapon = key; });
+  }, p2PreviewCtx, p2PreviewCanvas, p2RoleDesc);
+  renderCharPreview(p1PreviewCtx, p1PreviewCanvas, selectedP1Character);
+  renderCharPreview(p2PreviewCtx, p2PreviewCanvas, selectedP2Character);
+}
+buildCharOptionsRefresh();
 
 mode1Btn.addEventListener('click', () => {
   numPlayers = 1;
@@ -529,20 +707,49 @@ mode2Btn.addEventListener('click', () => {
 });
 
 const DIFFICULTY_SETTINGS = {
-  easy:   { zombieHealthMult: 0.7, zombieDamageMult: 0.6, zombieCountMult: 0.75, spawnIntervalMult: 1.3 },
-  normal: { zombieHealthMult: 1,   zombieDamageMult: 1,   zombieCountMult: 1,    spawnIntervalMult: 1 },
-  hard:   { zombieHealthMult: 1.4, zombieDamageMult: 1.4, zombieCountMult: 1.3,  spawnIntervalMult: 0.75 }
+  easy:      { zombieHealthMult: 0.7, zombieDamageMult: 0.6, zombieCountMult: 0.75, spawnIntervalMult: 1.3 },
+  normal:    { zombieHealthMult: 1,   zombieDamageMult: 1,   zombieCountMult: 1,    spawnIntervalMult: 1 },
+  hard:      { zombieHealthMult: 1.4, zombieDamageMult: 1.4, zombieCountMult: 1.3,  spawnIntervalMult: 0.75 },
+  nightmare: { zombieHealthMult: 1.9, zombieDamageMult: 1.8, zombieCountMult: 1.6,  spawnIntervalMult: 0.55 }
 };
+const NIGHTMARE_UNLOCK_WAVE = 30;
 let difficulty = 'normal';
-const diffButtons = [diffEasyBtn, diffNormalBtn, diffHardBtn];
+const diffButtons = [diffEasyBtn, diffNormalBtn, diffHardBtn, diffNightmareBtn];
 function setDifficulty(level, btn) {
+  if (level === 'nightmare' && getBestWave() < NIGHTMARE_UNLOCK_WAVE) return;
   difficulty = level;
   diffButtons.forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
 }
+function refreshNightmareLock() {
+  const unlocked = getBestWave() >= NIGHTMARE_UNLOCK_WAVE;
+  diffNightmareBtn.classList.toggle('locked', !unlocked);
+  diffNightmareBtn.title = unlocked ? '' : 'Reach wave ' + NIGHTMARE_UNLOCK_WAVE + ' to unlock';
+  diffNightmareBtn.textContent = unlocked ? 'NIGHTMARE' : 'NIGHTMARE \u{1F512}';
+}
+refreshNightmareLock();
 diffEasyBtn.addEventListener('click', () => setDifficulty('easy', diffEasyBtn));
 diffNormalBtn.addEventListener('click', () => setDifficulty('normal', diffNormalBtn));
 diffHardBtn.addEventListener('click', () => setDifficulty('hard', diffHardBtn));
+diffNightmareBtn.addEventListener('click', () => setDifficulty('nightmare', diffNightmareBtn));
+
+const ngPlusRow = document.getElementById('ngPlusRow');
+const ngPlusBtn = document.getElementById('ngPlusBtn');
+function refreshNgPlusRow() {
+  if (isNewGamePlusUnlocked()) {
+    ngPlusRow.style.display = '';
+  } else {
+    ngPlusRow.style.display = 'none';
+    newGamePlusEnabled = false;
+  }
+  ngPlusBtn.textContent = 'NEW GAME+ (' + (newGamePlusEnabled ? 'ON' : 'OFF') + ')';
+  ngPlusBtn.classList.toggle('active', newGamePlusEnabled);
+}
+ngPlusBtn.addEventListener('click', () => {
+  newGamePlusEnabled = !newGamePlusEnabled;
+  refreshNgPlusRow();
+});
+refreshNgPlusRow();
 
 const keys = {};
 function keyActive(keyList) {
@@ -573,9 +780,11 @@ const WEAPON_TYPES = {
   rocket:  { name: 'Rocket',  color: '#a855f7', cooldown: 40, damage: 3, pellets: 1, spread: 0,    ammoCost: 1, maxAmmo: 6,  bulletRadius: 9, splashRadius: 55 },
   sniper:  { name: 'Sniper',  color: '#f43f5e', cooldown: 50, damage: 7, pellets: 1, spread: 0,    ammoCost: 1, maxAmmo: 10, bulletRadius: 5, pierce: 2 },
   flamethrower: { name: 'Flamethrower', color: '#fb923c', cooldown: 2, damage: 1, pellets: 1, spread: 0.25, ammoCost: 1, maxAmmo: 120, bulletRadius: 7,
-    maxRange: 140, burnDamage: 2, burnDuration: 90 }
+    maxRange: 140, burnDamage: 2, burnDuration: 90 },
+  crossbow: { name: 'Crossbow', color: '#78350f', cooldown: 35, damage: 5, pellets: 1, spread: 0, ammoCost: 1, maxAmmo: 16, bulletRadius: 4,
+    pierce: 1, silent: true, retrieveAmmo: true }
 };
-const WEAPON_ORDER = ['pistol', 'smg', 'shotgun', 'rifle', 'rocket', 'sniper', 'flamethrower'];
+const WEAPON_ORDER = ['pistol', 'smg', 'shotgun', 'rifle', 'rocket', 'sniper', 'flamethrower', 'crossbow'];
 let selectedP1Weapon = CHARACTERS[selectedP1Character].startWeapon;
 let selectedP2Weapon = CHARACTERS[selectedP2Character].startWeapon;
 
@@ -659,15 +868,18 @@ function getNightSpeedMultiplier() {
 // millions. health keeps climbing a long time (zombies take way more bullets)
 // while damage caps lower so a single hit can't just insta-kill the player
 function getWaveHealthMult() {
-  return Math.min(500, Math.pow(2, (wave - 1) / 20));
+  const effectiveWave = wave + (newGamePlusEnabled ? NGPLUS_BONUS_WAVES : 0);
+  return Math.min(500, Math.pow(2, (effectiveWave - 1) / 20));
 }
 function getWaveDamageMult() {
-  return Math.min(4, Math.pow(2, (wave - 1) / 20));
+  const effectiveWave = wave + (newGamePlusEnabled ? NGPLUS_BONUS_WAVES : 0);
+  return Math.min(4, Math.pow(2, (effectiveWave - 1) / 20));
 }
 
 let dustStormTimer = 0;
 let dustStormCooldownTimer = 1800;
 let moanTimer = 300;
+let heartbeatTimer = 0;
 let bonusDamage = 0;
 let bulletPierceCount = 0;
 let bulletSplashBonus = 0;
@@ -734,7 +946,7 @@ const WIND_MOVE_PENALTY = 0.65;
 function updateDustStorm() {
   if (dustStormTimer > 0) {
     dustStormTimer--;
-    if (dustStormTimer === 0) unlockAchievement('stormChaser');
+    if (dustStormTimer <= 0) unlockAchievement('stormChaser');
   } else {
     dustStormCooldownTimer--;
     if (dustStormCooldownTimer <= 0) {
@@ -862,6 +1074,98 @@ function updateRescueEvent() {
   }
 }
 
+// a rare golden zombie - one hit kills it, but it runs from you, so you
+// have to actually catch it before it wanders off for the bonus
+let goldenZombieCooldownTimer = 1200 + Math.random() * 900;
+const GOLDEN_ZOMBIE_LIFETIME = 500;
+const GOLDEN_ZOMBIE_SCORE = 80;
+
+function spawnGoldenZombie() {
+  const spot = spawnPointAroundCamera(260 + Math.random() * 150);
+  zombies.push({
+    x: spot.x, y: spot.y,
+    tierName: 'Golden',
+    radius: 14,
+    speed: 1.9 * getNightSpeedMultiplier(),
+    health: 1,
+    maxHealth: 1,
+    damage: 0,
+    hitFlash: 0,
+    bobPhase: 0,
+    bodyColor: '#fde047',
+    glow: '#fff7b0',
+    damageReduction: 0,
+    isGolden: true,
+    lifeTimer: GOLDEN_ZOMBIE_LIFETIME
+  });
+  waveMessage = 'GOLDEN ZOMBIE SPOTTED! Catch it fast!';
+  waveMessageTimer = 90;
+  playPickup();
+}
+
+function updateGoldenZombieSpawn() {
+  goldenZombieCooldownTimer--;
+  if (goldenZombieCooldownTimer <= 0) {
+    goldenZombieCooldownTimer = 1800 + Math.random() * 1500;
+    if (wave >= 2 && !zombies.some(z => z.isGolden) && Math.random() < 0.4) {
+      spawnGoldenZombie();
+    }
+  }
+}
+
+// every so often a pack of 3 toughened-up "elite" zombies spawns together -
+// a step up from regular zombies, a step down from a full boss fight
+let eliteSquadCooldownTimer = 1500 + Math.random() * 1200;
+const ELITE_SQUAD_SIZE = 3;
+const ELITE_HEALTH_MULT = 2;
+const ELITE_DAMAGE_MULT = 1.3;
+
+function updateEliteSquadSpawn() {
+  eliteSquadCooldownTimer--;
+  if (eliteSquadCooldownTimer <= 0) {
+    eliteSquadCooldownTimer = 2200 + Math.random() * 1500;
+    if (wave >= 4 && !isBossWave && Math.random() < 0.4) {
+      spawnEliteSquad();
+    }
+  }
+}
+
+function spawnEliteSquad() {
+  const spot = spawnPointAroundCamera(ZOMBIE_SPAWN_RADIUS * 0.7);
+  const tier = pickZombieTier();
+  for (let i = 0; i < ELITE_SQUAD_SIZE; i++) {
+    pushTierZombie(tier, spot.x + (Math.random() - 0.5) * 70, spot.y + (Math.random() - 0.5) * 70);
+    const z = zombies[zombies.length - 1];
+    z.health = Math.round(z.health * ELITE_HEALTH_MULT);
+    z.maxHealth = z.health;
+    z.damage = Math.round(z.damage * ELITE_DAMAGE_MULT);
+    z.isElite = true;
+    z.glow = '#ff2222';
+    z.alerted = true;
+  }
+  waveMessage = 'ELITE SQUAD INCOMING!';
+  waveMessageTimer = 90;
+  playWaveStart();
+}
+
+// a crate-on-a-parachute animation for supply drops - purely visual, the
+// actual pickups already land at the same spot the moment it's triggered
+let supplyDropAnims = [];
+const SUPPLY_DROP_ANIM_TIME = 55;
+function spawnSupplyDropAnim(x, y) {
+  supplyDropAnims.push({ x, y, timer: SUPPLY_DROP_ANIM_TIME, maxTimer: SUPPLY_DROP_ANIM_TIME });
+}
+function updateSupplyDropAnims() {
+  for (let i = supplyDropAnims.length - 1; i >= 0; i--) {
+    const a = supplyDropAnims[i];
+    a.timer--;
+    if (a.timer <= 0) {
+      makeParticles(a.x, a.y, '#d9a86c', 14);
+      supplyDropAnims.splice(i, 1);
+    }
+  }
+}
+
 function updateSafeZone() {
   if (!safeZone) return;
   safeZone.timer--;
@@ -927,6 +1231,37 @@ function updateHazardZones() {
   }
 }
 
+// debris a Raider zombie chucks at you from range - dodgeable, but it keeps
+// you from safely sitting still at medium distance
+let zombieProjectiles = [];
+const ZOMBIE_PROJECTILE_SPEED = 5;
+const ZOMBIE_THROW_RANGE = 260;
+const ZOMBIE_THROW_MIN_RANGE = 40;
+const ZOMBIE_THROW_COOLDOWN = 120;
+
+function updateZombieProjectiles() {
+  for (let i = zombieProjectiles.length - 1; i >= 0; i--) {
+    const zp = zombieProjectiles[i];
+    zp.x += zp.vx;
+    zp.y += zp.vy;
+    zp.life--;
+    let hit = false;
+    for (const p of players) {
+      if (p.alive && p.invulnTimer <= 0 && Math.hypot(p.x - zp.x, p.y - zp.y) < p.radius + zp.radius) {
+        damagePlayer(p, zp.damage);
+        p.invulnTimer = 30;
+        makeParticles(p.x, p.y, '#ef4444', 8);
+        playPlayerHurt();
+        hit = true;
+        break;
+      }
+    }
+    if (hit || zp.life <= 0 || isPointInsideObstacle(zp.x, zp.y)) {
+      zombieProjectiles.splice(i, 1);
+    }
+  }
+}
+
 const GRENADE_COOLDOWN = 300;
 const GRENADE_FUSE = 50;
 const GRENADE_RADIUS = 50;
@@ -950,6 +1285,8 @@ const TURRET_DURATION = 600;
 const TURRET_COOLDOWN = 24;
 const TURRET_RANGE = 220;
 const TURRET_DAMAGE = 5;
+const TURRET_MAX_HEALTH = 40;
+const TURRET_RADIUS = 14;
 const FIRE_PATCH_DURATION = 300;
 const FIRE_PATCH_TICK_DAMAGE = 3;
 const FIRE_PATCH_TICK_INTERVAL = 25;
@@ -961,6 +1298,28 @@ let molotovLineLevel = 0;
 // still smoking, before they fade away
 let corpses = [];
 const CORPSE_LIFE = 150;
+
+// floating damage numbers that pop up and fade when you hit a zombie
+let damageNumbers = [];
+const DAMAGE_NUMBER_LIFE = 35;
+function spawnDamageNumber(x, y, amount, isCrit) {
+  damageNumbers.push({
+    x: x + (Math.random() - 0.5) * 10,
+    y: y - 10,
+    text: Math.round(amount).toString(),
+    life: DAMAGE_NUMBER_LIFE,
+    maxLife: DAMAGE_NUMBER_LIFE,
+    isCrit: !!isCrit
+  });
+}
+function updateDamageNumbers() {
+  for (let i = damageNumbers.length - 1; i >= 0; i--) {
+    const d = damageNumbers[i];
+    d.y -= 0.6;
+    d.life--;
+    if (d.life <= 0) damageNumbers.splice(i, 1);
+  }
+}
 
 // a once-per-run emergency flare: fire it, wait a few seconds, a chopper
 // does one gun run on that spot
@@ -1046,7 +1405,11 @@ const ZOMBIE_TIERS = [
   { name: 'Ghoul', minWave: 50, radius: 16, speedMult: 1.4, healthBase: 6, damage: 20, color: '#4a2545', glow: '#9b30ff',
     canBreakObstacles: true },
   { name: 'Behemoth', minWave: 100, radius: 30, speedMult: 0.5, healthBase: 12, damage: 30, color: '#2f2f2f', glow: '#ff2222',
-    damageReduction: 0.25, explodesOnDeath: true, explosionRadius: 90, explosionDamage: 25 }
+    damageReduction: 0.25, explodesOnDeath: true, explosionRadius: 90, explosionDamage: 25 },
+  { name: 'Raider', minWave: 6, radius: 16, speedMult: 0.85, healthBase: 2, damage: 9, color: '#5a4a3a', glow: null,
+    canThrow: true },
+  { name: 'Dog', minWave: 7, radius: 10, speedMult: 2.1, healthBase: 1, damage: 7, color: '#78502a', glow: null,
+    packSize: 3 }
 ];
 let tierSeen = {};
 
@@ -1174,6 +1537,8 @@ function spawnPointAroundCamera(radius) {
   return { x: camera.x + Math.cos(angle) * radius, y: camera.y + Math.sin(angle) * radius };
 }
 const ZOMBIE_SPAWN_RADIUS = 520;
+const ALERT_PLAYER_RADIUS = 220;
+const ALERT_SPREAD_RADIUS = 160;
 
 // sparse, purely decorative points of interest scattered across the wasteland
 const LANDMARK_TYPES = ['gasStation', 'radioTower', 'bunker', 'hospital', 'militaryOutpost', 'safeHouse', 'trader'];
@@ -1403,6 +1768,84 @@ function renderAchievementsList() {
   }).join('&nbsp;&nbsp;');
 }
 
+// zombie codex: every zombie/boss type you've ever run into gets remembered,
+// same as the high score, and shows up filled in instead of "???"
+const CODEX_KEY = 'atlasZombieShooterCodex';
+function getDiscoveredTiers() {
+  try { return JSON.parse(localStorage.getItem(CODEX_KEY)) || []; } catch (e) { return []; }
+}
+function discoverTier(name) {
+  const list = getDiscoveredTiers();
+  if (!list.includes(name)) {
+    list.push(name);
+    localStorage.setItem(CODEX_KEY, JSON.stringify(list));
+  }
+}
+function renderCodex() {
+  const discovered = getDiscoveredTiers();
+  const entries = [...ZOMBIE_TIERS, ...BOSS_TYPES];
+  codexList.innerHTML = entries.map(e => {
+    const known = discovered.includes(e.name);
+    const color = known ? (e.color || '#8a8a8a') : '#3a3a42';
+    const label = known ? e.name : '???';
+    let details = 'Not yet encountered';
+    if (known) {
+      if (e.healthBase !== undefined) {
+        details = 'Min Wave ' + e.minWave + '  •  Dmg ' + e.damage;
+      } else {
+        details = 'Boss  •  Dmg x' + e.damageMult;
+      }
+    }
+    return '<div style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);">' +
+      '<span style="width:14px; height:14px; border-radius:50%; background:' + color + '; flex-shrink:0;"></span>' +
+      '<span style="font-weight:700; min-width:110px;">' + label + '</span>' +
+      '<span style="font-size:0.72rem; color:#9a9ab0;">' + details + '</span>' +
+      '</div>';
+  }).join('');
+}
+codexBtn.addEventListener('click', () => {
+  renderCodex();
+  codexOverlay.classList.remove('hidden');
+});
+closeCodexBtn.addEventListener('click', () => {
+  codexOverlay.classList.add('hidden');
+});
+
+const SEEN_TUTORIAL_KEY = 'atlasZombieShooterSeenTutorial';
+helpBtn.addEventListener('click', () => {
+  tutorialOverlay.classList.remove('hidden');
+});
+closeTutorialBtn.addEventListener('click', () => {
+  tutorialOverlay.classList.add('hidden');
+  localStorage.setItem(SEEN_TUTORIAL_KEY, '1');
+});
+if (!localStorage.getItem(SEEN_TUTORIAL_KEY)) {
+  tutorialOverlay.classList.remove('hidden');
+}
+
+function refreshScreenShakeToggle() {
+  screenShakeToggle.textContent = 'SCREEN SHAKE: ' + (screenShakeEnabled ? 'ON' : 'OFF');
+  screenShakeToggle.classList.toggle('active', screenShakeEnabled);
+}
+volumeSlider.value = Math.round(soundVolumeMult * 100);
+refreshScreenShakeToggle();
+settingsBtn.addEventListener('click', () => {
+  settingsOverlay.classList.remove('hidden');
+});
+closeSettingsBtn.addEventListener('click', () => {
+  settingsOverlay.classList.add('hidden');
+});
+volumeSlider.addEventListener('input', () => {
+  soundVolumeMult = Number(volumeSlider.value) / 100;
+  localStorage.setItem(SOUND_VOLUME_KEY, String(soundVolumeMult));
+  if (ambientNodes) updateAmbientVolume();
+});
+screenShakeToggle.addEventListener('click', () => {
+  screenShakeEnabled = !screenShakeEnabled;
+  localStorage.setItem(SCREEN_SHAKE_KEY, String(screenShakeEnabled));
+  refreshScreenShakeToggle();
+});
+
 function buildPerkOptions() {
   perkOptions.innerHTML = '';
   PERKS.forEach(perk => {
@@ -1480,7 +1923,12 @@ function resetGame() {
   rescueCooldownTimer = 1500 + Math.random() * 900;
   hazardZones = [];
   hazardSpawnCooldown = 900 + Math.random() * 600;
+  goldenZombieCooldownTimer = 1200 + Math.random() * 900;
+  eliteSquadCooldownTimer = 1500 + Math.random() * 1200;
+  supplyDropAnims = [];
+  zombieProjectiles = [];
   moanTimer = 300;
+  heartbeatTimer = 0;
   bonusDamage = 0;
   bulletPierceCount = 0;
   bulletSplashBonus = 0;
@@ -1493,6 +1941,7 @@ function resetGame() {
   firePatches = [];
   molotovLineLevel = 0;
   corpses = [];
+  damageNumbers = [];
   totalZombiesKilled = 0;
   shotsFired = 0;
   shotsHit = 0;
@@ -1512,6 +1961,7 @@ function resetGame() {
   for (let i = 0; i < numPlayers; i++) {
     players.push(createPlayer(i, charIndices[i], numPlayers, weaponChoices[i]));
   }
+  pets = players.map(p => createPet(p));
   const perk = PERKS.find(pk => pk.id === selectedPerkId) || PERKS[0];
   perk.apply();
   const loadout = LOADOUT_UNLOCKS.find(lo => lo.id === selectedLoadoutId);
@@ -1527,7 +1977,7 @@ function resetGame() {
   ammoSpawnTimer = 180;
   medKits = [];
   medKitSpawnTimer = 300;
-  score = 0;
+  score = newGamePlusEnabled ? NGPLUS_BONUS_SCORE : 0;
   comboCount = 0;
   comboTimer = 0;
   rapidFireTimer = 0;
@@ -1556,6 +2006,7 @@ function spawnBoss() {
   const bossType = BOSS_TYPES[bossNumber % BOSS_TYPES.length];
   const bossHealth = Math.round((25 + bossNumber * 15) * Math.max(1, players.length) * diff.zombieHealthMult * nightMult * getWaveHealthMult() * bossType.healthMult);
   waveMessage = bossType.name.toUpperCase() + '! YOU LEVELED UP!';
+  discoverTier(bossType.name);
   zombies.push({
     x: camera.x,
     y: camera.y - ZOMBIE_SPAWN_RADIUS,
@@ -1580,7 +2031,8 @@ function spawnBoss() {
     shieldTimer: 0,
     chargeTimer: 0,
     chargeDirX: 0,
-    chargeDirY: 0
+    chargeDirY: 0,
+    alerted: true
   });
 }
 
@@ -1663,7 +2115,8 @@ function spawnMiniRunner() {
     bobPhase: Math.random() * Math.PI * 2,
     bodyColor: '#a4de3c',
     glow: null,
-    damageReduction: 0
+    damageReduction: 0,
+    alerted: true
   });
 }
 
@@ -1683,7 +2136,8 @@ function spawnHordeZombie() {
     bobPhase: Math.random() * Math.PI * 2,
     bodyColor: '#d4a017',
     glow: null,
-    damageReduction: 0
+    damageReduction: 0,
+    alerted: true
   });
 }
 
@@ -1731,16 +2185,9 @@ function spawnMedKit() {
   });
 }
 
-function spawnZombie() {
-  const spot = spawnPointAroundCamera(ZOMBIE_SPAWN_RADIUS);
-  const x = spot.x, y = spot.y;
-
+function pushTierZombie(tier, x, y) {
   const diff = DIFFICULTY_SETTINGS[difficulty];
   const nightMult = getNightStatMultiplier();
-  const eligible = ZOMBIE_TIERS.filter(t => wave >= t.minWave);
-  const unseen = eligible.find(t => !tierSeen[t.name]);
-  const tier = unseen || pickZombieTier();
-  tierSeen[tier.name] = true;
   const speedBonus = Math.min(0.9, (wave - 1) * 0.12);
   const baseHealth = Math.max(1, Math.round(tier.healthBase * diff.zombieHealthMult * nightMult * getWaveHealthMult()));
   zombies.push({
@@ -1762,8 +2209,30 @@ function spawnZombie() {
     poisonDamage: tier.poisonDamage || 0,
     poisonDuration: tier.poisonDuration || 0,
     canBreakObstacles: tier.canBreakObstacles || false,
-    damageReduction: tier.damageReduction || 0
+    damageReduction: tier.damageReduction || 0,
+    canThrow: tier.canThrow || false,
+    rangedCooldown: 0,
+    alerted: false
   });
+}
+
+function spawnZombie() {
+  const spot = spawnPointAroundCamera(ZOMBIE_SPAWN_RADIUS);
+  const x = spot.x, y = spot.y;
+
+  const eligible = ZOMBIE_TIERS.filter(t => wave >= t.minWave);
+  const unseen = eligible.find(t => !tierSeen[t.name]);
+  const tier = unseen || pickZombieTier();
+  tierSeen[tier.name] = true;
+  discoverTier(tier.name);
+  pushTierZombie(tier, x, y);
+
+  // pack zombies (like Dogs) bring a couple of friends along
+  if (tier.packSize) {
+    for (let i = 1; i < tier.packSize; i++) {
+      pushTierZombie(tier, x + (Math.random() - 0.5) * 50, y + (Math.random() - 0.5) * 50);
+    }
+  }
 }
 
 function findNearestZombie(p) {
@@ -1791,6 +2260,19 @@ function findNearestPlayer(x, y) {
     }
   }
   return nearest;
+}
+
+function findNearestTarget(x, y) {
+  let best = findNearestPlayer(x, y);
+  let bestDist = best ? Math.hypot(best.x - x, best.y - y) : Infinity;
+  for (const t of turrets) {
+    const d = Math.hypot(t.x - x, t.y - y);
+    if (d < bestDist) {
+      bestDist = d;
+      best = t;
+    }
+  }
+  return best;
 }
 
 function findTouchingPlayer(x, y, r) {
@@ -1932,12 +2414,14 @@ function shoot(p) {
       color: weapon.color,
       splash: (weapon.splashRadius || 0) * splashMult + bulletSplashBonus,
       pierce: pierce,
-      burnDamage: weapon.burnDamage || 0,
+      burnDamage: (weapon.burnDamage || 0) * (p.character.role === 'Pyro' ? 1.5 : 1),
       burnDuration: weapon.burnDuration || 0,
       isFlame: p.currentWeaponKey === 'flamethrower',
       flameSeed: Math.random() * 100,
       freezeDuration: bulletFreezeDuration,
-      weaponKey: p.currentWeaponKey
+      weaponKey: p.currentWeaponKey,
+      retrieveAmmo: weapon.retrieveAmmo || false,
+      owner: p
     });
   }
 }
@@ -1955,6 +2439,7 @@ function meleeAttack(p) {
       z.health -= dmg * (1 - z.damageReduction);
       z.hitFlash = 8;
       makeParticles(z.x, z.y, '#e8e8e8', 6);
+      spawnDamageNumber(z.x, z.y - z.radius, dmg * (1 - z.damageReduction));
     }
   }
 }
@@ -1972,7 +2457,8 @@ function throwGrenade(p, angleOverride) {
     vx: Math.cos(angle) * 6,
     vy: Math.sin(angle) * 6,
     fuseTimer: GRENADE_FUSE,
-    grenadeType: grenadeType
+    grenadeType: grenadeType,
+    owner: p
   });
   playGrenadeThrow();
 }
@@ -1980,7 +2466,17 @@ function throwGrenade(p, angleOverride) {
 function detonateGrenade(g) {
   const type = g.grenadeType || 'frag';
   if (type === 'turret') {
-    turrets.push({ x: g.x, y: g.y, life: TURRET_DURATION, cooldown: 0, barrelAngle: 0 });
+    const isEngineer = g.owner && g.owner.character.role === 'Engineer';
+    turrets.push({
+      x: g.x, y: g.y,
+      life: Math.round(TURRET_DURATION * (isEngineer ? 1.5 : 1)),
+      cooldown: 0,
+      barrelAngle: 0,
+      damage: Math.round(TURRET_DAMAGE * (isEngineer ? 1.5 : 1)),
+      health: TURRET_MAX_HEALTH,
+      maxHealth: TURRET_MAX_HEALTH,
+      isTurretEntity: true
+    });
     makeParticles(g.x, g.y, '#60a5fa', 10);
     playPickup();
     return;
@@ -2069,7 +2565,8 @@ function updateTurrets() {
   for (let i = turrets.length - 1; i >= 0; i--) {
     const t = turrets[i];
     t.life--;
-    if (t.life <= 0) {
+    if (t.life <= 0 || t.health <= 0) {
+      if (t.health <= 0) makeParticles(t.x, t.y, '#93c5fd', 14);
       turrets.splice(i, 1);
       continue;
     }
@@ -2086,7 +2583,7 @@ function updateTurrets() {
           vx: Math.cos(t.barrelAngle) * 11,
           vy: Math.sin(t.barrelAngle) * 11,
           radius: 4,
-          damage: TURRET_DAMAGE,
+          damage: t.damage || TURRET_DAMAGE,
           color: '#60a5fa',
           splash: 0,
           pierce: 0,
@@ -2098,6 +2595,46 @@ function updateTurrets() {
       }
     } else if (t.cooldown > 0) {
       t.cooldown--;
+    }
+  }
+}
+
+// a loyal pet that follows each player the whole run and bites any zombie
+// (including zombie dogs) that wanders close
+let pets = [];
+const PET_RANGE = 85;
+const PET_DAMAGE = 3;
+const PET_COOLDOWN = 55;
+const PET_FOLLOW_DIST = 34;
+const PET_FOLLOW_SPEED = 2.6;
+
+function createPet(owner) {
+  return { owner, x: owner.x, y: owner.y, angle: 0, cooldown: 0, bobPhase: Math.random() * Math.PI * 2 };
+}
+
+function updatePets() {
+  for (const pet of pets) {
+    if (!pet.owner.alive) continue;
+    const dx = pet.owner.x - pet.x, dy = pet.owner.y - pet.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > PET_FOLLOW_DIST) {
+      const ang = Math.atan2(dy, dx);
+      pet.angle = ang;
+      pet.x += Math.cos(ang) * PET_FOLLOW_SPEED;
+      pet.y += Math.sin(ang) * PET_FOLLOW_SPEED;
+    }
+    pet.bobPhase += 0.2;
+    if (pet.cooldown > 0) pet.cooldown--;
+    const target = findNearestZombie(pet);
+    if (target && pet.cooldown <= 0 && Math.hypot(target.x - pet.x, target.y - pet.y) < PET_RANGE) {
+      pet.angle = Math.atan2(target.y - pet.y, target.x - pet.x);
+      target.health -= PET_DAMAGE * (1 - target.damageReduction);
+      target.hitFlash = 8;
+      target.lastHitWeapon = null;
+      makeParticles(target.x, target.y, '#e8e8e8', 4);
+      spawnDamageNumber(target.x, target.y - target.radius, PET_DAMAGE);
+      pet.cooldown = PET_COOLDOWN;
+      playMeleeSwing();
     }
   }
 }
@@ -2142,6 +2679,23 @@ function update() {
   updateTurrets();
   updateRescueEvent();
   updateHazardZones();
+  updateGoldenZombieSpawn();
+  updateEliteSquadSpawn();
+  updateSupplyDropAnims();
+  updateZombieProjectiles();
+  updatePets();
+  if (isAnyPlayerCritical()) {
+    heartbeatTimer--;
+    if (heartbeatTimer <= 0) {
+      heartbeatTimer = 50;
+      playHeartbeat();
+    }
+  } else {
+    heartbeatTimer = 0;
+  }
+  updateAmbientVolume();
+  updateScareSting();
+  updateDamageNumbers();
   moanTimer--;
   if (moanTimer <= 0) {
     moanTimer = 400 + Math.random() * 600;
@@ -2204,6 +2758,7 @@ function update() {
         } else {
           ammoPickups.push({ x: lm.x - 20, y: lm.y + 30, radius: 12, bobPhase: 0 });
           medKits.push({ x: lm.x + 20, y: lm.y + 30, radius: 12, bobPhase: 0 });
+          spawnSupplyDropAnim(lm.x, lm.y + 30);
           waveMessage = 'SUPPLY DROP!';
         }
         waveMessageTimer = 90;
@@ -2256,8 +2811,18 @@ function update() {
     if (p.adrenalineTimer > 0) p.adrenalineTimer--;
     if (p.fortifyTimer > 0) p.fortifyTimer--;
 
+    // Medic passively patches up anyone hurt standing nearby, not just with their ability
+    if (p.character.role === 'Medic' && frameCount % 45 === 0) {
+      for (const other of players) {
+        if (other !== p && other.alive && other.health < other.maxHealth && Math.hypot(other.x - p.x, other.y - p.y) < 90) {
+          other.health = Math.min(other.maxHealth, other.health + 2);
+          makeParticles(other.x, other.y, '#4ade80', 2);
+        }
+      }
+    }
+
     if (keyActive(p.controls.grenade) && p.grenadeCooldown <= 0) {
-      p.grenadeCooldown = GRENADE_COOLDOWN;
+      p.grenadeCooldown = Math.round(GRENADE_COOLDOWN * (p.character.role === 'Pyro' ? 0.85 : 1));
       throwGrenade(p);
     }
     if (keyActive(p.controls.ability) && p.abilityCooldown <= 0) {
@@ -2428,6 +2993,13 @@ function update() {
   for (let i = zombies.length - 1; i >= 0; i--) {
     const z = zombies[i];
     if (z.hitFlash > 0) z.hitFlash--;
+    if (z.isGolden) {
+      z.lifeTimer--;
+      if (z.lifeTimer <= 0) {
+        zombies.splice(i, 1);
+        continue;
+      }
+    }
     if (z.burnTimer > 0) {
       z.burnTimer--;
       z.burnTickCounter--;
@@ -2444,6 +3016,15 @@ function update() {
     if (z.confusedTimer > 0) {
       z.confusedTimer--;
       if (!z.wanderAngle || Math.random() < 0.03) z.wanderAngle = Math.random() * Math.PI * 2;
+    }
+    // a zombie that hasn't noticed anyone yet just shambles in place - it
+    // wakes up once a player gets close, or once a nearby zombie that's
+    // already alerted spreads the word
+    if (!z.alerted) {
+      const nearPlayer = players.some(p => p.alive && Math.hypot(p.x - z.x, p.y - z.y) < ALERT_PLAYER_RADIUS);
+      const nearAlerted = !nearPlayer && zombies.some(other => other !== z && other.alerted &&
+        Math.hypot(other.x - z.x, other.y - z.y) < ALERT_SPREAD_RADIUS);
+      if (nearPlayer || nearAlerted) z.alerted = true;
     }
     if (z.isBoss && !(z.stunTimer > 0) && !(z.confusedTimer > 0)) {
       updateBossSpecialMove(z);
@@ -2467,8 +3048,21 @@ function update() {
         z.x += Math.cos(ang) * z.speed * 1.3 * frozenMult;
         z.y += Math.sin(ang) * z.speed * 1.3 * frozenMult;
       }
+    } else if (z.isGolden) {
+      // always runs from the nearest player - you have to actually chase it down
+      const fleeFrom = findNearestPlayer(z.x, z.y);
+      if (fleeFrom) {
+        const ang = Math.atan2(z.y - fleeFrom.y, z.x - fleeFrom.x);
+        z.x += Math.cos(ang) * z.speed * frozenMult;
+        z.y += Math.sin(ang) * z.speed * frozenMult;
+      }
+    } else if (!z.alerted) {
+      // hasn't noticed anyone - just a slow aimless shamble, not a real wander
+      if (!z.idleAngle || Math.random() < 0.01) z.idleAngle = Math.random() * Math.PI * 2;
+      z.x += Math.cos(z.idleAngle) * z.speed * 0.15 * frozenMult;
+      z.y += Math.sin(z.idleAngle) * z.speed * 0.15 * frozenMult;
     } else {
-      const chaseTarget = findNearestPlayer(z.x, z.y);
+      const chaseTarget = findNearestTarget(z.x, z.y);
       if (chaseTarget) {
         const ang = Math.atan2(chaseTarget.y - z.y, chaseTarget.x - z.x);
         const inSafeZone = safeZone && Math.hypot(z.x - safeZone.x, z.y - safeZone.y) < safeZone.radius;
@@ -2479,6 +3073,29 @@ function update() {
     }
     resolveObstacleCollision(z, z.canBreakObstacles);
     z.bobPhase += 0.2;
+
+    // armed zombies chuck debris at you from range while they close in
+    if (z.canThrow && z.alerted && !(z.stunTimer > 0) && !(z.confusedTimer > 0)) {
+      if (z.rangedCooldown > 0) z.rangedCooldown--;
+      const throwTarget = findNearestPlayer(z.x, z.y);
+      if (throwTarget && z.rangedCooldown <= 0) {
+        const throwDist = Math.hypot(throwTarget.x - z.x, throwTarget.y - z.y);
+        if (throwDist < ZOMBIE_THROW_RANGE && throwDist > ZOMBIE_THROW_MIN_RANGE) {
+          const throwAng = Math.atan2(throwTarget.y - z.y, throwTarget.x - z.x);
+          zombieProjectiles.push({
+            x: z.x + Math.cos(throwAng) * (z.radius + 4),
+            y: z.y + Math.sin(throwAng) * (z.radius + 4),
+            vx: Math.cos(throwAng) * ZOMBIE_PROJECTILE_SPEED,
+            vy: Math.sin(throwAng) * ZOMBIE_PROJECTILE_SPEED,
+            radius: 5,
+            damage: z.damage,
+            life: 120
+          });
+          z.rangedCooldown = ZOMBIE_THROW_COOLDOWN;
+          playMeleeSwing();
+        }
+      }
+    }
 
     // zombie vs any player standing close enough
     for (const p of players) {
@@ -2494,6 +3111,14 @@ function update() {
           p.poisonTickDamage = z.poisonDamage;
           if (p.poisonTickCounter <= 0) p.poisonTickCounter = POISON_TICK_INTERVAL;
         }
+      }
+    }
+
+    // zombie vs any turret standing close enough - turrets can be swarmed down
+    for (const t of turrets) {
+      if (Math.hypot(z.x - t.x, z.y - t.y) < z.radius + TURRET_RADIUS) {
+        t.health -= z.damage * 0.5;
+        makeParticles(t.x, t.y, '#93c5fd', 3);
       }
     }
 
@@ -2514,10 +3139,12 @@ function update() {
         }
         shotsHit++;
         const frozenBonus = z.frozenTimer > 0 ? FROZEN_DAMAGE_BONUS : 1;
-        z.health -= b.damage * (1 - z.damageReduction) * frozenBonus;
+        const dmgDealt = b.damage * (1 - z.damageReduction) * frozenBonus;
+        z.health -= dmgDealt;
         z.hitFlash = 8;
         makeParticles(b.x, b.y, b.color || '#86e686', 6);
         playZombieHit();
+        spawnDamageNumber(z.x, z.y - z.radius, dmgDealt, frozenBonus > 1);
         if (b.burnDamage > 0) {
           z.burning = true;
           z.burnTimer = b.burnDuration;
@@ -2528,6 +3155,8 @@ function update() {
           z.frozenTimer = Math.max(z.frozenTimer || 0, b.freezeDuration);
         }
         if (b.weaponKey) z.lastHitWeapon = b.weaponKey;
+        z.lastHitRetrieve = !!b.retrieveAmmo;
+        z.lastHitOwner = b.owner;
         if (b.splash > 0) {
           spawnExplosion(b.x, b.y, b.splash * 1.3);
           makeParticles(b.x, b.y, '#fde047', 14);
@@ -2554,7 +3183,20 @@ function update() {
       totalZombiesKilled++;
       if (totalZombiesKilled === 1) unlockAchievement('firstBlood');
       if (dead.tierName === 'Behemoth') unlockAchievement('giantSlayer');
+      if (dead.isGolden) {
+        score += GOLDEN_ZOMBIE_SCORE;
+        ammoPickups.push({ x: dead.x, y: dead.y, radius: 12, bobPhase: 0 });
+        waveMessage = 'GOLDEN ZOMBIE CAUGHT! +' + GOLDEN_ZOMBIE_SCORE;
+        waveMessageTimer = 90;
+        makeParticles(dead.x, dead.y, '#fde047', 24);
+        playLevelUp();
+      }
       addWeaponMasteryKill(dead.lastHitWeapon);
+      if (dead.lastHitRetrieve && dead.lastHitOwner && dead.lastHitOwner.alive) {
+        const ownerWeapon = WEAPON_TYPES[dead.lastHitOwner.currentWeaponKey];
+        const maxAmmo = Math.round(ownerWeapon.maxAmmo * dead.lastHitOwner.maxAmmoMult);
+        dead.lastHitOwner.ammo = Math.min(maxAmmo, dead.lastHitOwner.ammo + 1);
+      }
       if (dead.burning) {
         makeParticles(dead.x, dead.y, '#fb923c', 10);
         makeParticles(dead.x, dead.y, '#4a4a4a', 10);
@@ -2666,37 +3308,55 @@ function endGame() {
 
   const diffKey = getDiffHighScoreKey(difficulty);
   const prevDiffHigh = Number(localStorage.getItem(diffKey)) || 0;
-  let noteText = '';
+  const badges = [];
   if (score > prevDiffHigh) {
     localStorage.setItem(diffKey, String(score));
-    noteText = 'NEW HIGH SCORE (' + difficulty.toUpperCase() + ')!';
-  } else {
-    noteText = difficulty.toUpperCase() + ' High Score: ' + prevDiffHigh;
+    badges.push('<div class="stat-badge gold">★ NEW HIGH SCORE (' + difficulty.toUpperCase() + ')</div>');
   }
   const prevBestWave = Number(localStorage.getItem(BEST_WAVE_KEY)) || 0;
-  let waveNote = 'Best Wave: ' + Math.max(wave, prevBestWave);
   if (wave > prevBestWave) {
     localStorage.setItem(BEST_WAVE_KEY, String(wave));
-    waveNote = 'NEW BEST WAVE!';
+    badges.push('<div class="stat-badge green">★ NEW BEST WAVE</div>');
   }
-  finalStats.textContent = 'Score: ' + score + '  —  Wave: ' + wave;
-  highScoreNote.textContent = noteText;
-  bestWaveNote.textContent = waveNote;
+  statBadges.innerHTML = badges.join('');
+  statScore.textContent = score;
+  statWave.textContent = wave;
+  statKills.textContent = totalZombiesKilled;
 
   const totalSeconds = Math.floor(frameCount / 60);
   const mins = Math.floor(totalSeconds / 60);
   const secs = totalSeconds % 60;
   const timeText = mins + ':' + String(secs).padStart(2, '0');
   const accuracy = shotsFired > 0 ? Math.round((shotsHit / shotsFired) * 100) : 0;
-  runSummary.textContent = 'Zombies Killed: ' + totalZombiesKilled + '  •  Time Survived: ' + timeText + '  •  Accuracy: ' + accuracy + '%';
+  statTime.textContent = timeText;
+  statAccuracy.textContent = accuracy + '%';
 
   gameOverOverlay.classList.remove('hidden');
+  refreshNightmareLock();
+  refreshNgPlusRow();
+  buildCharOptionsRefresh();
+}
+
+// the world looks different the farther out you wander - purely visual,
+// doesn't change any gameplay
+const BIOME_PALETTES = {
+  wasteland: { ground: '#3d362b', vignette: 'rgba(25, 15, 8, 0.6)' },
+  ruins:     { ground: '#2e2d33', vignette: 'rgba(15, 15, 22, 0.6)' },
+  forest:    { ground: '#23301f', vignette: 'rgba(8, 18, 10, 0.6)' }
+};
+function getBiome(x, y) {
+  const dist = Math.hypot(x, y);
+  if (dist < 3200) return 'wasteland';
+  if (dist < 6400) return 'ruins';
+  return 'forest';
 }
 
 function drawBackground() {
-  // a dusty, sun-bleached wasteland that tiles infinitely around the camera
+  // a dusty, sun-bleached wasteland that tiles infinitely around the camera -
+  // the ground color shifts to a different biome the farther out you travel
   const tileSize = 80;
-  context.fillStyle = '#3d362b';
+  const biome = BIOME_PALETTES[getBiome(camera.x, camera.y)];
+  context.fillStyle = biome.ground;
   context.fillRect(0, 0, canvas.width, canvas.height);
 
   const offsetX = canvas.width / 2 - camera.x;
@@ -2770,13 +3430,13 @@ function drawBackground() {
     }
   }
 
-  // warm, sepia-toned vignette for that wasteland haze
+  // haze vignette, tinted to match the current biome
   const vignette = context.createRadialGradient(
     canvas.width / 2, canvas.height / 2, 80,
     canvas.width / 2, canvas.height / 2, canvas.width / 1.3
   );
   vignette.addColorStop(0, 'rgba(40, 25, 10, 0)');
-  vignette.addColorStop(1, 'rgba(25, 15, 8, 0.6)');
+  vignette.addColorStop(1, biome.vignette);
   context.fillStyle = vignette;
   context.fillRect(0, 0, canvas.width, canvas.height);
 }
@@ -4019,6 +4679,128 @@ function drawGrenade(g) {
   context.fill();
 }
 
+function drawZombieProjectile(zp) {
+  context.save();
+  context.translate(zp.x, zp.y);
+  context.rotate(frameCount * 0.3);
+  context.fillStyle = '#6b5a3a';
+  context.beginPath();
+  context.moveTo(-5, -2);
+  context.lineTo(5, 0);
+  context.lineTo(-5, 2);
+  context.closePath();
+  context.fill();
+  context.restore();
+}
+
+function drawSupplyDropAnim(a) {
+  const t = 1 - a.timer / a.maxTimer;
+  const fallHeight = 220;
+  const curY = a.y - fallHeight * (1 - t);
+  // shadow on the ground, growing as it nears landing
+  context.fillStyle = 'rgba(0,0,0,' + (0.15 + t * 0.25) + ')';
+  context.beginPath();
+  context.ellipse(a.x, a.y + 10, 10 * (0.4 + t * 0.6), 4 * (0.4 + t * 0.6), 0, 0, Math.PI * 2);
+  context.fill();
+  context.save();
+  context.translate(a.x, curY);
+  context.strokeStyle = 'rgba(255,255,255,0.7)';
+  context.lineWidth = 1.2;
+  context.fillStyle = 'rgba(200,60,60,0.85)';
+  context.beginPath();
+  context.ellipse(0, -22, 16, 10, 0, Math.PI, 0);
+  context.fill();
+  context.stroke();
+  context.beginPath();
+  context.moveTo(-14, -22); context.lineTo(-7, -4);
+  context.moveTo(14, -22); context.lineTo(7, -4);
+  context.stroke();
+  context.fillStyle = '#6b4a2a';
+  context.fillRect(-8, -4, 16, 16);
+  context.strokeStyle = 'rgba(0,0,0,0.5)';
+  context.strokeRect(-8, -4, 16, 16);
+  context.restore();
+}
+
+function drawPet(pet) {
+  if (!pet.owner.alive) return;
+  const trot = Math.sin(pet.bobPhase);
+  const bob = Math.abs(trot) * 1.5;
+
+  // ground shadow, stays flat regardless of facing
+  context.fillStyle = 'rgba(0,0,0,0.3)';
+  context.beginPath();
+  context.ellipse(pet.x, pet.y + 7, 9, 3.5, 0, 0, Math.PI * 2);
+  context.fill();
+
+  context.save();
+  context.translate(pet.x, pet.y - bob);
+  context.rotate(pet.angle);
+
+  const furColor = '#b5793f';
+  const furDark = '#8a5a2a';
+  const legSwing = trot * 3;
+
+  // trotting legs (two pairs, swinging opposite each other)
+  context.strokeStyle = furDark;
+  context.lineWidth = 2.2;
+  context.lineCap = 'round';
+  context.beginPath();
+  context.moveTo(-5, 3); context.lineTo(-5 + legSwing, 8);
+  context.moveTo(4, 3); context.lineTo(4 - legSwing, 8);
+  context.stroke();
+
+  // wagging tail
+  const tailWag = Math.sin(pet.bobPhase * 1.6) * 0.5;
+  context.strokeStyle = furColor;
+  context.lineWidth = 2.5;
+  context.beginPath();
+  context.moveTo(-9, -1);
+  context.quadraticCurveTo(-15, -4 + tailWag * 4, -13, -9 + tailWag * 2);
+  context.stroke();
+
+  // body
+  context.fillStyle = furColor;
+  context.beginPath();
+  context.ellipse(-1, -2, 9, 5.5, 0, 0, Math.PI * 2);
+  context.fill();
+  context.strokeStyle = 'rgba(0,0,0,0.4)';
+  context.lineWidth = 1;
+  context.stroke();
+
+  // head + snout, facing the direction of travel
+  context.fillStyle = furColor;
+  context.beginPath();
+  context.arc(8, -4, 4.2, 0, Math.PI * 2);
+  context.fill();
+  context.stroke();
+  context.fillStyle = furDark;
+  context.beginPath();
+  context.ellipse(12, -3, 2.2, 1.6, 0, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = '#1a1a1a';
+  context.beginPath();
+  context.arc(13.5, -3, 0.8, 0, Math.PI * 2);
+  context.fill();
+
+  // perked ears
+  context.fillStyle = furDark;
+  context.beginPath();
+  context.moveTo(5, -7);
+  context.lineTo(4, -12);
+  context.lineTo(7.5, -8);
+  context.closePath();
+  context.fill();
+  context.beginPath();
+  context.moveTo(10, -7);
+  context.lineTo(11.5, -12);
+  context.lineTo(13, -7.5);
+  context.closePath();
+  context.fill();
+
+  context.restore();
+}
+
 function drawTurret(t) {
   context.save();
   context.translate(t.x, t.y);
@@ -4051,6 +4833,15 @@ function drawParticle(p) {
   context.beginPath();
   context.arc(p.x, p.y, 3, 0, Math.PI * 2);
   context.fill();
+  context.globalAlpha = 1;
+}
+
+function drawDamageNumber(d) {
+  context.globalAlpha = Math.max(0, d.life / d.maxLife);
+  context.textAlign = 'center';
+  context.font = (d.isCrit ? '800 15px' : '700 12px') + ' "DM Sans", sans-serif';
+  context.fillStyle = d.isCrit ? '#60a5fa' : '#fde047';
+  context.fillText(d.text, d.x, d.y);
   context.globalAlpha = 1;
 }
 
@@ -4251,7 +5042,7 @@ function drawHUD() {
   context.textAlign = 'center';
   context.font = '700 13px "DM Sans", sans-serif';
   context.fillStyle = '#c9c9da';
-  context.fillText('WAVE ' + wave, canvas.width / 2, 24);
+  context.fillText('WAVE ' + wave + (newGamePlusEnabled ? '  (NG+)' : ''), canvas.width / 2, 24);
 
   const nightFactor = getNightFactor();
   if (nightFactor > 0.3) {
@@ -4309,6 +5100,18 @@ function drawHUD() {
     context.font = '800 12px "DM Sans", sans-serif';
     context.fillStyle = '#4ade80';
     context.fillText('SURVIVOR NEARBY! (' + Math.ceil(rescueEvent.timer / 60) + 's)', canvas.width / 2, 116);
+  }
+  if (zombies.length === 0 && zombiesSpawnedThisWave >= zombiesToSpawnThisWave) {
+    const nextWave = wave + 1;
+    const nextIsBoss = nextWave % 5 === 0;
+    const nextIsHorde = !nextIsBoss && nextWave % 3 === 0;
+    let previewText = 'NEXT: WAVE ' + nextWave;
+    let previewColor = '#9a9ab0';
+    if (nextIsBoss) { previewText = 'NEXT: BOSS WAVE'; previewColor = '#ff5533'; }
+    else if (nextIsHorde) { previewText = 'NEXT: HORDE WAVE'; previewColor = '#fde047'; }
+    context.font = '700 11px "DM Sans", sans-serif';
+    context.fillStyle = previewColor;
+    context.fillText(previewText, canvas.width / 2, 132);
   }
 
   if (waveMessageTimer > 0) {
@@ -4378,8 +5181,8 @@ function drawShop() {
 function draw() {
   drawBackground();
   context.save();
-  const shakeX = screenShakeTimer > 0 ? (Math.random() * 2 - 1) * screenShakeMag : 0;
-  const shakeY = screenShakeTimer > 0 ? (Math.random() * 2 - 1) * screenShakeMag : 0;
+  const shakeX = (screenShakeEnabled && screenShakeTimer > 0) ? (Math.random() * 2 - 1) * screenShakeMag : 0;
+  const shakeY = (screenShakeEnabled && screenShakeTimer > 0) ? (Math.random() * 2 - 1) * screenShakeMag : 0;
   context.translate(canvas.width / 2 - camera.x + shakeX, canvas.height / 2 - camera.y + shakeY);
   if (safeZone) {
     const pulse = 0.5 + 0.5 * Math.sin(frameCount * 0.08);
@@ -4437,7 +5240,10 @@ function draw() {
   medKits.forEach(drawMedKit);
   bullets.forEach(drawBullet);
   grenades.forEach(drawGrenade);
+  zombieProjectiles.forEach(drawZombieProjectile);
   turrets.forEach(drawTurret);
+  pets.forEach(drawPet);
+  supplyDropAnims.forEach(drawSupplyDropAnim);
   if (rescueEvent) {
     const bob = Math.sin(frameCount * 0.12) * 4;
     context.save();
@@ -4468,6 +5274,7 @@ function draw() {
   particles.forEach(drawParticle);
   explosions.forEach(drawExplosion);
   players.forEach(drawPlayer);
+  damageNumbers.forEach(drawDamageNumber);
   if (flareTimer > 0) {
     const pulse = 0.5 + 0.5 * Math.sin(frameCount * 0.3);
     context.strokeStyle = 'rgba(239, 68, 68, ' + (0.4 + pulse * 0.4) + ')';
@@ -4488,10 +5295,26 @@ function draw() {
   drawHUD();
 }
 
+const LOW_HEALTH_THRESHOLD = 0.25;
+function isAnyPlayerCritical() {
+  return players.some(p => p.alive && p.health > 0 && p.health / p.maxHealth < LOW_HEALTH_THRESHOLD);
+}
+
 function drawAtmosphereOverlay() {
   const nightFactor = getNightFactor();
   if (nightFactor > 0.02) {
     context.fillStyle = 'rgba(8, 10, 35, ' + (nightFactor * 0.55) + ')';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  if (isAnyPlayerCritical()) {
+    const pulse = 0.5 + 0.5 * Math.sin(frameCount * 0.25);
+    const grad = context.createRadialGradient(
+      canvas.width / 2, canvas.height / 2, canvas.width * 0.25,
+      canvas.width / 2, canvas.height / 2, canvas.width * 0.7
+    );
+    grad.addColorStop(0, 'rgba(180, 0, 0, 0)');
+    grad.addColorStop(1, 'rgba(180, 0, 0, ' + (0.25 + pulse * 0.25) + ')');
+    context.fillStyle = grad;
     context.fillRect(0, 0, canvas.width, canvas.height);
   }
   if (dustStormTimer > 0) {
