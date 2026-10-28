@@ -217,7 +217,7 @@ canvas {
   <canvas id="game" width="760" height="460"></canvas>
   <div class="overlay" id="startOverlay">
     <h2>ZOMBIE SHOOTER</h2>
-    <p>Pick your gun below for each character. Player 1: <b>Shift</b> to roll, <b>Q</b> for grenade, <b>E</b> for your class ability, <b>F</b> to loot. Player 2: <b>Enter</b> to roll, <b>Ctrl</b> for grenade, <b>'</b> for ability, <b>;</b> to loot. Find gas stations, bunkers and radio towers and hold your loot key nearby for ammo, armor, or a supply drop. Watch for yellow Boomers that explode when killed, and green Venom zombies that poison you. Every 5th wave is a BOSS WAVE, every 3rd brings a HORDE.</p>
+    <p>Pick your gun below for each character. Player 1: <b>Shift</b> to roll, <b>Q</b> for grenade, <b>E</b> for your class ability, <b>F</b> to loot. Player 2: <b>Enter</b> to roll, <b>Ctrl</b> for grenade, <b>'</b> for ability, <b>;</b> to loot. Find gas stations, bunkers, radio towers, hospitals and military outposts and hold your loot key nearby for ammo, armor, healing, or gear. Watch for yellow Boomers that explode when killed, and green Venom zombies that poison you. Every 5th wave is a BOSS WAVE, every 3rd brings a HORDE. Watch out for dust storms - they curve your bullets with the wind, blind you past a short range, and slow you down if you walk against the wind.</p>
     <div class="mode-toggle">
       <button class="mode-btn active" id="mode1Btn">1 PLAYER</button>
       <button class="mode-btn" id="mode2Btn">2 PLAYERS</button>
@@ -248,6 +248,14 @@ canvas {
       <div class="char-select-label">PLAYER 2 WEAPON</div>
       <div class="char-options" id="p2WeaponOptions"></div>
     </div>
+    <div class="char-select-label">PERK (OPTIONAL)</div>
+    <div class="char-options" id="perkOptions"></div>
+    <div class="role-desc" id="perkDesc"></div>
+    <div class="char-select-label">STARTING LOADOUT (unlocked by achievements)</div>
+    <div class="char-options" id="loadoutOptions"></div>
+    <div class="role-desc" id="loadoutDesc"></div>
+    <div class="char-select-label">ACHIEVEMENTS</div>
+    <div id="achievementsList" style="font-size:0.7rem; color:#9a9ab0; max-width:480px; text-align:center; line-height:1.8;"></div>
     <button class="btn" id="startBtn">START</button>
   </div>
   <div class="overlay hidden" id="gameOverOverlay">
@@ -269,6 +277,7 @@ const canvas = document.getElementById('game');
 const context = canvas.getContext('2d');
 const HIGH_SCORE_KEY = 'atlasZombieShooterHighScore';
 const BEST_WAVE_KEY = 'atlasZombieShooterBestWave';
+function getDiffHighScoreKey(diff) { return 'atlasZombieShooterHighScore_' + diff; }
 
 const startOverlay = document.getElementById('startOverlay');
 const gameOverOverlay = document.getElementById('gameOverOverlay');
@@ -298,6 +307,11 @@ const p2PreviewCanvas = document.getElementById('p2Preview');
 const p2PreviewCtx = p2PreviewCanvas.getContext('2d');
 const p1RoleDesc = document.getElementById('p1RoleDesc');
 const p2RoleDesc = document.getElementById('p2RoleDesc');
+const perkOptions = document.getElementById('perkOptions');
+const perkDesc = document.getElementById('perkDesc');
+const loadoutOptions = document.getElementById('loadoutOptions');
+const loadoutDesc = document.getElementById('loadoutDesc');
+const achievementsList = document.getElementById('achievementsList');
 
 let phase = 'start'; // 'start' | 'playing' | 'paused' | 'gameOver'
 let frameCount = 0;
@@ -442,7 +456,9 @@ const CHARACTERS = [
   { name: 'Diego', light: '#86efac', dark: '#16a34a', cap: '#052e16', headwear: 'beanie',  startWeapon: 'rifle',
     role: 'Medic', roleDesc: 'Faster revives, +healing', unlockWave: 10 },
   { name: 'Riley', light: '#d8b4fe', dark: '#9333ea', cap: '#4c1d95', headwear: 'ponytail', startWeapon: 'rocket',
-    role: 'Demolitions', roleDesc: '+Blast radius, +max ammo', unlockWave: 15 }
+    role: 'Demolitions', roleDesc: '+Blast radius, +max ammo', unlockWave: 15 },
+  { name: 'Nina',  light: '#fde68a', dark: '#ca8a04', cap: '#422006', headwear: 'cap', startWeapon: 'sniper',
+    role: 'Sharpshooter', roleDesc: '+2 Bullet damage, +1 Pierce', unlockWave: 50 }
 ];
 
 function getBestWave() {
@@ -537,16 +553,16 @@ function makeControls(index, totalPlayers) {
   if (totalPlayers === 1) {
     return {
       up: ['w', 'arrowup'], down: ['s', 'arrowdown'], left: ['a', 'arrowleft'], right: ['d', 'arrowright'],
-      dash: ['shift', 'enter'], grenade: ['q', 'control'], ability: ['e', "'"], interact: ['f', ';']
+      dash: ['shift', 'enter'], grenade: ['q', 'control'], ability: ['e', "'"], interact: ['f', ';'], cycleGrenade: ['r', ']'], flare: ['g', '[']
     };
   }
   if (index === 0) {
-    return { up: ['w'], down: ['s'], left: ['a'], right: ['d'], dash: ['shift'], grenade: ['q'], ability: ['e'], interact: ['f'] };
+    return { up: ['w'], down: ['s'], left: ['a'], right: ['d'], dash: ['shift'], grenade: ['q'], ability: ['e'], interact: ['f'], cycleGrenade: ['r'], flare: ['g'] };
   }
   // P2's grenade/ability/interact keys are kept off to the side of the arrow cluster -
   // keys immediately next to the arrows (like "/" or ".") can fail to register
   // together with arrow presses on some keyboards (ghosting).
-  return { up: ['arrowup'], down: ['arrowdown'], left: ['arrowleft'], right: ['arrowright'], dash: ['enter'], grenade: ['control'], ability: ["'"], interact: [';'] };
+  return { up: ['arrowup'], down: ['arrowdown'], left: ['arrowleft'], right: ['arrowright'], dash: ['enter'], grenade: ['control'], ability: ["'"], interact: [';'], cycleGrenade: [']'], flare: ['['] };
 }
 
 const WEAPON_TYPES = {
@@ -554,19 +570,49 @@ const WEAPON_TYPES = {
   smg:     { name: 'SMG',     color: '#22d3ee', cooldown: 4,  damage: 1, pellets: 1, spread: 0.12, ammoCost: 1, maxAmmo: 50, bulletRadius: 4 },
   shotgun: { name: 'Shotgun', color: '#f97316', cooldown: 22, damage: 1, pellets: 4, spread: 0.3,  ammoCost: 2, maxAmmo: 20, bulletRadius: 5 },
   rifle:   { name: 'Rifle',   color: '#38bdf8', cooldown: 3,  damage: 1, pellets: 1, spread: 0.06, ammoCost: 1, maxAmmo: 40, bulletRadius: 5 },
-  rocket:  { name: 'Rocket',  color: '#a855f7', cooldown: 40, damage: 3, pellets: 1, spread: 0,    ammoCost: 1, maxAmmo: 6,  bulletRadius: 9, splashRadius: 55 }
+  rocket:  { name: 'Rocket',  color: '#a855f7', cooldown: 40, damage: 3, pellets: 1, spread: 0,    ammoCost: 1, maxAmmo: 6,  bulletRadius: 9, splashRadius: 55 },
+  sniper:  { name: 'Sniper',  color: '#f43f5e', cooldown: 50, damage: 7, pellets: 1, spread: 0,    ammoCost: 1, maxAmmo: 10, bulletRadius: 5, pierce: 2 },
+  flamethrower: { name: 'Flamethrower', color: '#fb923c', cooldown: 2, damage: 1, pellets: 1, spread: 0.25, ammoCost: 1, maxAmmo: 120, bulletRadius: 7,
+    maxRange: 140, burnDamage: 2, burnDuration: 90 }
 };
-const WEAPON_ORDER = ['pistol', 'smg', 'shotgun', 'rifle', 'rocket'];
+const WEAPON_ORDER = ['pistol', 'smg', 'shotgun', 'rifle', 'rocket', 'sniper', 'flamethrower'];
 let selectedP1Weapon = CHARACTERS[selectedP1Character].startWeapon;
 let selectedP2Weapon = CHARACTERS[selectedP2Character].startWeapon;
+
+// weapon mastery: kills with a weapon are counted across every run (saved
+// like the high score), and crossing the threshold unlocks a permanent
+// fire-rate bonus for that weapon from then on
+const WEAPON_MASTERY_KEY = 'atlasZombieShooterWeaponMastery';
+const MASTERY_THRESHOLD = 50;
+const MASTERY_COOLDOWN_MULT = 0.85;
+function getWeaponMasteryData() {
+  try { return JSON.parse(localStorage.getItem(WEAPON_MASTERY_KEY)) || {}; } catch (e) { return {}; }
+}
+function isWeaponMastered(weaponKey) {
+  return (getWeaponMasteryData()[weaponKey] || 0) >= MASTERY_THRESHOLD;
+}
+function addWeaponMasteryKill(weaponKey) {
+  if (!weaponKey || !WEAPON_TYPES[weaponKey]) return;
+  const data = getWeaponMasteryData();
+  const wasMastered = (data[weaponKey] || 0) >= MASTERY_THRESHOLD;
+  data[weaponKey] = (data[weaponKey] || 0) + 1;
+  localStorage.setItem(WEAPON_MASTERY_KEY, JSON.stringify(data));
+  if (!wasMastered && data[weaponKey] >= MASTERY_THRESHOLD) {
+    waveMessage = WEAPON_TYPES[weaponKey].name.toUpperCase() + ' MASTERED! +15% Fire Rate';
+    waveMessageTimer = 110;
+    playLevelUp();
+  }
+}
 
 function buildWeaponOptions(container, getSelected, onSelect) {
   container.innerHTML = '';
   WEAPON_ORDER.forEach(key => {
     const w = WEAPON_TYPES[key];
+    const mastered = isWeaponMastered(key);
     const btn = document.createElement('button');
     btn.className = 'char-swatch' + (key === getSelected() ? ' selected' : '');
-    btn.innerHTML = '<span class="char-swatch-dot" style="background:' + w.color + ';"></span><span class="char-swatch-name">' + w.name + '</span>';
+    if (mastered) btn.title = 'Mastered! +15% fire rate';
+    btn.innerHTML = '<span class="char-swatch-dot" style="background:' + w.color + ';"></span><span class="char-swatch-name">' + w.name + (mastered ? ' ★' : '') + '</span>';
     btn.addEventListener('click', () => {
       onSelect(key);
       container.querySelectorAll('.char-swatch').forEach(el => el.classList.remove('selected'));
@@ -608,10 +654,27 @@ function getNightSpeedMultiplier() {
   return 1 + getNightFactor() * 0.25;
 }
 
+// zombies ramp up hard with wave number - doubling roughly every 20 waves -
+// capped so the numbers stay sane at very high waves instead of going to the
+// millions. health keeps climbing a long time (zombies take way more bullets)
+// while damage caps lower so a single hit can't just insta-kill the player
+function getWaveHealthMult() {
+  return Math.min(500, Math.pow(2, (wave - 1) / 20));
+}
+function getWaveDamageMult() {
+  return Math.min(4, Math.pow(2, (wave - 1) / 20));
+}
+
 let dustStormTimer = 0;
 let dustStormCooldownTimer = 1800;
 let moanTimer = 300;
 let bonusDamage = 0;
+let bulletPierceCount = 0;
+let bulletSplashBonus = 0;
+let spreadMult = 1;
+let cooldownMult = 1;
+let bulletFreezeDuration = 0;
+const FROZEN_DAMAGE_BONUS = 1.5;
 let totalZombiesKilled = 0;
 let shotsFired = 0;
 let shotsHit = 0;
@@ -636,7 +699,19 @@ const SHOP_POOL = [
   { id: 'dash', label: '-20% Roll Cooldown', baseCost: 65,
     apply: () => { for (const p of players) p.dashCooldownMax = Math.max(15, Math.round(p.dashCooldownMax * 0.8)); } },
   { id: 'damage', label: '+1 Bullet Damage', baseCost: 90,
-    apply: () => { bonusDamage += 1; } }
+    apply: () => { bonusDamage += 1; } },
+  { id: 'pierce', label: 'Piercing Rounds (+1 Zombie)', baseCost: 110,
+    apply: () => { bulletPierceCount += 1; } },
+  { id: 'explosive', label: 'Explosive Rounds (+Blast)', baseCost: 120,
+    apply: () => { bulletSplashBonus += 18; } },
+  { id: 'scope', label: 'Scope Attachment (-Spread)', baseCost: 95,
+    apply: () => { spreadMult *= 0.8; } },
+  { id: 'rapidTrigger', label: 'Rapid Trigger (-10% Cooldown)', baseCost: 100,
+    apply: () => { cooldownMult *= 0.9; } },
+  { id: 'molotovLine', label: 'Molotov Line (+Fire Trail)', baseCost: 105,
+    apply: () => { molotovLineLevel += 1; } },
+  { id: 'cryo', label: 'Cryo Rounds (+Freeze)', baseCost: 110,
+    apply: () => { bulletFreezeDuration += 40; } }
 ];
 
 function generateShopOffers() {
@@ -652,14 +727,20 @@ function purchaseShopOffer(index) {
   shopOffers.splice(index, 1);
   playPickup();
 }
+let windAngle = 0;
+const WIND_BULLET_CURVE = 0.15;
+const WIND_MOVE_PENALTY = 0.65;
+
 function updateDustStorm() {
   if (dustStormTimer > 0) {
     dustStormTimer--;
+    if (dustStormTimer === 0) unlockAchievement('stormChaser');
   } else {
     dustStormCooldownTimer--;
     if (dustStormCooldownTimer <= 0) {
-      if (Math.random() < 0.4) {
+      if (Math.random() < 0.4 && rainTimer <= 0) {
         dustStormTimer = 400 + Math.random() * 300;
+        windAngle = Math.random() * Math.PI * 2;
         waveMessage = 'DUST STORM!';
         waveMessageTimer = 90;
       }
@@ -667,10 +748,260 @@ function updateDustStorm() {
     }
   }
 }
+
+// rain doesn't hurt visibility like a dust storm does - it just puts out
+// any fire (molotov patches) early, so throwing fire gets riskier timing
+let rainTimer = 0;
+let rainCooldownTimer = 1200 + Math.random() * 900;
+function updateRain() {
+  if (rainTimer > 0) {
+    rainTimer--;
+  } else {
+    rainCooldownTimer--;
+    if (rainCooldownTimer <= 0) {
+      if (Math.random() < 0.35 && dustStormTimer <= 0) {
+        rainTimer = 500 + Math.random() * 300;
+        if (firePatches.length > 0) {
+          firePatches = [];
+          waveMessage = 'RAIN! FIRES DOUSED';
+        } else {
+          waveMessage = 'RAIN';
+        }
+        waveMessageTimer = 90;
+      }
+      rainCooldownTimer = 1200 + Math.random() * 900;
+    }
+  }
+}
+
+// a random bonus fight that can break out mid-wave: a small rush of extra
+// zombies spawns, and if you kill them all before the timer runs out you
+// get bonus score. ignoring it just costs the bonus, no extra danger.
+let miniEventCooldownTimer = 900 + Math.random() * 600;
+let activeEvent = null;
+
+// a safe house generator (only usable at night) lights up a temporary
+// refuge: players inside take less damage and slowly heal, zombies inside
+// are slowed way down
+let safeZone = null;
+const HORDE_RUSH_TIME = 600;
+const HORDE_RUSH_ZOMBIE_COUNT = 8;
+const HORDE_RUSH_BONUS = 150;
+
+function updateMiniEvent() {
+  if (activeEvent) {
+    activeEvent.timer--;
+    const remaining = zombies.filter(z => z.isEventZombie).length;
+    if (remaining === 0) {
+      score += activeEvent.bonusScore;
+      waveMessage = 'HORDE RUSH CLEARED! +' + activeEvent.bonusScore;
+      waveMessageTimer = 90;
+      playLevelUp();
+      activeEvent = null;
+    } else if (activeEvent.timer <= 0) {
+      waveMessage = 'HORDE RUSH OVER';
+      waveMessageTimer = 60;
+      activeEvent = null;
+    }
+    return;
+  }
+  miniEventCooldownTimer--;
+  if (miniEventCooldownTimer <= 0) {
+    miniEventCooldownTimer = 1200 + Math.random() * 1200;
+    if (zombies.length > 0 && !isBossWave && wave >= 3 && Math.random() < 0.5) {
+      activeEvent = { timer: HORDE_RUSH_TIME, bonusScore: Math.round(HORDE_RUSH_BONUS * (1 + (wave - 1) * 0.05)) };
+      for (let i = 0; i < HORDE_RUSH_ZOMBIE_COUNT; i++) {
+        spawnHordeZombie();
+        zombies[zombies.length - 1].isEventZombie = true;
+      }
+      waveMessage = 'HORDE RUSH! Kill them all for bonus score!';
+      waveMessageTimer = 100;
+      playWaveStart();
+    }
+  }
+}
+
+// every so often a trapped survivor shows up nearby - reach them before
+// time runs out for a reward, or they're lost for good
+let rescueEvent = null;
+let rescueCooldownTimer = 1500 + Math.random() * 900;
+const RESCUE_TIME = 500;
+const RESCUE_REACH_RANGE = 40;
+const RESCUE_SCORE_BONUS = 120;
+
+function updateRescueEvent() {
+  if (rescueEvent) {
+    rescueEvent.timer--;
+    const reached = players.some(p => p.alive && Math.hypot(p.x - rescueEvent.x, p.y - rescueEvent.y) < RESCUE_REACH_RANGE);
+    if (reached) {
+      score += RESCUE_SCORE_BONUS;
+      ammoPickups.push({ x: rescueEvent.x - 16, y: rescueEvent.y, radius: 12, bobPhase: 0 });
+      medKits.push({ x: rescueEvent.x + 16, y: rescueEvent.y, radius: 12, bobPhase: 0 });
+      waveMessage = 'SURVIVOR RESCUED! +' + RESCUE_SCORE_BONUS;
+      waveMessageTimer = 90;
+      playLevelUp();
+      makeParticles(rescueEvent.x, rescueEvent.y, '#4ade80', 20);
+      rescueEvent = null;
+    } else if (rescueEvent.timer <= 0) {
+      waveMessage = 'SURVIVOR LOST...';
+      waveMessageTimer = 70;
+      rescueEvent = null;
+    }
+    return;
+  }
+  rescueCooldownTimer--;
+  if (rescueCooldownTimer <= 0) {
+    rescueCooldownTimer = 1800 + Math.random() * 1200;
+    if (wave >= 2 && Math.random() < 0.5) {
+      const spot = spawnPointAroundCamera(280 + Math.random() * 150);
+      rescueEvent = { x: spot.x, y: spot.y, timer: RESCUE_TIME };
+      waveMessage = 'SURVIVOR SPOTTED NEARBY!';
+      waveMessageTimer = 90;
+      playDistantMoan();
+    }
+  }
+}
+
+function updateSafeZone() {
+  if (!safeZone) return;
+  safeZone.timer--;
+  if (safeZone.timer <= 0) {
+    safeZone = null;
+    return;
+  }
+  for (const p of players) {
+    if (!p.alive) continue;
+    if (Math.hypot(p.x - safeZone.x, p.y - safeZone.y) < safeZone.radius) {
+      p.fortifyTimer = Math.max(p.fortifyTimer, 20);
+      if (safeZone.timer % 45 === 0 && p.health < p.maxHealth) {
+        p.health = Math.min(p.maxHealth, p.health + 2);
+        makeParticles(p.x, p.y, '#4ade80', 3);
+      }
+    }
+  }
+}
+
+// electrified hazard zones scattered around the map - zap anyone (zombie
+// or player) that lingers in them. free kills if you lure zombies in, but
+// they'll hurt you too if you're not careful
+let hazardZones = [];
+const HAZARD_TICK_INTERVAL = 30;
+const HAZARD_DAMAGE = 6;
+const HAZARD_RADIUS = 50;
+const HAZARD_MAX_COUNT = 6;
+const HAZARD_PRUNE_RANGE = 2500;
+let hazardSpawnCooldown = 900 + Math.random() * 600;
+
+function updateHazardZones() {
+  hazardSpawnCooldown--;
+  if (hazardSpawnCooldown <= 0) {
+    hazardSpawnCooldown = 1200 + Math.random() * 900;
+    if (wave >= 2 && hazardZones.length < HAZARD_MAX_COUNT) {
+      const spot = spawnPointAroundCamera(300 + Math.random() * 200);
+      hazardZones.push({ x: spot.x, y: spot.y, radius: HAZARD_RADIUS, tickCounter: HAZARD_TICK_INTERVAL });
+    }
+  }
+  for (const hz of hazardZones) {
+    hz.tickCounter--;
+    if (hz.tickCounter <= 0) {
+      hz.tickCounter = HAZARD_TICK_INTERVAL;
+      for (const z of zombies) {
+        if (Math.hypot(z.x - hz.x, z.y - hz.y) < hz.radius + z.radius) {
+          z.health -= HAZARD_DAMAGE * (1 - z.damageReduction);
+          z.hitFlash = 8;
+        }
+      }
+      for (const p of players) {
+        if (p.alive && Math.hypot(p.x - hz.x, p.y - hz.y) < hz.radius + p.radius) {
+          damagePlayer(p, HAZARD_DAMAGE);
+          makeParticles(p.x, p.y, '#93c5fd', 6);
+          p.invulnTimer = Math.max(p.invulnTimer, 20);
+        }
+      }
+      makeParticles(hz.x, hz.y, '#93c5fd', 8);
+    }
+  }
+  // the world is infinite, so prune hazard zones that have fallen far behind
+  if (hazardZones.length > 0) {
+    hazardZones = hazardZones.filter(hz => Math.hypot(hz.x - camera.x, hz.y - camera.y) < HAZARD_PRUNE_RANGE);
+  }
+}
+
 const GRENADE_COOLDOWN = 300;
 const GRENADE_FUSE = 50;
 const GRENADE_RADIUS = 50;
 const GRENADE_DAMAGE = 4;
+
+// 4 grenade flavors to pick from with the cycleGrenade key - press it before
+// throwing to change what your grenade key throws next
+const GRENADE_TYPES = [
+  { id: 'frag', label: 'Frag' },
+  { id: 'molotov', label: 'Molotov' },
+  { id: 'flash', label: 'Flashbang' },
+  { id: 'stun', label: 'Stun' },
+  { id: 'turret', label: 'Turret' }
+];
+let firePatches = [];
+
+// a deployable auto-turret, thrown down like a grenade - fires on its own
+// at whatever zombie is nearest for a while, then runs out
+let turrets = [];
+const TURRET_DURATION = 600;
+const TURRET_COOLDOWN = 24;
+const TURRET_RANGE = 220;
+const TURRET_DAMAGE = 5;
+const FIRE_PATCH_DURATION = 300;
+const FIRE_PATCH_TICK_DAMAGE = 3;
+const FIRE_PATCH_TICK_INTERVAL = 25;
+const FLASH_CONFUSE_DURATION = 240;
+const STUN_DURATION = 150;
+let molotovLineLevel = 0;
+
+// burned-out zombie husks that linger a few seconds after a fire kill,
+// still smoking, before they fade away
+let corpses = [];
+const CORPSE_LIFE = 150;
+
+// a once-per-run emergency flare: fire it, wait a few seconds, a chopper
+// does one gun run on that spot
+let flareUsed = false;
+let flareTimer = 0;
+let flareX = 0, flareY = 0;
+const FLARE_DELAY = 180;
+const FLARE_RADIUS = 220;
+const FLARE_DAMAGE = 60;
+
+function useFlare(p) {
+  if (flareUsed || flareTimer > 0) return;
+  flareUsed = true;
+  flareTimer = FLARE_DELAY;
+  flareX = p.x;
+  flareY = p.y;
+  waveMessage = 'FLARE FIRED! HELP INCOMING...';
+  waveMessageTimer = 90;
+  playGrenadeThrow();
+}
+
+function updateFlare() {
+  if (flareTimer <= 0) return;
+  flareTimer--;
+  if (flareTimer === 0) {
+    for (const z of zombies) {
+      if (Math.hypot(z.x - flareX, z.y - flareY) < FLARE_RADIUS) {
+        z.health -= FLARE_DAMAGE * (1 - z.damageReduction);
+        z.hitFlash = 8;
+      }
+    }
+    spawnExplosion(flareX, flareY, FLARE_RADIUS);
+    makeParticles(flareX, flareY, '#fde047', 30);
+    makeParticles(flareX, flareY, '#ef4444', 20);
+    playRocketBlast();
+    triggerScreenShake(12, 30);
+    waveMessage = 'AIRSTRIKE!';
+    waveMessageTimer = 90;
+  }
+}
+
 const ABILITY_COOLDOWN = 900;
 const ADRENALINE_DURATION = 240;
 const FORTIFY_DURATION = 180;
@@ -711,7 +1042,11 @@ const ZOMBIE_TIERS = [
   { name: 'Toxic', minWave: 8, radius: 18, speedMult: 1.2, healthBase: 4, damage: 18, color: '#7c3aed', glow: '#a855f7',
     canBreakObstacles: true },
   { name: 'Armored', minWave: 9, radius: 20, speedMult: 0.65, healthBase: 5, damage: 16, color: '#4a4a52', glow: null,
-    damageReduction: 0.4 }
+    damageReduction: 0.4 },
+  { name: 'Ghoul', minWave: 50, radius: 16, speedMult: 1.4, healthBase: 6, damage: 20, color: '#4a2545', glow: '#9b30ff',
+    canBreakObstacles: true },
+  { name: 'Behemoth', minWave: 100, radius: 30, speedMult: 0.5, healthBase: 12, damage: 30, color: '#2f2f2f', glow: '#ff2222',
+    damageReduction: 0.25, explodesOnDeath: true, explosionRadius: 90, explosionDamage: 25 }
 ];
 let tierSeen = {};
 
@@ -841,7 +1176,8 @@ function spawnPointAroundCamera(radius) {
 const ZOMBIE_SPAWN_RADIUS = 520;
 
 // sparse, purely decorative points of interest scattered across the wasteland
-const LANDMARK_TYPES = ['gasStation', 'radioTower', 'bunker'];
+const LANDMARK_TYPES = ['gasStation', 'radioTower', 'bunker', 'hospital', 'militaryOutpost', 'safeHouse', 'trader'];
+const TRADER_COST = 60;
 const LANDMARK_CHUNK_SIZE = 800;
 let landmarkChunks = {};
 let activeLandmarks = [];
@@ -928,6 +1264,7 @@ function resolveObstacleCollision(entity, canBreak) {
 }
 
 function startWave() {
+  if (wave >= 10) unlockAchievement('survivor10');
   shopOffers = [];
   shopGeneratedForThisBreak = false;
   const countMult = DIFFICULTY_SETTINGS[difficulty].zombieCountMult;
@@ -995,10 +1332,12 @@ function createPlayer(index, characterIndex, totalPlayers, chosenWeapon) {
     poisonTickDamage: 0,
     poisonTickCounter: 0,
     grenadeCooldown: 0,
+    grenadeTypeIndex: 0,
     abilityCooldown: 0,
     adrenalineTimer: 0,
     fortifyTimer: 0,
     muzzleFlashTimer: 0,
+    flameGlowTimer: 0,
     armor: 0,
     maxArmor: 100
   };
@@ -1008,18 +1347,152 @@ const DASH_SPEED_MULT = 3;
 const DASH_DURATION = 10;
 const DASH_COOLDOWN = 50;
 const POISON_TICK_INTERVAL = 30;
+const BURN_TICK_INTERVAL = 20;
 
 const REVIVE_WINDOW = 600;
 const REVIVE_RANGE = 10;
 const REVIVE_HEAL_FRACTION = 0.5;
 const REVIVE_HOLD_TIME = 75;
 
+// a perk picked before the run starts - lets each run play a little
+// differently. "none" just plays it straight
+const PERKS = [
+  { id: 'none', label: 'No Perk', desc: 'Play it straight.', apply: () => {} },
+  { id: 'piercer', label: 'Sharp Start', desc: '+1 Bullet Pierce from the start.', apply: () => { bulletPierceCount += 1; } },
+  { id: 'tough', label: 'Thick Skin', desc: '+25 Max HP, -10% Speed.',
+    apply: () => { for (const p of players) { p.maxHealth += 25; p.health += 25; p.speed *= 0.9; } } },
+  { id: 'swift', label: 'Fleet Footed', desc: '+20% Speed, -15 Max HP.',
+    apply: () => { for (const p of players) { p.speed *= 1.2; p.maxHealth = Math.max(10, p.maxHealth - 15); p.health = Math.min(p.health, p.maxHealth); } } },
+  { id: 'scavenger', label: 'Scavenger', desc: 'Start with full armor.', apply: () => { for (const p of players) p.armor = p.maxArmor; } }
+];
+let selectedPerkId = 'none';
+
+// achievements: small badges saved in localStorage, same spot as the high score
+const ACHIEVEMENTS_KEY = 'atlasZombieShooterAchievements';
+const ACHIEVEMENTS = [
+  { id: 'firstBlood', label: 'First Blood', desc: 'Kill your first zombie.' },
+  { id: 'survivor10', label: 'Survivor', desc: 'Reach wave 10.' },
+  { id: 'bossSlayer', label: 'Boss Slayer', desc: 'Kill a boss.' },
+  { id: 'stormChaser', label: 'Storm Chaser', desc: 'Survive an entire dust storm.' },
+  { id: 'battleBuddy', label: 'Battle Buddy', desc: 'Revive a downed teammate.' },
+  { id: 'giantSlayer', label: 'Giant Slayer', desc: 'Kill a Behemoth.' }
+];
+function getUnlockedAchievements() {
+  try { return JSON.parse(localStorage.getItem(ACHIEVEMENTS_KEY)) || []; } catch (e) { return []; }
+}
+function unlockAchievement(id) {
+  const unlocked = getUnlockedAchievements();
+  if (unlocked.includes(id)) return;
+  unlocked.push(id);
+  localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(unlocked));
+  const def = ACHIEVEMENTS.find(a => a.id === id);
+  if (def) {
+    waveMessage = 'ACHIEVEMENT: ' + def.label + '!';
+    waveMessageTimer = 110;
+    playLevelUp();
+  }
+  renderAchievementsList();
+  if (typeof buildLoadoutOptions === 'function' && loadoutOptions) buildLoadoutOptions();
+}
+function renderAchievementsList() {
+  if (!achievementsList) return;
+  const unlocked = getUnlockedAchievements();
+  achievementsList.innerHTML = ACHIEVEMENTS.map(a => {
+    const got = unlocked.includes(a.id);
+    return '<span style="color:' + (got ? '#4ade80' : '#5a5a6a') + ';" title="' + a.desc + '">' + (got ? '★ ' : '☆ ') + a.label + '</span>';
+  }).join('&nbsp;&nbsp;');
+}
+
+function buildPerkOptions() {
+  perkOptions.innerHTML = '';
+  PERKS.forEach(perk => {
+    const btn = document.createElement('button');
+    btn.className = 'char-swatch' + (perk.id === selectedPerkId ? ' selected' : '');
+    btn.innerHTML = '<span class="char-swatch-name">' + perk.label + '</span>';
+    btn.addEventListener('click', () => {
+      selectedPerkId = perk.id;
+      perkOptions.querySelectorAll('.char-swatch').forEach(el => el.classList.remove('selected'));
+      btn.classList.add('selected');
+      perkDesc.textContent = perk.desc;
+    });
+    perkOptions.appendChild(btn);
+  });
+  perkDesc.textContent = PERKS.find(p => p.id === selectedPerkId).desc;
+}
+buildPerkOptions();
+renderAchievementsList();
+
+// a permanent small head start, earned by unlocking achievements, applied
+// to every run from then on (on top of whatever perk is picked that run)
+const LOADOUT_UNLOCKS = [
+  { id: 'none', label: 'None', desc: 'No head start.', requiresAchievement: null, apply: () => {} },
+  { id: 'headstartHP', label: '+15 Max HP', desc: 'Start every run with +15 max HP.',
+    requiresAchievement: 'survivor10', apply: () => { for (const p of players) { p.maxHealth += 15; p.health += 15; } } },
+  { id: 'headstartArmor', label: '+30 Armor', desc: 'Start every run with 30 armor.',
+    requiresAchievement: 'bossSlayer', apply: () => { for (const p of players) p.armor = Math.min(p.maxArmor, p.armor + 30); } },
+  { id: 'headstartPierce', label: '+1 Pierce', desc: 'Start every run with +1 bullet pierce.',
+    requiresAchievement: 'giantSlayer', apply: () => { bulletPierceCount += 1; } }
+];
+let selectedLoadoutId = 'none';
+
+function isLoadoutUnlocked(loadout) {
+  return !loadout.requiresAchievement || getUnlockedAchievements().includes(loadout.requiresAchievement);
+}
+
+function buildLoadoutOptions() {
+  loadoutOptions.innerHTML = '';
+  LOADOUT_UNLOCKS.forEach(lo => {
+    const unlocked = isLoadoutUnlocked(lo);
+    const btn = document.createElement('button');
+    btn.className = 'char-swatch' + (lo.id === selectedLoadoutId ? ' selected' : '') + (unlocked ? '' : ' locked');
+    if (unlocked) {
+      btn.innerHTML = '<span class="char-swatch-name">' + lo.label + '</span>';
+    } else {
+      const reqDef = ACHIEVEMENTS.find(a => a.id === lo.requiresAchievement);
+      btn.innerHTML = '<span class="char-swatch-dot locked-dot">&#128274;</span><span class="char-swatch-name">' + (reqDef ? reqDef.label : lo.requiresAchievement) + '</span>';
+      btn.title = 'Earn the "' + (reqDef ? reqDef.label : lo.requiresAchievement) + '" achievement to unlock';
+    }
+    btn.addEventListener('click', () => {
+      if (!isLoadoutUnlocked(lo)) return;
+      selectedLoadoutId = lo.id;
+      loadoutOptions.querySelectorAll('.char-swatch').forEach(el => el.classList.remove('selected'));
+      btn.classList.add('selected');
+      loadoutDesc.textContent = lo.desc;
+    });
+    loadoutOptions.appendChild(btn);
+  });
+  const current = LOADOUT_UNLOCKS.find(lo => lo.id === selectedLoadoutId);
+  loadoutDesc.textContent = current ? current.desc : '';
+}
+buildLoadoutOptions();
+
 function resetGame() {
   frameCount = 0;
   dustStormTimer = 0;
   dustStormCooldownTimer = 1800;
+  windAngle = 0;
+  rainTimer = 0;
+  rainCooldownTimer = 1200 + Math.random() * 900;
+  flareUsed = false;
+  flareTimer = 0;
+  turrets = [];
+  rescueEvent = null;
+  rescueCooldownTimer = 1500 + Math.random() * 900;
+  hazardZones = [];
+  hazardSpawnCooldown = 900 + Math.random() * 600;
   moanTimer = 300;
   bonusDamage = 0;
+  bulletPierceCount = 0;
+  bulletSplashBonus = 0;
+  spreadMult = 1;
+  cooldownMult = 1;
+  bulletFreezeDuration = 0;
+  activeEvent = null;
+  miniEventCooldownTimer = 900 + Math.random() * 600;
+  safeZone = null;
+  firePatches = [];
+  molotovLineLevel = 0;
+  corpses = [];
   totalZombiesKilled = 0;
   shotsFired = 0;
   shotsHit = 0;
@@ -1039,6 +1512,10 @@ function resetGame() {
   for (let i = 0; i < numPlayers; i++) {
     players.push(createPlayer(i, charIndices[i], numPlayers, weaponChoices[i]));
   }
+  const perk = PERKS.find(pk => pk.id === selectedPerkId) || PERKS[0];
+  perk.apply();
+  const loadout = LOADOUT_UNLOCKS.find(lo => lo.id === selectedLoadoutId);
+  if (loadout && isLoadoutUnlocked(loadout)) loadout.apply();
   bullets = [];
   zombies = [];
   particles = [];
@@ -1059,27 +1536,115 @@ function resetGame() {
   startWave();
 }
 
+// every boss wave cycles to the next boss type, so bosses don't all play
+// the same way - each reuses existing zombie abilities (poison, armor,
+// speed) rather than needing brand new mechanics
+const BOSS_TYPES = [
+  { id: 'brute', name: 'Brute Boss', color: '#5c0a0a', glow: '#ff5533', radius: 34, speedMult: 1, healthMult: 1, damageMult: 1 },
+  { id: 'toxic', name: 'Toxic Boss', color: '#3a1f5c', glow: '#a855f7', radius: 32, speedMult: 0.9, healthMult: 0.9, damageMult: 0.7,
+    poisonOnHit: true, poisonDamage: 3, poisonDuration: 240 },
+  { id: 'armored', name: 'Armored Boss', color: '#2f2f38', glow: '#8a8a9a', radius: 36, speedMult: 0.75, healthMult: 1.3, damageMult: 1.1,
+    damageReduction: 0.35 },
+  { id: 'berserker', name: 'Berserker Boss', color: '#7a1010', glow: '#ff8833', radius: 30, speedMult: 1.5, healthMult: 0.75, damageMult: 1.2 }
+];
+const BOSS_SPECIAL_COOLDOWN = 300;
+
 function spawnBoss() {
   const diff = DIFFICULTY_SETTINGS[difficulty];
   const nightMult = getNightStatMultiplier();
   const bossNumber = Math.floor(wave / 5);
-  const bossHealth = Math.round((25 + bossNumber * 15) * Math.max(1, players.length) * diff.zombieHealthMult * nightMult);
+  const bossType = BOSS_TYPES[bossNumber % BOSS_TYPES.length];
+  const bossHealth = Math.round((25 + bossNumber * 15) * Math.max(1, players.length) * diff.zombieHealthMult * nightMult * getWaveHealthMult() * bossType.healthMult);
+  waveMessage = bossType.name.toUpperCase() + '! YOU LEVELED UP!';
   zombies.push({
     x: camera.x,
     y: camera.y - ZOMBIE_SPAWN_RADIUS,
-    tierName: 'Boss',
-    radius: 34,
-    speed: 0.6 * getNightSpeedMultiplier(),
+    tierName: bossType.name,
+    radius: bossType.radius,
+    speed: 0.6 * getNightSpeedMultiplier() * bossType.speedMult,
     health: bossHealth,
     maxHealth: bossHealth,
-    damage: Math.round(28 * diff.zombieDamageMult * nightMult),
+    damage: Math.round(28 * diff.zombieDamageMult * nightMult * getWaveDamageMult() * bossType.damageMult),
     hitFlash: 0,
     bobPhase: 0,
-    bodyColor: '#5c0a0a',
-    glow: '#ff5533',
+    bodyColor: bossType.color,
+    glow: bossType.glow,
     isBoss: true,
-    damageReduction: 0
+    damageReduction: bossType.damageReduction || 0,
+    baseDamageReduction: bossType.damageReduction || 0,
+    poisonOnHit: bossType.poisonOnHit || false,
+    poisonDamage: bossType.poisonDamage || 0,
+    poisonDuration: bossType.poisonDuration || 0,
+    bossMoveType: bossType.id,
+    specialCooldown: BOSS_SPECIAL_COOLDOWN,
+    shieldTimer: 0,
+    chargeTimer: 0,
+    chargeDirX: 0,
+    chargeDirY: 0
   });
+}
+
+// each boss type gets its own signature move on a cooldown, instead of
+// just being a scaled-up regular zombie
+function updateBossSpecialMove(z) {
+  z.specialCooldown--;
+  if (z.bossMoveType === 'armored' && z.shieldTimer > 0) {
+    z.shieldTimer--;
+    if (z.shieldTimer <= 0) z.damageReduction = z.baseDamageReduction;
+  }
+  if (z.specialCooldown > 0) return;
+  z.specialCooldown = BOSS_SPECIAL_COOLDOWN;
+
+  if (z.bossMoveType === 'brute') {
+    // ground slam - knocks back and hurts anyone standing close
+    const slamRadius = 90;
+    let hitAnyone = false;
+    for (const p of players) {
+      if (p.alive && Math.hypot(p.x - z.x, p.y - z.y) < slamRadius) {
+        damagePlayer(p, Math.round(z.damage * 0.6));
+        const ang = Math.atan2(p.y - z.y, p.x - z.x);
+        p.x += Math.cos(ang) * 40;
+        p.y += Math.sin(ang) * 40;
+        p.invulnTimer = 30;
+        hitAnyone = true;
+      }
+    }
+    spawnExplosion(z.x, z.y, slamRadius);
+    triggerScreenShake(8, 16);
+    makeParticles(z.x, z.y, '#8a6a4a', 16);
+    if (hitAnyone) playPlayerHurt();
+  } else if (z.bossMoveType === 'toxic') {
+    // poison cloud pulse - everyone nearby gets poisoned
+    const cloudRadius = 110;
+    makeParticles(z.x, z.y, '#aef23a', 24);
+    spawnExplosion(z.x, z.y, cloudRadius);
+    for (const p of players) {
+      if (p.alive && Math.hypot(p.x - z.x, p.y - z.y) < cloudRadius) {
+        p.poisonTimer = Math.max(p.poisonTimer, 180);
+        p.poisonTickDamage = 3;
+        if (p.poisonTickCounter <= 0) p.poisonTickCounter = POISON_TICK_INTERVAL;
+      }
+    }
+  } else if (z.bossMoveType === 'armored') {
+    // shield phase - becomes nearly immune to damage for a few seconds
+    z.shieldTimer = 150;
+    z.damageReduction = 0.92;
+    makeParticles(z.x, z.y, '#8a8a9a', 20);
+    waveMessage = 'ARMORED BOSS RAISES ITS SHIELD!';
+    waveMessageTimer = 70;
+  } else if (z.bossMoveType === 'berserker') {
+    // charges straight at the nearest player at high speed
+    const target = findNearestPlayer(z.x, z.y);
+    if (target) {
+      const ang = Math.atan2(target.y - z.y, target.x - z.x);
+      z.chargeDirX = Math.cos(ang);
+      z.chargeDirY = Math.sin(ang);
+      z.chargeTimer = 40;
+      makeParticles(z.x, z.y, '#ff8833', 14);
+      waveMessage = 'BERSERKER BOSS CHARGES!';
+      waveMessageTimer = 60;
+    }
+  }
 }
 
 function spawnMiniRunner() {
@@ -1093,7 +1658,7 @@ function spawnMiniRunner() {
     speed: (1.9 + Math.random() * 0.3) * getNightSpeedMultiplier(),
     health: 1,
     maxHealth: 1,
-    damage: Math.round(8 * DIFFICULTY_SETTINGS[difficulty].zombieDamageMult * getNightStatMultiplier()),
+    damage: Math.round(8 * DIFFICULTY_SETTINGS[difficulty].zombieDamageMult * getNightStatMultiplier() * getWaveDamageMult()),
     hitFlash: 0,
     bobPhase: Math.random() * Math.PI * 2,
     bodyColor: '#a4de3c',
@@ -1113,7 +1678,7 @@ function spawnHordeZombie() {
     speed: (1.6 + Math.random() * 0.4) * getNightSpeedMultiplier(),
     health: 1,
     maxHealth: 1,
-    damage: Math.round(6 * DIFFICULTY_SETTINGS[difficulty].zombieDamageMult * getNightStatMultiplier()),
+    damage: Math.round(6 * DIFFICULTY_SETTINGS[difficulty].zombieDamageMult * getNightStatMultiplier() * getWaveDamageMult()),
     hitFlash: 0,
     bobPhase: Math.random() * Math.PI * 2,
     bodyColor: '#d4a017',
@@ -1177,7 +1742,7 @@ function spawnZombie() {
   const tier = unseen || pickZombieTier();
   tierSeen[tier.name] = true;
   const speedBonus = Math.min(0.9, (wave - 1) * 0.12);
-  const baseHealth = Math.max(1, Math.round((tier.healthBase + Math.floor((wave - 1) / 4)) * diff.zombieHealthMult * nightMult));
+  const baseHealth = Math.max(1, Math.round(tier.healthBase * diff.zombieHealthMult * nightMult * getWaveHealthMult()));
   zombies.push({
     x, y,
     tierName: tier.name,
@@ -1185,7 +1750,7 @@ function spawnZombie() {
     speed: (0.9 + speedBonus + Math.random() * 0.3) * tier.speedMult * getNightSpeedMultiplier(),
     health: baseHealth,
     maxHealth: baseHealth,
-    damage: Math.round(tier.damage * diff.zombieDamageMult * nightMult),
+    damage: Math.round(tier.damage * diff.zombieDamageMult * nightMult * getWaveDamageMult()),
     hitFlash: 0,
     bobPhase: Math.random() * Math.PI * 2,
     bodyColor: tier.color || ZOMBIE_COLORS[Math.floor(Math.random() * ZOMBIE_COLORS.length)],
@@ -1289,40 +1854,90 @@ function spawnBloodDecal(x, y, scale) {
   }
 }
 
-function getShootCooldownFrames(weapon) {
-  const base = Math.max(3, weapon.cooldown - Math.floor((wave - 1) / 4)) * legendaryFireRateMult;
+function spawnScorchDecal(x, y, scale) {
+  const baseScale = scale || 1;
+  bloodDecals.push({
+    x, y,
+    scale: baseScale * (0.7 + Math.random() * 0.3),
+    rot: Math.random() * Math.PI * 2,
+    life: 600, maxLife: 600,
+    isScorch: true
+  });
+  if (bloodDecals.length > MAX_BLOOD_DECALS) bloodDecals.shift();
+}
+
+function updateCorpses() {
+  for (let i = corpses.length - 1; i >= 0; i--) {
+    const c = corpses[i];
+    c.life--;
+    if (c.life <= 0) {
+      corpses.splice(i, 1);
+      continue;
+    }
+    if (c.life > CORPSE_LIFE * 0.3 && Math.random() < 0.05) {
+      particles.push({
+        x: c.x + (Math.random() - 0.5) * 10,
+        y: c.y - 6,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: -0.4 - Math.random() * 0.3,
+        life: 30 + Math.random() * 15,
+        color: 'rgba(90,90,90,0.5)'
+      });
+    }
+  }
+}
+
+function getShootCooldownFrames(weapon, weaponKey) {
+  const masteryMult = weaponKey && isWeaponMastered(weaponKey) ? MASTERY_COOLDOWN_MULT : 1;
+  const base = Math.max(3, weapon.cooldown - Math.floor((wave - 1) / 4)) * legendaryFireRateMult * cooldownMult * masteryMult;
   return rapidFireTimer > 0 ? Math.max(2, Math.round(base * 0.5)) : Math.max(2, Math.round(base));
 }
 
-function getBulletDamage(weapon) {
-  return weapon.damage + Math.floor((wave - 1) / 3) + bonusDamage;
+function getBulletDamage(weapon, p) {
+  const sharpshooterBonus = p && p.character.role === 'Sharpshooter' ? 2 : 0;
+  return weapon.damage + Math.floor((wave - 1) / 3) + bonusDamage + sharpshooterBonus;
 }
 
 function shoot(p) {
   const weapon = WEAPON_TYPES[p.currentWeaponKey];
   if (p.shootCooldown > 0 || p.ammo < weapon.ammoCost) return;
-  p.shootCooldown = getShootCooldownFrames(weapon);
+  p.shootCooldown = getShootCooldownFrames(weapon, p.currentWeaponKey);
   p.ammo -= weapon.ammoCost;
   p.muzzleFlashTimer = 4;
+  if (p.currentWeaponKey === 'flamethrower') p.flameGlowTimer = 14;
   playShoot(p.currentWeaponKey);
-  const dmg = getBulletDamage(weapon);
+  const dmg = getBulletDamage(weapon, p);
+  const pierce = bulletPierceCount + (weapon.pierce || 0) + (p.character.role === 'Sharpshooter' ? 1 : 0);
   const speed = 11;
   const splashMult = p.character.role === 'Demolitions' ? 1.3 : 1;
   shotsFired += weapon.pellets;
+  const effectiveSpread = weapon.spread * spreadMult;
   for (let i = 0; i < weapon.pellets; i++) {
     const spreadOffset = weapon.pellets > 1
-      ? (i - (weapon.pellets - 1) / 2) * weapon.spread
-      : (Math.random() - 0.5) * weapon.spread;
+      ? (i - (weapon.pellets - 1) / 2) * effectiveSpread
+      : (Math.random() - 0.5) * effectiveSpread;
     const angle = p.angle + spreadOffset;
+    const startX = p.x + Math.cos(angle) * (p.radius + 4);
+    const startY = p.y + Math.sin(angle) * (p.radius + 4);
     bullets.push({
-      x: p.x + Math.cos(angle) * (p.radius + 4),
-      y: p.y + Math.sin(angle) * (p.radius + 4),
+      x: startX,
+      y: startY,
+      ox: startX,
+      oy: startY,
+      maxRange: weapon.maxRange || 0,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       radius: weapon.bulletRadius,
       damage: dmg,
       color: weapon.color,
-      splash: (weapon.splashRadius || 0) * splashMult
+      splash: (weapon.splashRadius || 0) * splashMult + bulletSplashBonus,
+      pierce: pierce,
+      burnDamage: weapon.burnDamage || 0,
+      burnDuration: weapon.burnDuration || 0,
+      isFlame: p.currentWeaponKey === 'flamethrower',
+      flameSeed: Math.random() * 100,
+      freezeDuration: bulletFreezeDuration,
+      weaponKey: p.currentWeaponKey
     });
   }
 }
@@ -1346,26 +1961,143 @@ function meleeAttack(p) {
 
 function throwGrenade(p, angleOverride) {
   const angle = angleOverride !== undefined ? angleOverride : p.angle;
+  const grenadeType = GRENADE_TYPES[p.grenadeTypeIndex].id;
+  const startX = p.x + Math.cos(angle) * (p.radius + 6);
+  const startY = p.y + Math.sin(angle) * (p.radius + 6);
   grenades.push({
-    x: p.x + Math.cos(angle) * (p.radius + 6),
-    y: p.y + Math.sin(angle) * (p.radius + 6),
+    x: startX,
+    y: startY,
+    ox: startX,
+    oy: startY,
     vx: Math.cos(angle) * 6,
     vy: Math.sin(angle) * 6,
-    fuseTimer: GRENADE_FUSE
+    fuseTimer: GRENADE_FUSE,
+    grenadeType: grenadeType
   });
   playGrenadeThrow();
 }
 
 function detonateGrenade(g) {
-  spawnExplosion(g.x, g.y, GRENADE_RADIUS * 1.2);
-  makeParticles(g.x, g.y, '#fde047', 12);
-  makeParticles(g.x, g.y, '#f97316', 14);
-  playExplosion();
+  const type = g.grenadeType || 'frag';
+  if (type === 'turret') {
+    turrets.push({ x: g.x, y: g.y, life: TURRET_DURATION, cooldown: 0, barrelAngle: 0 });
+    makeParticles(g.x, g.y, '#60a5fa', 10);
+    playPickup();
+    return;
+  }
   triggerScreenShake(5, 8);
-  for (const z of zombies) {
-    if (Math.hypot(z.x - g.x, z.y - g.y) < GRENADE_RADIUS + z.radius) {
-      z.health -= GRENADE_DAMAGE * (1 - z.damageReduction);
-      z.hitFlash = 8;
+  if (type === 'molotov') {
+    firePatches.push({ x: g.x, y: g.y, radius: GRENADE_RADIUS * 1.3, timer: FIRE_PATCH_DURATION, tickCounter: FIRE_PATCH_TICK_INTERVAL });
+    if (molotovLineLevel > 0 && g.ox !== undefined) {
+      // trails a line of smaller fire patches back along its flight path -
+      // more trail points the more times this upgrade is bought
+      const steps = 1 + molotovLineLevel;
+      for (let s = 1; s <= steps; s++) {
+        const t = s / (steps + 1);
+        firePatches.push({
+          x: g.ox + (g.x - g.ox) * t,
+          y: g.oy + (g.y - g.oy) * t,
+          radius: GRENADE_RADIUS * 0.9,
+          timer: FIRE_PATCH_DURATION,
+          tickCounter: FIRE_PATCH_TICK_INTERVAL
+        });
+      }
+    }
+    makeParticles(g.x, g.y, '#fb923c', 16);
+    makeParticles(g.x, g.y, '#f97316', 10);
+    playExplosion();
+  } else if (type === 'flash') {
+    spawnExplosion(g.x, g.y, GRENADE_RADIUS * 0.6);
+    makeParticles(g.x, g.y, '#ffffff', 24);
+    playExplosion();
+    for (const z of zombies) {
+      if (Math.hypot(z.x - g.x, z.y - g.y) < GRENADE_RADIUS * 1.6 + z.radius) {
+        z.confusedTimer = FLASH_CONFUSE_DURATION;
+        z.hitFlash = 8;
+      }
+    }
+  } else if (type === 'stun') {
+    spawnExplosion(g.x, g.y, GRENADE_RADIUS * 0.8);
+    makeParticles(g.x, g.y, '#60a5fa', 20);
+    playExplosion();
+    for (const z of zombies) {
+      if (Math.hypot(z.x - g.x, z.y - g.y) < GRENADE_RADIUS * 1.2 + z.radius) {
+        z.stunTimer = STUN_DURATION;
+        z.hitFlash = 8;
+      }
+    }
+  } else {
+    spawnExplosion(g.x, g.y, GRENADE_RADIUS * 1.2);
+    makeParticles(g.x, g.y, '#fde047', 12);
+    makeParticles(g.x, g.y, '#f97316', 14);
+    playExplosion();
+    for (const z of zombies) {
+      if (Math.hypot(z.x - g.x, z.y - g.y) < GRENADE_RADIUS + z.radius) {
+        z.health -= GRENADE_DAMAGE * (1 - z.damageReduction);
+        z.hitFlash = 8;
+      }
+    }
+  }
+}
+
+function updateFirePatches() {
+  for (let i = firePatches.length - 1; i >= 0; i--) {
+    const fp = firePatches[i];
+    fp.timer -= rainTimer > 0 ? 5 : 1;
+    if (fp.timer <= 0) {
+      firePatches.splice(i, 1);
+      continue;
+    }
+    fp.tickCounter--;
+    if (fp.tickCounter <= 0) {
+      fp.tickCounter = FIRE_PATCH_TICK_INTERVAL;
+      for (const z of zombies) {
+        if (Math.hypot(z.x - fp.x, z.y - fp.y) < fp.radius + z.radius) {
+          z.health -= FIRE_PATCH_TICK_DAMAGE * (1 - z.damageReduction);
+          z.burning = true;
+          z.burnTimer = Math.max(z.burnTimer || 0, 40);
+          z.burnTickDamage = Math.max(z.burnTickDamage || 0, 1);
+          if (!z.burnTickCounter || z.burnTickCounter <= 0) z.burnTickCounter = BURN_TICK_INTERVAL;
+          makeParticles(z.x, z.y, '#fb923c', 2);
+        }
+      }
+    }
+  }
+}
+
+function updateTurrets() {
+  for (let i = turrets.length - 1; i >= 0; i--) {
+    const t = turrets[i];
+    t.life--;
+    if (t.life <= 0) {
+      turrets.splice(i, 1);
+      continue;
+    }
+    const target = findNearestZombie(t);
+    if (target && Math.hypot(target.x - t.x, target.y - t.y) < TURRET_RANGE) {
+      t.barrelAngle = Math.atan2(target.y - t.y, target.x - t.x);
+      if (t.cooldown > 0) {
+        t.cooldown--;
+      } else {
+        t.cooldown = TURRET_COOLDOWN;
+        bullets.push({
+          x: t.x + Math.cos(t.barrelAngle) * 14,
+          y: t.y + Math.sin(t.barrelAngle) * 14,
+          vx: Math.cos(t.barrelAngle) * 11,
+          vy: Math.sin(t.barrelAngle) * 11,
+          radius: 4,
+          damage: TURRET_DAMAGE,
+          color: '#60a5fa',
+          splash: 0,
+          pierce: 0,
+          burnDamage: 0,
+          burnDuration: 0,
+          freezeDuration: 0
+        });
+        playShoot('smg');
+      }
+    } else if (t.cooldown > 0) {
+      t.cooldown--;
     }
   }
 }
@@ -1401,6 +2133,15 @@ function update() {
   activeLandmarks = getActiveLandmarks();
   pruneDistantChunks();
   updateDustStorm();
+  updateRain();
+  updateMiniEvent();
+  updateSafeZone();
+  updateFirePatches();
+  updateCorpses();
+  updateFlare();
+  updateTurrets();
+  updateRescueEvent();
+  updateHazardZones();
   moanTimer--;
   if (moanTimer <= 0) {
     moanTimer = 400 + Math.random() * 600;
@@ -1420,11 +2161,18 @@ function update() {
   const LOOT_HOLD_TIME = 70;
   for (const lm of activeLandmarks) {
     if (lm.looted) continue;
-    const holder = players.find(p => p.alive && keyActive(p.controls.interact) &&
+    // the safe house generator only works once it's dark out
+    const isUsable = lm.landmarkType !== 'safeHouse' || getNightFactor() > 0.5;
+    const holder = isUsable && players.find(p => p.alive && keyActive(p.controls.interact) &&
       Math.hypot(p.x - lm.x, p.y - lm.y) < LOOT_RANGE);
     if (holder) {
       lm.lootProgress++;
-      if (lm.lootProgress >= LOOT_HOLD_TIME) {
+      if (lm.lootProgress >= LOOT_HOLD_TIME && lm.landmarkType === 'trader' && score < TRADER_COST) {
+        // can't afford it yet - hold progress at the door instead of completing
+        lm.lootProgress = LOOT_HOLD_TIME - 1;
+        waveMessage = 'NOT ENOUGH SCORE (NEED ' + TRADER_COST + ')';
+        waveMessageTimer = 40;
+      } else if (lm.lootProgress >= LOOT_HOLD_TIME) {
         lm.looted = true;
         if (lm.landmarkType === 'gasStation') {
           for (const p of players) p.ammo = Math.round(WEAPON_TYPES[p.currentWeaponKey].maxAmmo * p.maxAmmoMult);
@@ -1432,6 +2180,27 @@ function update() {
         } else if (lm.landmarkType === 'bunker') {
           for (const p of players) p.armor = Math.min(p.maxArmor, p.armor + 50);
           waveMessage = 'ARMOR ACQUIRED!';
+        } else if (lm.landmarkType === 'hospital') {
+          for (const p of players) {
+            if (p.alive) { p.health = p.maxHealth; }
+            p.maxHealth += 10;
+            if (p.alive) p.health = Math.min(p.maxHealth, p.health + 10);
+          }
+          waveMessage = 'FULLY HEALED! +10 MAX HP';
+        } else if (lm.landmarkType === 'militaryOutpost') {
+          bulletPierceCount += 1;
+          waveMessage = 'WEAPON CACHE! +1 PIERCE';
+        } else if (lm.landmarkType === 'safeHouse') {
+          safeZone = { x: lm.x, y: lm.y, radius: 140, timer: 600 };
+          waveMessage = 'GENERATOR ONLINE! SAFE ZONE ACTIVE';
+        } else if (lm.landmarkType === 'trader') {
+          score -= TRADER_COST;
+          for (const p of players) {
+            p.ammo = Math.round(WEAPON_TYPES[p.currentWeaponKey].maxAmmo * p.maxAmmoMult);
+            p.armor = Math.min(p.maxArmor, p.armor + 30);
+            if (p.alive) p.health = Math.min(p.maxHealth, p.health + 20);
+          }
+          waveMessage = 'TRADED ' + TRADER_COST + ' SCORE FOR SUPPLIES!';
         } else {
           ammoPickups.push({ x: lm.x - 20, y: lm.y + 30, radius: 12, bobPhase: 0 });
           medKits.push({ x: lm.x + 20, y: lm.y + 30, radius: 12, bobPhase: 0 });
@@ -1457,6 +2226,7 @@ function update() {
           p.reviveProgress += reviver.character.role === 'Medic' ? 2 : 1;
           if (p.reviveProgress >= REVIVE_HOLD_TIME) {
             p.alive = true;
+            unlockAchievement('battleBuddy');
             const healFraction = reviver.character.role === 'Medic' ? REVIVE_HEAL_FRACTION * 1.4 : REVIVE_HEAL_FRACTION;
             p.health = Math.round(p.maxHealth * Math.min(1, healFraction));
             p.downTimer = 0;
@@ -1478,6 +2248,7 @@ function update() {
     if (p.meleeCooldown > 0) p.meleeCooldown--;
     if (p.meleeFlashTimer > 0) p.meleeFlashTimer--;
     if (p.muzzleFlashTimer > 0) p.muzzleFlashTimer--;
+    if (p.flameGlowTimer > 0) p.flameGlowTimer--;
     if (p.invulnTimer > 0) p.invulnTimer--;
     if (p.dashCooldown > 0) p.dashCooldown--;
     if (p.grenadeCooldown > 0) p.grenadeCooldown--;
@@ -1521,7 +2292,12 @@ function update() {
       playDash();
     }
 
-    const currentSpeed = p.adrenalineTimer > 0 ? p.speed * 1.8 : p.speed;
+    let currentSpeed = p.adrenalineTimer > 0 ? p.speed * 1.8 : p.speed;
+    if (dustStormTimer > 0 && (dx !== 0 || dy !== 0)) {
+      const moveLen = Math.hypot(dx, dy);
+      const windDot = (dx / moveLen) * Math.cos(windAngle) + (dy / moveLen) * Math.sin(windAngle);
+      if (windDot < -0.3) currentSpeed *= WIND_MOVE_PENALTY;
+    }
     if (p.dashTimer > 0) {
       p.dashTimer--;
       p.x += p.dashDirX * currentSpeed * DASH_SPEED_MULT;
@@ -1551,10 +2327,26 @@ function update() {
   // bullets
   for (let i = bullets.length - 1; i >= 0; i--) {
     const b = bullets[i];
+    if (dustStormTimer > 0) {
+      b.vx += Math.cos(windAngle) * WIND_BULLET_CURVE;
+      b.vy += Math.sin(windAngle) * WIND_BULLET_CURVE;
+    }
     b.x += b.vx;
     b.y += b.vy;
+    if (b.isFlame && Math.random() < 0.7) {
+      const flameColors = ['#fde047', '#fb923c', '#f97316', '#dc2626'];
+      particles.push({
+        x: b.x + (Math.random() - 0.5) * 6,
+        y: b.y + (Math.random() - 0.5) * 6,
+        vx: b.vx * 0.08 + (Math.random() - 0.5) * 0.6,
+        vy: b.vy * 0.08 + (Math.random() - 0.5) * 0.6,
+        life: 10 + Math.random() * 8,
+        color: flameColors[Math.floor(Math.random() * flameColors.length)]
+      });
+    }
     const offScreen = Math.abs(b.x - camera.x) > canvas.width / 2 + 10 || Math.abs(b.y - camera.y) > canvas.height / 2 + 10;
-    if (offScreen || isPointInsideObstacle(b.x, b.y)) {
+    const outOfRange = b.maxRange > 0 && Math.hypot(b.x - b.ox, b.y - b.oy) > b.maxRange;
+    if (offScreen || outOfRange || isPointInsideObstacle(b.x, b.y)) {
       bullets.splice(i, 1);
     }
   }
@@ -1578,9 +2370,13 @@ function update() {
     }
   } else if (zombies.length === 0) {
     if (!shopGeneratedForThisBreak) {
-      generateShopOffers();
+      if (wave % 10 === 0) {
+        generateShopOffers();
+        waveBreakTimer = 300;
+      } else {
+        waveBreakTimer = 90;
+      }
       shopGeneratedForThisBreak = true;
-      waveBreakTimer = 300;
     }
     waveBreakTimer--;
     if (waveBreakTimer <= 0) {
@@ -1632,11 +2428,54 @@ function update() {
   for (let i = zombies.length - 1; i >= 0; i--) {
     const z = zombies[i];
     if (z.hitFlash > 0) z.hitFlash--;
-    const chaseTarget = findNearestPlayer(z.x, z.y);
-    if (chaseTarget) {
-      const ang = Math.atan2(chaseTarget.y - z.y, chaseTarget.x - z.x);
-      z.x += Math.cos(ang) * z.speed;
-      z.y += Math.sin(ang) * z.speed;
+    if (z.burnTimer > 0) {
+      z.burnTimer--;
+      z.burnTickCounter--;
+      if (z.burnTickCounter <= 0) {
+        z.health -= z.burnTickDamage * (1 - z.damageReduction);
+        z.burnTickCounter = BURN_TICK_INTERVAL;
+        makeParticles(z.x, z.y, '#fb923c', 4);
+      }
+      if (z.burnTimer <= 0) z.burning = false;
+    }
+    if (z.stunTimer > 0) z.stunTimer--;
+    if (z.frozenTimer > 0) z.frozenTimer--;
+    const frozenMult = z.frozenTimer > 0 ? 0.15 : 1;
+    if (z.confusedTimer > 0) {
+      z.confusedTimer--;
+      if (!z.wanderAngle || Math.random() < 0.03) z.wanderAngle = Math.random() * Math.PI * 2;
+    }
+    if (z.isBoss && !(z.stunTimer > 0) && !(z.confusedTimer > 0)) {
+      updateBossSpecialMove(z);
+    }
+    if (z.stunTimer > 0) {
+      // stunned - doesn't move at all
+    } else if (z.confusedTimer > 0) {
+      // flashed - wanders a random direction instead of chasing anyone
+      z.x += Math.cos(z.wanderAngle) * z.speed * 0.5 * frozenMult;
+      z.y += Math.sin(z.wanderAngle) * z.speed * 0.5 * frozenMult;
+    } else if (z.chargeTimer > 0) {
+      // berserker boss mid-charge - rushes in a straight line, ignoring everything else
+      z.chargeTimer--;
+      z.x += z.chargeDirX * z.speed * 3.5;
+      z.y += z.chargeDirY * z.speed * 3.5;
+    } else if (z.burning && z.health < z.maxHealth * 0.3) {
+      // burning and nearly dead - panics and runs away instead of attacking
+      const fleeFrom = findNearestPlayer(z.x, z.y);
+      if (fleeFrom) {
+        const ang = Math.atan2(z.y - fleeFrom.y, z.x - fleeFrom.x);
+        z.x += Math.cos(ang) * z.speed * 1.3 * frozenMult;
+        z.y += Math.sin(ang) * z.speed * 1.3 * frozenMult;
+      }
+    } else {
+      const chaseTarget = findNearestPlayer(z.x, z.y);
+      if (chaseTarget) {
+        const ang = Math.atan2(chaseTarget.y - z.y, chaseTarget.x - z.x);
+        const inSafeZone = safeZone && Math.hypot(z.x - safeZone.x, z.y - safeZone.y) < safeZone.radius;
+        const moveSpeed = (inSafeZone ? z.speed * 0.35 : z.speed) * frozenMult;
+        z.x += Math.cos(ang) * moveSpeed;
+        z.y += Math.sin(ang) * moveSpeed;
+      }
     }
     resolveObstacleCollision(z, z.canBreakObstacles);
     z.bobPhase += 0.2;
@@ -1661,13 +2500,34 @@ function update() {
     // bullets vs zombie
     for (let j = bullets.length - 1; j >= 0; j--) {
       const b = bullets[j];
+      // a piercing bullet keeps flying after a hit, so it can stay
+      // overlapping the same zombie for a few more frames - track who
+      // it's already hit so it doesn't deal damage to that zombie again
+      if (b.hitZombies && b.hitZombies.has(z)) continue;
       if (Math.hypot(b.x - z.x, b.y - z.y) < z.radius + b.radius + 5) {
-        bullets.splice(j, 1);
+        if (b.pierce > 0) {
+          b.pierce--;
+          if (!b.hitZombies) b.hitZombies = new Set();
+          b.hitZombies.add(z);
+        } else {
+          bullets.splice(j, 1);
+        }
         shotsHit++;
-        z.health -= b.damage * (1 - z.damageReduction);
+        const frozenBonus = z.frozenTimer > 0 ? FROZEN_DAMAGE_BONUS : 1;
+        z.health -= b.damage * (1 - z.damageReduction) * frozenBonus;
         z.hitFlash = 8;
         makeParticles(b.x, b.y, b.color || '#86e686', 6);
         playZombieHit();
+        if (b.burnDamage > 0) {
+          z.burning = true;
+          z.burnTimer = b.burnDuration;
+          z.burnTickDamage = b.burnDamage;
+          if (!z.burnTickCounter || z.burnTickCounter <= 0) z.burnTickCounter = BURN_TICK_INTERVAL;
+        }
+        if (b.freezeDuration > 0) {
+          z.frozenTimer = Math.max(z.frozenTimer || 0, b.freezeDuration);
+        }
+        if (b.weaponKey) z.lastHitWeapon = b.weaponKey;
         if (b.splash > 0) {
           spawnExplosion(b.x, b.y, b.splash * 1.3);
           makeParticles(b.x, b.y, '#fde047', 14);
@@ -1692,12 +2552,23 @@ function update() {
     const dead = zombies[i];
     if (dead.health <= 0) {
       totalZombiesKilled++;
-      makeParticles(dead.x, dead.y, '#4caf50', 16);
-      spawnBloodDecal(dead.x, dead.y, dead.isBoss ? 2 : 1);
+      if (totalZombiesKilled === 1) unlockAchievement('firstBlood');
+      if (dead.tierName === 'Behemoth') unlockAchievement('giantSlayer');
+      addWeaponMasteryKill(dead.lastHitWeapon);
+      if (dead.burning) {
+        makeParticles(dead.x, dead.y, '#fb923c', 10);
+        makeParticles(dead.x, dead.y, '#4a4a4a', 10);
+        spawnScorchDecal(dead.x, dead.y, dead.isBoss ? 2 : 1);
+        corpses.push({ x: dead.x, y: dead.y, radius: dead.radius, life: CORPSE_LIFE });
+      } else {
+        makeParticles(dead.x, dead.y, '#4caf50', 16);
+        spawnBloodDecal(dead.x, dead.y, dead.isBoss ? 2 : 1);
+      }
       playZombieDeath();
 
       // boss always drops a guaranteed ammo + health crate, plus a special reward
       if (dead.isBoss) {
+        unlockAchievement('bossSlayer');
         medKits.push({ x: dead.x - 16, y: dead.y, radius: 12, bobPhase: 0 });
         ammoPickups.push({ x: dead.x + 16, y: dead.y, radius: 12, bobPhase: 0 });
         score += BOSS_SCORE_BONUS;
@@ -1791,12 +2662,16 @@ function endGame() {
   phase = 'gameOver';
   playGameOver();
   const prevHigh = Number(localStorage.getItem(HIGH_SCORE_KEY)) || 0;
+  if (score > prevHigh) localStorage.setItem(HIGH_SCORE_KEY, String(score));
+
+  const diffKey = getDiffHighScoreKey(difficulty);
+  const prevDiffHigh = Number(localStorage.getItem(diffKey)) || 0;
   let noteText = '';
-  if (score > prevHigh) {
-    localStorage.setItem(HIGH_SCORE_KEY, String(score));
-    noteText = 'NEW HIGH SCORE!';
+  if (score > prevDiffHigh) {
+    localStorage.setItem(diffKey, String(score));
+    noteText = 'NEW HIGH SCORE (' + difficulty.toUpperCase() + ')!';
   } else {
-    noteText = 'High Score: ' + prevHigh;
+    noteText = difficulty.toUpperCase() + ' High Score: ' + prevDiffHigh;
   }
   const prevBestWave = Number(localStorage.getItem(BEST_WAVE_KEY)) || 0;
   let waveNote = 'Best Wave: ' + Math.max(wave, prevBestWave);
@@ -2014,6 +2889,118 @@ function drawLandmark(lm) {
     // warm glow leaking from the doorway
     context.fillStyle = 'rgba(255,180,80,0.5)';
     context.fillRect(-9, -3, 18, 12);
+  } else if (lm.landmarkType === 'hospital') {
+    context.fillStyle = '#d8d8d4';
+    context.fillRect(-45, -30, 90, 60);
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 2;
+    context.strokeRect(-45, -30, 90, 60);
+    context.fillStyle = 'rgba(140,220,240,0.5)';
+    context.fillRect(-36, -18, 24, 20);
+    context.fillRect(12, -18, 24, 20);
+    context.strokeStyle = 'rgba(0,0,0,0.4)';
+    context.strokeRect(-36, -18, 24, 20);
+    context.strokeRect(12, -18, 24, 20);
+    context.fillStyle = '#1f1f1a';
+    context.fillRect(-10, 6, 20, 24);
+    context.fillStyle = '#e23b3b';
+    context.fillRect(-28, -56, 56, 16);
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.strokeRect(-28, -56, 56, 16);
+    context.fillStyle = '#ffffff';
+    context.fillRect(-4, -53, 8, 10);
+    context.fillRect(-9, -50, 18, 4);
+  } else if (lm.landmarkType === 'militaryOutpost') {
+    context.fillStyle = '#8a7a52';
+    context.strokeStyle = 'rgba(0,0,0,0.4)';
+    context.lineWidth = 1;
+    for (let s = -45; s < 45; s += 20) {
+      context.beginPath();
+      context.ellipse(s + 10, 24, 11, 7, 0, 0, Math.PI * 2);
+      context.fill();
+      context.stroke();
+    }
+    context.fillStyle = '#5a4a32';
+    context.fillRect(-20, -14, 40, 34);
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 2;
+    context.strokeRect(-20, -14, 40, 34);
+    context.beginPath();
+    context.moveTo(-20, -14); context.lineTo(20, 20);
+    context.moveTo(20, -14); context.lineTo(-20, 20);
+    context.stroke();
+    context.strokeStyle = '#8a8a8a';
+    context.lineWidth = 3;
+    context.beginPath();
+    context.moveTo(0, -14); context.lineTo(0, -80);
+    context.stroke();
+    context.fillStyle = '#4a7a3a';
+    context.beginPath();
+    context.moveTo(0, -80);
+    context.lineTo(28, -72);
+    context.lineTo(0, -64);
+    context.closePath();
+    context.fill();
+  } else if (lm.landmarkType === 'safeHouse') {
+    const isNight = getNightFactor() > 0.5;
+    context.fillStyle = '#4a4438';
+    context.fillRect(-38, -24, 76, 50);
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 2;
+    context.strokeRect(-38, -24, 76, 50);
+    // sloped roof
+    context.fillStyle = '#2a2620';
+    context.beginPath();
+    context.moveTo(-44, -24);
+    context.lineTo(0, -52);
+    context.lineTo(44, -24);
+    context.closePath();
+    context.fill();
+    // window - glows bright at night, dim by day
+    context.fillStyle = isNight ? 'rgba(253, 224, 71, 0.9)' : 'rgba(253, 224, 71, 0.25)';
+    if (isNight) { context.shadowColor = '#fde047'; context.shadowBlur = 14; }
+    context.fillRect(-14, -10, 28, 18);
+    context.shadowBlur = 0;
+    context.strokeStyle = 'rgba(0,0,0,0.4)';
+    context.strokeRect(-14, -10, 28, 18);
+    // little generator box with an antenna out front
+    context.fillStyle = '#5a5a5a';
+    context.fillRect(20, 12, 16, 14);
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.strokeRect(20, 12, 16, 14);
+    context.strokeStyle = '#8a8a8a';
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(28, 12); context.lineTo(28, -8);
+    context.stroke();
+  } else if (lm.landmarkType === 'trader') {
+    // a market stall with a striped awning and crates of goods
+    context.fillStyle = '#6b4a2a';
+    context.fillRect(-40, -8, 80, 38);
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 2;
+    context.strokeRect(-40, -8, 80, 38);
+    context.fillStyle = '#8a6a1a';
+    context.strokeStyle = '#3a2a0a';
+    for (let s = -40; s < 40; s += 16) {
+      context.beginPath();
+      context.moveTo(s, -8);
+      context.lineTo(s + 8, -26);
+      context.lineTo(s + 16, -8);
+      context.closePath();
+      context.fill();
+      context.stroke();
+    }
+    context.fillStyle = '#4a3a2a';
+    context.fillRect(-22, 4, 16, 16);
+    context.fillRect(6, 4, 16, 16);
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.strokeRect(-22, 4, 16, 16);
+    context.strokeRect(6, 4, 16, 16);
+    context.fillStyle = '#fde047';
+    context.font = '800 11px "DM Sans", sans-serif';
+    context.textAlign = 'center';
+    context.fillText('TRADE', 0, 14);
   }
 
   // loot prompt + progress bar
@@ -2021,12 +3008,17 @@ function drawLandmark(lm) {
     const nearHolder = players.some(p => p.alive && keyActive(p.controls.interact) &&
       Math.hypot(p.x - lm.x, p.y - lm.y) < 55);
     const nearAny = players.some(p => p.alive && Math.hypot(p.x - lm.x, p.y - lm.y) < 90);
+    const safeHouseLocked = lm.landmarkType === 'safeHouse' && getNightFactor() <= 0.5;
+    const isTrader = lm.landmarkType === 'trader';
     if (lm.lootProgress > 0 || nearAny) {
       context.textAlign = 'center';
       context.textBaseline = 'alphabetic';
       context.fillStyle = '#fde047';
       context.font = '800 11px "DM Sans", sans-serif';
-      context.fillText(nearHolder ? 'LOOTING...' : 'HOLD F TO LOOT', 0, -145);
+      let promptText = nearHolder ? 'LOOTING...' : 'HOLD F TO LOOT';
+      if (safeHouseLocked) promptText = 'GENERATOR OFFLINE (NIGHT ONLY)';
+      else if (isTrader) promptText = (nearHolder ? 'TRADING...' : 'HOLD F TO TRADE') + ' (' + TRADER_COST + ' score for full ammo/armor/heal)';
+      context.fillText(promptText, 0, -145);
     }
     if (lm.lootProgress > 0) {
       const barW = 50;
@@ -2049,12 +3041,42 @@ function drawBloodDecal(d) {
   context.translate(d.x, d.y);
   context.rotate(d.rot);
   context.scale(d.scale, d.scale);
-  context.fillStyle = 'rgba(80, 10, 10, ' + alpha + ')';
+  if (d.isScorch) {
+    context.fillStyle = 'rgba(20, 16, 14, ' + (alpha * 1.6) + ')';
+    context.beginPath();
+    context.ellipse(0, 0, 17, 12, 0, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = 'rgba(60, 35, 20, ' + (alpha * 1.1) + ')';
+    context.beginPath();
+    context.ellipse(0, 0, 11, 7, 0, 0, Math.PI * 2);
+    context.fill();
+  } else {
+    context.fillStyle = 'rgba(80, 10, 10, ' + alpha + ')';
+    context.beginPath();
+    context.ellipse(0, 0, 14, 9, 0, 0, Math.PI * 2);
+    context.ellipse(10, 4, 6, 4, 0.4, 0, Math.PI * 2);
+    context.ellipse(-8, -3, 5, 3, -0.3, 0, Math.PI * 2);
+    context.fill();
+  }
+  context.restore();
+}
+
+function drawCorpse(c) {
+  const fadeIn = Math.min(1, (CORPSE_LIFE - c.life) / 10);
+  const fadeOut = Math.min(1, c.life / 40);
+  const alpha = Math.min(fadeIn, fadeOut) * 0.85;
+  context.save();
+  context.translate(c.x, c.y);
+  context.globalAlpha = alpha;
+  context.fillStyle = '#1a1512';
   context.beginPath();
-  context.ellipse(0, 0, 14, 9, 0, 0, Math.PI * 2);
-  context.ellipse(10, 4, 6, 4, 0.4, 0, Math.PI * 2);
-  context.ellipse(-8, -3, 5, 3, -0.3, 0, Math.PI * 2);
+  context.ellipse(0, 0, c.radius * 1.1, c.radius * 0.65, 0.3, 0, Math.PI * 2);
   context.fill();
+  context.fillStyle = '#2e1c12';
+  context.beginPath();
+  context.ellipse(-c.radius * 0.3, -c.radius * 0.1, c.radius * 0.4, c.radius * 0.3, 0.2, 0, Math.PI * 2);
+  context.fill();
+  context.globalAlpha = 1;
   context.restore();
 }
 
@@ -2723,6 +3745,72 @@ function drawZombie(z) {
     context.shadowBlur = 16;
   }
 
+  // small flickering flames while burning
+  if (z.burning) {
+    const flicker = 0.6 + 0.4 * Math.sin(frameCount * 0.5);
+    context.fillStyle = 'rgba(251, 146, 60, ' + flicker + ')';
+    for (let f = -1; f <= 1; f++) {
+      context.beginPath();
+      context.moveTo(f * z.radius * 0.5, -z.radius * 0.6);
+      context.lineTo(f * z.radius * 0.5 - 4, -z.radius * 1.1 - Math.sin(frameCount * 0.4 + f) * 4);
+      context.lineTo(f * z.radius * 0.5 + 4, -z.radius * 1.1 - Math.sin(frameCount * 0.4 + f) * 4);
+      context.closePath();
+      context.fill();
+    }
+  }
+
+  // little spinning stars above a flashed (confused) zombie's head
+  if (z.confusedTimer > 0) {
+    context.fillStyle = '#fde047';
+    for (let s = 0; s < 3; s++) {
+      const starAngle = frameCount * 0.15 + s * (Math.PI * 2 / 3);
+      const sx = Math.cos(starAngle) * (z.radius * 0.7);
+      const sy = -z.radius * 1.3 + Math.sin(starAngle) * 4;
+      context.beginPath();
+      context.arc(sx, sy, 2.5, 0, Math.PI * 2);
+      context.fill();
+    }
+  }
+  // a few static sparks above a stunned zombie's head
+  if (z.stunTimer > 0) {
+    context.strokeStyle = '#60a5fa';
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.moveTo(-6, -z.radius * 1.3);
+    context.lineTo(0, -z.radius * 1.6);
+    context.lineTo(-2, -z.radius * 1.4);
+    context.lineTo(6, -z.radius * 1.7);
+    context.stroke();
+  }
+  // an icy blue tint + a few crystal flecks on a frozen zombie
+  if (z.frozenTimer > 0) {
+    context.fillStyle = 'rgba(147, 197, 253, 0.35)';
+    context.beginPath();
+    context.arc(0, -z.radius * 0.3, z.radius * 1.1, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = '#bfdbfe';
+    for (let s = -1; s <= 1; s += 2) {
+      context.beginPath();
+      context.moveTo(s * z.radius * 0.6, -z.radius * 0.2);
+      context.lineTo(s * z.radius * 0.8, -z.radius * 0.6);
+      context.lineTo(s * z.radius * 0.45, -z.radius * 0.55);
+      context.closePath();
+      context.fill();
+    }
+  }
+
+  // a glowing shield shell around an Armored Boss in its shield phase
+  if (z.shieldTimer > 0) {
+    const shieldPulse = 0.6 + 0.4 * Math.sin(frameCount * 0.3);
+    context.strokeStyle = 'rgba(167, 199, 231, ' + shieldPulse + ')';
+    context.lineWidth = 3;
+    context.beginPath();
+    context.arc(0, -z.radius * 0.2, z.radius * 1.35, 0, Math.PI * 2);
+    context.stroke();
+    context.fillStyle = 'rgba(167, 199, 231, 0.12)';
+    context.fill();
+  }
+
   // legs
   context.fillStyle = '#263226';
   context.fillRect(-legW - 1, 7 + bob, legW, legH);
@@ -2880,10 +3968,38 @@ function drawMedKit(kit) {
 }
 
 function drawBullet(b) {
+  if (b.isFlame) {
+    drawFlameBullet(b);
+    return;
+  }
   context.fillStyle = b.color || '#fde047';
   context.beginPath();
   context.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
   context.fill();
+}
+
+function drawFlameBullet(b) {
+  const angle = Math.atan2(b.vy, b.vx);
+  const flicker = 0.75 + 0.25 * Math.sin(frameCount * 0.9 + b.flameSeed);
+  context.save();
+  context.translate(b.x, b.y);
+  context.rotate(angle);
+  context.scale(flicker, flicker);
+  // an elongated teardrop pointing the way it's flying, layered from a
+  // deep red-orange outer glow down to a hot white-yellow core
+  const grad = context.createRadialGradient(2, 0, 0, 0, 0, b.radius * 2.6);
+  grad.addColorStop(0, 'rgba(255, 255, 220, 0.95)');
+  grad.addColorStop(0.35, 'rgba(253, 224, 71, 0.9)');
+  grad.addColorStop(0.7, 'rgba(249, 115, 22, 0.75)');
+  grad.addColorStop(1, 'rgba(194, 65, 12, 0)');
+  context.fillStyle = grad;
+  context.beginPath();
+  context.moveTo(b.radius * 2.6, 0);
+  context.quadraticCurveTo(b.radius * 0.6, -b.radius * 1.5, -b.radius * 1.8, 0);
+  context.quadraticCurveTo(b.radius * 0.6, b.radius * 1.5, b.radius * 2.6, 0);
+  context.closePath();
+  context.fill();
+  context.restore();
 }
 
 function drawGrenade(g) {
@@ -2901,6 +4017,32 @@ function drawGrenade(g) {
   context.beginPath();
   context.arc(g.x, g.y - 8, 1.6, 0, Math.PI * 2);
   context.fill();
+}
+
+function drawTurret(t) {
+  context.save();
+  context.translate(t.x, t.y);
+  // base
+  context.fillStyle = '#374151';
+  context.beginPath();
+  context.arc(0, 0, 14, 0, Math.PI * 2);
+  context.fill();
+  context.strokeStyle = 'rgba(0,0,0,0.5)';
+  context.lineWidth = 2;
+  context.stroke();
+  // rotating barrel pointed at its target
+  context.rotate(t.barrelAngle);
+  context.fillStyle = '#60a5fa';
+  context.fillRect(0, -3, 20, 6);
+  context.strokeStyle = 'rgba(0,0,0,0.5)';
+  context.strokeRect(0, -3, 20, 6);
+  context.restore();
+  // a dwindling life bar so you know when it'll run out
+  const barW = 24;
+  context.fillStyle = 'rgba(0,0,0,0.5)';
+  context.fillRect(t.x - barW / 2, t.y - 24, barW, 4);
+  context.fillStyle = '#60a5fa';
+  context.fillRect(t.x - barW / 2, t.y - 24, barW * (t.life / TURRET_DURATION), 4);
 }
 
 function drawParticle(p) {
@@ -2980,7 +4122,9 @@ function drawPlayerHUD(p, barY) {
 
   context.font = '700 10px "DM Sans", sans-serif';
   context.fillStyle = p.grenadeCooldown > 0 ? '#6b6b80' : '#fde047';
-  const grenadeText = p.grenadeCooldown > 0 ? 'GRENADE ' + Math.ceil(p.grenadeCooldown / 60) + 's' : 'GRENADE READY';
+  const grenadeLabel = GRENADE_TYPES[p.grenadeTypeIndex].label;
+  const cycleKey = (p.controls.cycleGrenade && p.controls.cycleGrenade[0] || 'r').toUpperCase();
+  const grenadeText = (p.grenadeCooldown > 0 ? grenadeLabel + ' ' + Math.ceil(p.grenadeCooldown / 60) + 's' : grenadeLabel + ' READY') + ' (cycle: ' + cycleKey + ')';
   context.fillText(grenadeText, 14, nextLineY);
   nextLineY += 13;
 
@@ -3013,6 +4157,20 @@ function drawMinimap() {
     context.fillStyle = '#60a5fa';
     context.beginPath();
     context.arc(cx + dx, cy + dy, 3, 0, Math.PI * 2);
+    context.fill();
+  }
+  if (rescueEvent) {
+    const dx = (rescueEvent.x - camera.x) * scale, dy = (rescueEvent.y - camera.y) * scale;
+    context.fillStyle = '#4ade80';
+    context.beginPath();
+    context.arc(cx + dx, cy + dy, 3.5, 0, Math.PI * 2);
+    context.fill();
+  }
+  for (const hz of hazardZones) {
+    const dx = (hz.x - camera.x) * scale, dy = (hz.y - camera.y) * scale;
+    context.fillStyle = '#93c5fd';
+    context.beginPath();
+    context.arc(cx + dx, cy + dy, 2.5, 0, Math.PI * 2);
     context.fill();
   }
   for (const z of zombies) {
@@ -3049,8 +4207,17 @@ function drawMinimap() {
   }
 
   context.restore();
-  context.strokeStyle = 'rgba(255,255,255,0.35)';
-  context.lineWidth = 2;
+
+  // a lot of zombies clustered nearby? pulse the minimap edge red as a warning
+  const nearbyZombieCount = zombies.filter(z => Math.hypot(z.x - camera.x, z.y - camera.y) < MINIMAP_WORLD_RANGE).length;
+  if (nearbyZombieCount >= 10) {
+    const pulse = 0.5 + 0.5 * Math.sin(frameCount * 0.25);
+    context.strokeStyle = 'rgba(239,68,68,' + (0.5 + pulse * 0.5) + ')';
+    context.lineWidth = 3 + pulse * 2;
+  } else {
+    context.strokeStyle = 'rgba(255,255,255,0.35)';
+    context.lineWidth = 2;
+  }
   context.beginPath();
   context.arc(cx, cy, MINIMAP_RADIUS, 0, Math.PI * 2);
   context.stroke();
@@ -3093,9 +4260,55 @@ function drawHUD() {
     context.fillText(nightFactor > 0.7 ? 'NIGHT - ZOMBIES STRONGER' : 'DUSK', canvas.width / 2, 40);
   }
   if (dustStormTimer > 0) {
+    const stormLineY = nightFactor > 0.3 ? 54 : 40;
     context.font = '700 11px "DM Sans", sans-serif';
     context.fillStyle = '#d9a86c';
-    context.fillText('DUST STORM', canvas.width / 2, nightFactor > 0.3 ? 54 : 40);
+    context.fillText('DUST STORM - WIND', canvas.width / 2, stormLineY);
+    // little arrow showing which way the wind (and curving bullets) blows
+    context.save();
+    context.translate(canvas.width / 2 + 58, stormLineY - 4);
+    context.rotate(windAngle);
+    context.strokeStyle = '#d9a86c';
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(-7, 0);
+    context.lineTo(7, 0);
+    context.moveTo(3, -4);
+    context.lineTo(7, 0);
+    context.lineTo(3, 4);
+    context.stroke();
+    context.restore();
+  }
+  if (rainTimer > 0) {
+    context.font = '700 11px "DM Sans", sans-serif';
+    context.fillStyle = '#93c5fd';
+    context.fillText('RAIN - FIRE DOUSES FAST', canvas.width / 2, nightFactor > 0.3 ? 54 : 40);
+  }
+  if (activeEvent) {
+    const eventZombiesLeft = zombies.filter(z => z.isEventZombie).length;
+    context.font = '800 12px "DM Sans", sans-serif';
+    context.fillStyle = '#fde047';
+    context.fillText('HORDE RUSH: ' + eventZombiesLeft + ' left (' + Math.ceil(activeEvent.timer / 60) + 's)', canvas.width / 2, 68);
+  }
+  if (safeZone) {
+    context.font = '800 12px "DM Sans", sans-serif';
+    context.fillStyle = '#fde047';
+    context.fillText('SAFE ZONE ACTIVE (' + Math.ceil(safeZone.timer / 60) + 's)', canvas.width / 2, activeEvent ? 84 : 68);
+  }
+  if (flareTimer > 0) {
+    context.font = '800 12px "DM Sans", sans-serif';
+    context.fillStyle = '#ef4444';
+    context.fillText('AIRSTRIKE INCOMING (' + Math.ceil(flareTimer / 60) + 's)', canvas.width / 2, 100);
+  } else if (!flareUsed && players[0]) {
+    const flareKey = (players[0].controls.flare && players[0].controls.flare[0] || 'g').toUpperCase();
+    context.font = '700 10px "DM Sans", sans-serif';
+    context.fillStyle = '#6b6b80';
+    context.fillText('SOS FLARE READY (' + flareKey + ')', canvas.width / 2, 100);
+  }
+  if (rescueEvent) {
+    context.font = '800 12px "DM Sans", sans-serif';
+    context.fillStyle = '#4ade80';
+    context.fillText('SURVIVOR NEARBY! (' + Math.ceil(rescueEvent.timer / 60) + 's)', canvas.width / 2, 116);
   }
 
   if (waveMessageTimer > 0) {
@@ -3168,17 +4381,108 @@ function draw() {
   const shakeX = screenShakeTimer > 0 ? (Math.random() * 2 - 1) * screenShakeMag : 0;
   const shakeY = screenShakeTimer > 0 ? (Math.random() * 2 - 1) * screenShakeMag : 0;
   context.translate(canvas.width / 2 - camera.x + shakeX, canvas.height / 2 - camera.y + shakeY);
+  if (safeZone) {
+    const pulse = 0.5 + 0.5 * Math.sin(frameCount * 0.08);
+    const grad = context.createRadialGradient(safeZone.x, safeZone.y, 0, safeZone.x, safeZone.y, safeZone.radius);
+    grad.addColorStop(0, 'rgba(253, 224, 71, ' + (0.18 + pulse * 0.08) + ')');
+    grad.addColorStop(1, 'rgba(253, 224, 71, 0)');
+    context.fillStyle = grad;
+    context.beginPath();
+    context.arc(safeZone.x, safeZone.y, safeZone.radius, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = 'rgba(253, 224, 71, 0.4)';
+    context.lineWidth = 2;
+    context.stroke();
+  }
   activeLandmarks.forEach(drawLandmark);
+  firePatches.forEach(fp => {
+    const flicker = 0.6 + 0.4 * Math.sin(frameCount * 0.3 + fp.x);
+    const grad = context.createRadialGradient(fp.x, fp.y, 0, fp.x, fp.y, fp.radius);
+    grad.addColorStop(0, 'rgba(251, 146, 60, ' + (0.5 * flicker) + ')');
+    grad.addColorStop(1, 'rgba(251, 146, 60, 0)');
+    context.fillStyle = grad;
+    context.beginPath();
+    context.arc(fp.x, fp.y, fp.radius, 0, Math.PI * 2);
+    context.fill();
+  });
+  hazardZones.forEach(hz => {
+    const pulse = 0.5 + 0.5 * Math.sin(frameCount * 0.25);
+    context.strokeStyle = 'rgba(147, 197, 253, ' + (0.5 + pulse * 0.4) + ')';
+    context.lineWidth = 2;
+    context.beginPath();
+    context.arc(hz.x, hz.y, hz.radius, 0, Math.PI * 2);
+    context.stroke();
+    context.fillStyle = 'rgba(147, 197, 253, 0.1)';
+    context.fill();
+    // zig-zag bolts crossing the zone
+    context.save();
+    context.translate(hz.x, hz.y);
+    context.strokeStyle = 'rgba(219, 234, 254, ' + (0.6 + pulse * 0.4) + ')';
+    context.lineWidth = 1.5;
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 2) {
+      const jitter = Math.sin(frameCount * 0.5 + a) * 6;
+      context.beginPath();
+      context.moveTo(0, 0);
+      context.lineTo(Math.cos(a) * hz.radius * 0.5 + jitter, Math.sin(a) * hz.radius * 0.5 - jitter);
+      context.lineTo(Math.cos(a) * hz.radius, Math.sin(a) * hz.radius);
+      context.stroke();
+    }
+    context.restore();
+  });
   activeObstacles.filter(o => !o.destroyed).forEach(drawObstacle);
   bloodDecals.forEach(drawBloodDecal);
+  corpses.forEach(drawCorpse);
   zombies.forEach(drawZombie);
   ammoPickups.forEach(drawAmmoPickup);
   medKits.forEach(drawMedKit);
   bullets.forEach(drawBullet);
   grenades.forEach(drawGrenade);
+  turrets.forEach(drawTurret);
+  if (rescueEvent) {
+    const bob = Math.sin(frameCount * 0.12) * 4;
+    context.save();
+    context.translate(rescueEvent.x, rescueEvent.y + bob);
+    const pulse = 0.5 + 0.5 * Math.sin(frameCount * 0.2);
+    context.strokeStyle = 'rgba(74, 222, 128, ' + (0.4 + pulse * 0.4) + ')';
+    context.lineWidth = 2;
+    context.beginPath();
+    context.arc(0, 0, 20 + pulse * 6, 0, Math.PI * 2);
+    context.stroke();
+    context.fillStyle = '#4ade80';
+    context.beginPath();
+    context.arc(0, -10, 6, 0, Math.PI * 2);
+    context.fill();
+    context.fillRect(-5, -4, 10, 14);
+    context.strokeStyle = '#1a1a1a';
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(5, -2);
+    context.lineTo(12, -12);
+    context.stroke();
+    context.textAlign = 'center';
+    context.fillStyle = '#4ade80';
+    context.font = '700 10px "DM Sans", sans-serif';
+    context.fillText('SURVIVOR', 0, -32);
+    context.restore();
+  }
   particles.forEach(drawParticle);
   explosions.forEach(drawExplosion);
   players.forEach(drawPlayer);
+  if (flareTimer > 0) {
+    const pulse = 0.5 + 0.5 * Math.sin(frameCount * 0.3);
+    context.strokeStyle = 'rgba(239, 68, 68, ' + (0.4 + pulse * 0.4) + ')';
+    context.lineWidth = 2;
+    context.beginPath();
+    context.arc(flareX, flareY, FLARE_RADIUS * (0.3 + (1 - flareTimer / FLARE_DELAY) * 0.7), 0, Math.PI * 2);
+    context.stroke();
+    context.fillStyle = '#fde047';
+    context.beginPath();
+    context.moveTo(flareX, flareY - 80);
+    context.lineTo(flareX - 3, flareY);
+    context.lineTo(flareX + 3, flareY);
+    context.closePath();
+    context.fill();
+  }
   context.restore();
   drawAtmosphereOverlay();
   drawHUD();
@@ -3193,6 +4497,46 @@ function drawAtmosphereOverlay() {
   if (dustStormTimer > 0) {
     context.fillStyle = 'rgba(150, 110, 60, 0.3)';
     context.fillRect(0, 0, canvas.width, canvas.height);
+    // the storm cuts visibility - fog in everything past a short radius
+    const grad = context.createRadialGradient(
+      canvas.width / 2, canvas.height / 2, canvas.width * 0.16,
+      canvas.width / 2, canvas.height / 2, canvas.width * 0.48
+    );
+    grad.addColorStop(0, 'rgba(60, 45, 25, 0)');
+    grad.addColorStop(1, 'rgba(40, 30, 15, 0.88)');
+    context.fillStyle = grad;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  if (rainTimer > 0) {
+    context.fillStyle = 'rgba(40, 60, 90, 0.18)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.strokeStyle = 'rgba(180, 210, 240, 0.35)';
+    context.lineWidth = 1;
+    for (let i = 0; i < 40; i++) {
+      const rx = (i * 53 + frameCount * 7) % (canvas.width + 40) - 20;
+      const ry = (i * 97 + frameCount * 14) % (canvas.height + 40) - 20;
+      context.beginPath();
+      context.moveTo(rx, ry);
+      context.lineTo(rx - 4, ry + 14);
+      context.stroke();
+    }
+  }
+  // a flamethrower lights up the dark around whoever's firing it
+  for (const p of players) {
+    if (p.flameGlowTimer > 0) {
+      const sx = canvas.width / 2 - camera.x + p.x;
+      const sy = canvas.height / 2 - camera.y + p.y;
+      const flicker = 0.7 + 0.3 * Math.sin(frameCount * 0.6);
+      const strength = (p.flameGlowTimer / 14) * flicker;
+      const grad = context.createRadialGradient(sx, sy, 0, sx, sy, 130);
+      grad.addColorStop(0, 'rgba(253, 186, 71, ' + (0.35 * strength) + ')');
+      grad.addColorStop(0.5, 'rgba(249, 115, 22, ' + (0.18 * strength) + ')');
+      grad.addColorStop(1, 'rgba(249, 115, 22, 0)');
+      context.fillStyle = grad;
+      context.beginPath();
+      context.arc(sx, sy, 130, 0, Math.PI * 2);
+      context.fill();
+    }
   }
 }
 
@@ -3210,9 +4554,30 @@ window.addEventListener('keydown', (e) => {
   if (phase === 'playing' && (k === '1' || k === '2' || k === '3')) {
     purchaseShopOffer(Number(k) - 1);
   }
+  if (phase === 'playing' && !e.repeat) {
+    for (const p of players) {
+      if (p.controls.cycleGrenade && p.controls.cycleGrenade.includes(k)) {
+        p.grenadeTypeIndex = (p.grenadeTypeIndex + 1) % GRENADE_TYPES.length;
+        playPickup();
+      }
+      if (p.alive && p.controls.flare && p.controls.flare.includes(k)) {
+        useFlare(p);
+      }
+    }
+  }
 });
 window.addEventListener('keyup', (e) => {
   keys[e.key.toLowerCase()] = false;
+});
+// if the window/tab loses focus while a key is held, its keyup never fires,
+// leaving it "stuck" down (e.g. grenade throwing forever on its own) - clear
+// everything whenever that happens
+function clearAllKeys() {
+  for (const k in keys) keys[k] = false;
+}
+window.addEventListener('blur', clearAllKeys);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) clearAllKeys();
 });
 startBtn.addEventListener('click', () => {
   ensureAudio();
