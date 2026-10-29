@@ -531,6 +531,7 @@ function playShoot(weaponKey) {
   else if (weaponKey === 'rocket') beep(90, 0.3, 'sawtooth', 0.2, 170);
   else if (weaponKey === 'smg') beep(380, 0.04, 'square', 0.07, 460);
   else if (weaponKey === 'minigun') beep(300, 0.03, 'square', 0.06, 340);
+  else if (weaponKey === 'grenadeLauncher') beep(130, 0.18, 'sawtooth', 0.16, 220);
   else beep(420, 0.07, 'square', 0.09, 520);
 }
 function playZombieHit() { beep(140, 0.07, 'square', 0.06, 90); }
@@ -790,9 +791,10 @@ const WEAPON_TYPES = {
   sniper:  { name: 'Sniper',  color: '#f43f5e', cooldown: 50, damage: 7, pellets: 1, spread: 0,    ammoCost: 1, maxAmmo: 10, bulletRadius: 5, pierce: 2 },
   flamethrower: { name: 'Flamethrower', color: '#fb923c', cooldown: 2, damage: 1, pellets: 1, spread: 0.25, ammoCost: 1, maxAmmo: 120, bulletRadius: 7,
     maxRange: 140, burnDamage: 2, burnDuration: 90 },
-  minigun: { name: 'Minigun', color: '#fbbf24', cooldown: 9, damage: 1, pellets: 1, spread: 0.1, ammoCost: 1, maxAmmo: 90, bulletRadius: 3.5 }
+  minigun: { name: 'Minigun', color: '#fbbf24', cooldown: 9, damage: 1, pellets: 1, spread: 0.1, ammoCost: 1, maxAmmo: 90, bulletRadius: 3.5 },
+  grenadeLauncher: { name: 'Grenade Launcher', color: '#65a30d', cooldown: 45, damage: 2, pellets: 1, spread: 0.03, ammoCost: 1, maxAmmo: 8, bulletRadius: 6, splashRadius: 70 }
 };
-const WEAPON_ORDER = ['pistol', 'smg', 'shotgun', 'rifle', 'rocket', 'sniper', 'flamethrower', 'minigun'];
+const WEAPON_ORDER = ['pistol', 'smg', 'shotgun', 'rifle', 'rocket', 'sniper', 'flamethrower', 'minigun', 'grenadeLauncher'];
 // minigun fire rate ramps up the longer you hold it on a target, maxing out at this many frames of continuous fire
 const MINIGUN_SPIN_MAX = 50;
 let selectedP1Weapon = CHARACTERS[selectedP1Character].startWeapon;
@@ -3078,7 +3080,7 @@ function update() {
         color: flameColors[Math.floor(Math.random() * flameColors.length)]
       });
     }
-    if (b.weaponKey === 'rocket') {
+    if (b.weaponKey === 'rocket' || b.weaponKey === 'grenadeLauncher') {
       particles.push({
         x: b.x + (Math.random() - 0.5) * 3,
         y: b.y + (Math.random() - 0.5) * 3,
@@ -4679,6 +4681,26 @@ function drawHeldWeapon(r, weaponKey, color, outOfAmmo, knifeColor, spinFrames) 
     context.beginPath();
     context.arc(r + 8, 0, 2.5, 0, Math.PI * 2);
     context.fill();
+  } else if (weaponKey === 'grenadeLauncher') {
+    // short, wide break-action barrel
+    context.fillStyle = '#2f3a1a';
+    context.fillRect(r - 4, -7, 8, 13);
+    context.fillStyle = '#3a3a3a';
+    context.fillRect(r + 2, -7, 24, 14);
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 1;
+    context.strokeRect(r + 2, -7, 24, 14);
+    // stubby wide muzzle
+    context.fillStyle = '#1a1a1a';
+    context.fillRect(r + 24, -5, 7, 10);
+    // loaded shell visible at the breech
+    context.fillStyle = color;
+    context.beginPath();
+    context.arc(r + 5, -2, 3, 0, Math.PI * 2);
+    context.fill();
+    // trigger handle
+    context.fillStyle = '#1a1a1a';
+    context.fillRect(r + 2, 7, 5, 9);
   } else {
     context.fillStyle = '#1a1330';
     context.fillRect(r + 2, -5, 14, 10);
@@ -5063,6 +5085,22 @@ function drawMedKit(kit) {
 function drawBullet(b) {
   if (b.isFlame) {
     drawFlameBullet(b);
+    return;
+  }
+  if (b.weaponKey === 'grenadeLauncher') {
+    // a stubby shell that tumbles end over end as it flies
+    context.save();
+    context.translate(b.x, b.y);
+    context.rotate(frameCount * 0.5 + b.flameSeed);
+    context.fillStyle = '#4d7c0f';
+    context.beginPath();
+    context.ellipse(0, 0, b.radius * 1.1, b.radius * 0.75, 0, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = '#1a2e05';
+    context.beginPath();
+    context.arc(b.radius * 0.55, 0, b.radius * 0.35, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
     return;
   }
   // a short fading tracer behind the bullet, matching the weapon's color
