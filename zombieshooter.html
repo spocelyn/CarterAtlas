@@ -299,6 +299,8 @@ canvas {
     <div class="char-select-label">STARTING LOADOUT (unlocked by achievements)</div>
     <div class="char-options" id="loadoutOptions"></div>
     <div class="role-desc" id="loadoutDesc"></div>
+    <div class="char-select-label">PET COLOR (unlocked by achievements)</div>
+    <div class="char-options" id="petSkinOptions"></div>
     <div class="char-select-label">ACHIEVEMENTS</div>
     <div id="achievementsList" style="font-size:0.7rem; color:#9a9ab0; max-width:480px; text-align:center; line-height:1.8;"></div>
     <div style="display:flex; gap:10px; margin-top:4px;">
@@ -410,6 +412,7 @@ const perkOptions = document.getElementById('perkOptions');
 const perkDesc = document.getElementById('perkDesc');
 const loadoutOptions = document.getElementById('loadoutOptions');
 const loadoutDesc = document.getElementById('loadoutDesc');
+const petSkinOptions = document.getElementById('petSkinOptions');
 const achievementsList = document.getElementById('achievementsList');
 
 let phase = 'start'; // 'start' | 'playing' | 'paused' | 'gameOver'
@@ -539,6 +542,10 @@ function playWaveStart() { beep(320, 0.3, 'sine', 0.15, 520); }
 function playLevelUp() { beep(420, 0.4, 'sine', 0.18, 900); }
 function playGameOver() { beep(180, 0.6, 'sawtooth', 0.2, 55); }
 function playMeleeSwing() { beep(200, 0.09, 'triangle', 0.12, 550); }
+function playPetBark() {
+  beep(320, 0.07, 'square', 0.1, 480);
+  setTimeout(() => beep(260, 0.06, 'square', 0.08, 400), 70);
+}
 function playBossDown() {
   beep(300, 0.18, 'sine', 0.18, 500);
   setTimeout(() => beep(450, 0.25, 'sine', 0.2, 650), 120);
@@ -1052,6 +1059,7 @@ function updateRescueEvent() {
       waveMessage = 'SURVIVOR RESCUED! +' + RESCUE_SCORE_BONUS;
       waveMessageTimer = 90;
       playLevelUp();
+      addKillFeed('Survivor rescued! +' + RESCUE_SCORE_BONUS, '#4ade80');
       makeParticles(rescueEvent.x, rescueEvent.y, '#4ade80', 20);
       rescueEvent = null;
     } else if (rescueEvent.timer <= 0) {
@@ -1096,7 +1104,8 @@ function spawnGoldenZombie() {
     glow: '#fff7b0',
     damageReduction: 0,
     isGolden: true,
-    lifeTimer: GOLDEN_ZOMBIE_LIFETIME
+    lifeTimer: GOLDEN_ZOMBIE_LIFETIME,
+    spawnTimer: ZOMBIE_SPAWN_ANIM_TIME
   });
   waveMessage = 'GOLDEN ZOMBIE SPOTTED! Catch it fast!';
   waveMessageTimer = 90;
@@ -1145,6 +1154,7 @@ function spawnEliteSquad() {
   }
   waveMessage = 'ELITE SQUAD INCOMING!';
   waveMessageTimer = 90;
+  addKillFeed('Elite squad incoming!', '#ff5533');
   playWaveStart();
 }
 
@@ -1388,6 +1398,7 @@ let spawnTimer = 0;
 let waveBreakTimer = 0;
 let waveMessage = '';
 let waveMessageTimer = 0;
+let isMilestoneMessage = false;
 
 const ZOMBIE_TIERS = [
   { name: 'Walker', minWave: 1, radius: 15, speedMult: 1, healthBase: 1, damage: 12, glow: null },
@@ -1537,6 +1548,7 @@ function spawnPointAroundCamera(radius) {
   return { x: camera.x + Math.cos(angle) * radius, y: camera.y + Math.sin(angle) * radius };
 }
 const ZOMBIE_SPAWN_RADIUS = 520;
+const ZOMBIE_SPAWN_ANIM_TIME = 18;
 const ALERT_PLAYER_RADIUS = 220;
 const ALERT_SPREAD_RADIUS = 160;
 
@@ -1656,9 +1668,16 @@ function startWave() {
     waveMessage = 'WAVE ' + wave;
     if (wave > 1) playWaveStart();
   }
+  // a big celebration banner every 50 waves, on top of whatever message already fired
+  isMilestoneMessage = wave % 50 === 0;
+  if (isMilestoneMessage) {
+    waveMessage = 'WAVE ' + wave + '!';
+    waveMessageTimer = 160;
+  } else {
+    waveMessageTimer = 90;
+  }
   zombiesSpawnedThisWave = 0;
   spawnTimer = 0;
-  waveMessageTimer = 90;
 }
 
 function createPlayer(index, characterIndex, totalPlayers, chosenWeapon) {
@@ -1755,9 +1774,11 @@ function unlockAchievement(id) {
     waveMessage = 'ACHIEVEMENT: ' + def.label + '!';
     waveMessageTimer = 110;
     playLevelUp();
+    addKillFeed('Achievement: ' + def.label, '#86efac');
   }
   renderAchievementsList();
   if (typeof buildLoadoutOptions === 'function' && loadoutOptions) buildLoadoutOptions();
+  if (typeof buildPetSkinOptions === 'function' && petSkinOptions) buildPetSkinOptions();
 }
 function renderAchievementsList() {
   if (!achievementsList) return;
@@ -1909,6 +1930,46 @@ function buildLoadoutOptions() {
 }
 buildLoadoutOptions();
 
+// pet skins - cosmetic only, unlocked by achievements, picked on the start screen
+const PET_SKINS = [
+  { id: 'default', label: 'Tan', fur: '#b5793f', furDark: '#8a5a2a', requiresAchievement: null },
+  { id: 'black', label: 'Black', fur: '#2e2a26', furDark: '#1a1714', requiresAchievement: 'firstBlood' },
+  { id: 'white', label: 'Snow', fur: '#e8e4da', furDark: '#b8b2a0', requiresAchievement: 'survivor10' },
+  { id: 'red', label: 'Red', fur: '#9a3a2a', furDark: '#6b2418', requiresAchievement: 'bossSlayer' },
+  { id: 'blue', label: 'Husky', fur: '#5a7a9a', furDark: '#3a5370', requiresAchievement: 'stormChaser' },
+  { id: 'gold', label: 'Golden', fur: '#d4af37', furDark: '#a1841f', requiresAchievement: 'giantSlayer' }
+];
+let selectedPetSkinId = 'default';
+
+function isPetSkinUnlocked(skin) {
+  return !skin.requiresAchievement || getUnlockedAchievements().includes(skin.requiresAchievement);
+}
+
+function buildPetSkinOptions() {
+  if (!petSkinOptions) return;
+  petSkinOptions.innerHTML = '';
+  PET_SKINS.forEach(skin => {
+    const unlocked = isPetSkinUnlocked(skin);
+    const btn = document.createElement('button');
+    btn.className = 'char-swatch' + (skin.id === selectedPetSkinId ? ' selected' : '') + (unlocked ? '' : ' locked');
+    if (unlocked) {
+      btn.innerHTML = '<span class="char-swatch-dot" style="background:' + skin.fur + ';"></span><span class="char-swatch-name">' + skin.label + '</span>';
+    } else {
+      const reqDef = ACHIEVEMENTS.find(a => a.id === skin.requiresAchievement);
+      btn.innerHTML = '<span class="char-swatch-dot locked-dot">&#128274;</span><span class="char-swatch-name">' + (reqDef ? reqDef.label : skin.requiresAchievement) + '</span>';
+      btn.title = 'Earn the "' + (reqDef ? reqDef.label : skin.requiresAchievement) + '" achievement to unlock';
+    }
+    btn.addEventListener('click', () => {
+      if (!isPetSkinUnlocked(skin)) return;
+      selectedPetSkinId = skin.id;
+      petSkinOptions.querySelectorAll('.char-swatch').forEach(el => el.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+    petSkinOptions.appendChild(btn);
+  });
+}
+buildPetSkinOptions();
+
 function resetGame() {
   frameCount = 0;
   dustStormTimer = 0;
@@ -1942,6 +2003,7 @@ function resetGame() {
   molotovLineLevel = 0;
   corpses = [];
   damageNumbers = [];
+  killFeed = [];
   totalZombiesKilled = 0;
   shotsFired = 0;
   shotsHit = 0;
@@ -2032,7 +2094,8 @@ function spawnBoss() {
     chargeTimer: 0,
     chargeDirX: 0,
     chargeDirY: 0,
-    alerted: true
+    alerted: true,
+    spawnTimer: ZOMBIE_SPAWN_ANIM_TIME
   });
 }
 
@@ -2116,7 +2179,8 @@ function spawnMiniRunner() {
     bodyColor: '#a4de3c',
     glow: null,
     damageReduction: 0,
-    alerted: true
+    alerted: true,
+    spawnTimer: ZOMBIE_SPAWN_ANIM_TIME
   });
 }
 
@@ -2137,7 +2201,8 @@ function spawnHordeZombie() {
     bodyColor: '#d4a017',
     glow: null,
     damageReduction: 0,
-    alerted: true
+    alerted: true,
+    spawnTimer: ZOMBIE_SPAWN_ANIM_TIME
   });
 }
 
@@ -2212,7 +2277,8 @@ function pushTierZombie(tier, x, y) {
     damageReduction: tier.damageReduction || 0,
     canThrow: tier.canThrow || false,
     rangedCooldown: 0,
-    alerted: false
+    alerted: true,
+    spawnTimer: ZOMBIE_SPAWN_ANIM_TIME
   });
 }
 
@@ -2356,7 +2422,7 @@ function updateCorpses() {
       corpses.splice(i, 1);
       continue;
     }
-    if (c.life > CORPSE_LIFE * 0.3 && Math.random() < 0.05) {
+    if (c.isBurnt && c.life > CORPSE_LIFE * 0.3 && Math.random() < 0.05) {
       particles.push({
         x: c.x + (Math.random() - 0.5) * 10,
         y: c.y - 6,
@@ -2366,6 +2432,20 @@ function updateCorpses() {
         color: 'rgba(90,90,90,0.5)'
       });
     }
+  }
+}
+
+// a short running log of notable moments, shown in a HUD corner
+let killFeed = [];
+const KILL_FEED_LIFE = 240;
+function addKillFeed(text, color) {
+  killFeed.unshift({ text, color: color || '#fde047', life: KILL_FEED_LIFE });
+  if (killFeed.length > 4) killFeed.pop();
+}
+function updateKillFeed() {
+  for (let i = killFeed.length - 1; i >= 0; i--) {
+    killFeed[i].life--;
+    if (killFeed[i].life <= 0) killFeed.splice(i, 1);
   }
 }
 
@@ -2609,7 +2689,8 @@ const PET_FOLLOW_DIST = 34;
 const PET_FOLLOW_SPEED = 2.6;
 
 function createPet(owner) {
-  return { owner, x: owner.x, y: owner.y, angle: 0, cooldown: 0, bobPhase: Math.random() * Math.PI * 2 };
+  const skin = PET_SKINS.find(s => s.id === selectedPetSkinId && isPetSkinUnlocked(s)) || PET_SKINS[0];
+  return { owner, x: owner.x, y: owner.y, angle: 0, cooldown: 0, bobPhase: Math.random() * Math.PI * 2, fur: skin.fur, furDark: skin.furDark };
 }
 
 function updatePets() {
@@ -2634,7 +2715,7 @@ function updatePets() {
       makeParticles(target.x, target.y, '#e8e8e8', 4);
       spawnDamageNumber(target.x, target.y - target.radius, PET_DAMAGE);
       pet.cooldown = PET_COOLDOWN;
-      playMeleeSwing();
+      playPetBark();
     }
   }
 }
@@ -2696,6 +2777,7 @@ function update() {
   updateAmbientVolume();
   updateScareSting();
   updateDamageNumbers();
+  updateKillFeed();
   moanTimer--;
   if (moanTimer <= 0) {
     moanTimer = 400 + Math.random() * 600;
@@ -2909,6 +2991,16 @@ function update() {
         color: flameColors[Math.floor(Math.random() * flameColors.length)]
       });
     }
+    if (b.weaponKey === 'rocket') {
+      particles.push({
+        x: b.x + (Math.random() - 0.5) * 3,
+        y: b.y + (Math.random() - 0.5) * 3,
+        vx: -b.vx * 0.05 + (Math.random() - 0.5) * 0.3,
+        vy: -b.vy * 0.05 + (Math.random() - 0.5) * 0.3,
+        life: 16 + Math.random() * 10,
+        color: 'rgba(160,160,160,0.5)'
+      });
+    }
     const offScreen = Math.abs(b.x - camera.x) > canvas.width / 2 + 10 || Math.abs(b.y - camera.y) > canvas.height / 2 + 10;
     const outOfRange = b.maxRange > 0 && Math.hypot(b.x - b.ox, b.y - b.oy) > b.maxRange;
     if (offScreen || outOfRange || isPointInsideObstacle(b.x, b.y)) {
@@ -2949,7 +3041,10 @@ function update() {
       startWave();
     }
   }
-  if (waveMessageTimer > 0) waveMessageTimer--;
+  if (waveMessageTimer > 0) {
+    waveMessageTimer--;
+    if (waveMessageTimer <= 0) isMilestoneMessage = false;
+  }
 
   // ammo pickups: spawn over time, pick up on contact
   ammoSpawnTimer--;
@@ -2993,6 +3088,14 @@ function update() {
   for (let i = zombies.length - 1; i >= 0; i--) {
     const z = zombies[i];
     if (z.hitFlash > 0) z.hitFlash--;
+    if (z.spawnTimer > 0) {
+      // still climbing up out of the ground - harmless and immobile for a beat
+      if (z.spawnTimer === ZOMBIE_SPAWN_ANIM_TIME) {
+        makeParticles(z.x, z.y + z.radius * 0.5, '#5a4a32', 10);
+      }
+      z.spawnTimer--;
+      continue;
+    }
     if (z.isGolden) {
       z.lifeTimer--;
       if (z.lifeTimer <= 0) {
@@ -3073,6 +3176,18 @@ function update() {
     }
     resolveObstacleCollision(z, z.canBreakObstacles);
     z.bobPhase += 0.2;
+
+    // fast zombies kick up a little dust trail while actually sprinting
+    if (z.alerted && !(z.stunTimer > 0) && (z.tierName === 'Runner' || z.tierName === 'Dog' || z.tierName === 'Ghoul') && Math.random() < 0.35) {
+      particles.push({
+        x: z.x - Math.cos(z.bobPhase) * 2,
+        y: z.y + z.radius * 0.6,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.2,
+        life: 14 + Math.random() * 8,
+        color: 'rgba(160,140,100,0.35)'
+      });
+    }
 
     // armed zombies chuck debris at you from range while they close in
     if (z.canThrow && z.alerted && !(z.stunTimer > 0) && !(z.confusedTimer > 0)) {
@@ -3190,6 +3305,7 @@ function update() {
         waveMessageTimer = 90;
         makeParticles(dead.x, dead.y, '#fde047', 24);
         playLevelUp();
+        addKillFeed('Golden zombie caught! +' + GOLDEN_ZOMBIE_SCORE, '#fde047');
       }
       addWeaponMasteryKill(dead.lastHitWeapon);
       if (dead.lastHitRetrieve && dead.lastHitOwner && dead.lastHitOwner.alive) {
@@ -3201,12 +3317,14 @@ function update() {
         makeParticles(dead.x, dead.y, '#fb923c', 10);
         makeParticles(dead.x, dead.y, '#4a4a4a', 10);
         spawnScorchDecal(dead.x, dead.y, dead.isBoss ? 2 : 1);
-        corpses.push({ x: dead.x, y: dead.y, radius: dead.radius, life: CORPSE_LIFE });
+        corpses.push({ x: dead.x, y: dead.y, radius: dead.radius, life: CORPSE_LIFE, maxLife: CORPSE_LIFE, isBurnt: true });
       } else {
         makeParticles(dead.x, dead.y, '#4caf50', 16);
         spawnBloodDecal(dead.x, dead.y, dead.isBoss ? 2 : 1);
+        corpses.push({ x: dead.x, y: dead.y, radius: dead.radius, life: Math.round(CORPSE_LIFE * 0.6), maxLife: Math.round(CORPSE_LIFE * 0.6), isBurnt: false });
       }
       playZombieDeath();
+      if (dead.isElite) addKillFeed('Elite ' + dead.tierName + ' put down', '#ff5533');
 
       // boss always drops a guaranteed ammo + health crate, plus a special reward
       if (dead.isBoss) {
@@ -3219,12 +3337,14 @@ function update() {
         waveMessageTimer = 100;
         playBossDown();
         triggerScreenShake(9, 22);
+        addKillFeed('Boss defeated! +' + BOSS_SCORE_BONUS, '#ef4444');
 
         if (Math.random() < 0.25) {
           const pick = LEGENDARY_POOL[Math.floor(Math.random() * LEGENDARY_POOL.length)];
           pick.apply();
           legendaryAnnounceDelay = 90;
           legendaryAnnounceText = 'LEGENDARY DROP: ' + pick.label + '!';
+          addKillFeed('Legendary drop: ' + pick.label, '#a855f7');
         }
       }
 
@@ -3722,20 +3842,34 @@ function drawBloodDecal(d) {
 }
 
 function drawCorpse(c) {
-  const fadeIn = Math.min(1, (CORPSE_LIFE - c.life) / 10);
+  const maxLife = c.maxLife || CORPSE_LIFE;
+  const fadeIn = Math.min(1, (maxLife - c.life) / 10);
   const fadeOut = Math.min(1, c.life / 40);
   const alpha = Math.min(fadeIn, fadeOut) * 0.85;
   context.save();
   context.translate(c.x, c.y);
   context.globalAlpha = alpha;
-  context.fillStyle = '#1a1512';
-  context.beginPath();
-  context.ellipse(0, 0, c.radius * 1.1, c.radius * 0.65, 0.3, 0, Math.PI * 2);
-  context.fill();
-  context.fillStyle = '#2e1c12';
-  context.beginPath();
-  context.ellipse(-c.radius * 0.3, -c.radius * 0.1, c.radius * 0.4, c.radius * 0.3, 0.2, 0, Math.PI * 2);
-  context.fill();
+  if (c.isBurnt) {
+    context.fillStyle = '#1a1512';
+    context.beginPath();
+    context.ellipse(0, 0, c.radius * 1.1, c.radius * 0.65, 0.3, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = '#2e1c12';
+    context.beginPath();
+    context.ellipse(-c.radius * 0.3, -c.radius * 0.1, c.radius * 0.4, c.radius * 0.3, 0.2, 0, Math.PI * 2);
+    context.fill();
+  } else {
+    // a plain fallen body, duller than the living color, with a small
+    // blood pool underneath
+    context.fillStyle = 'rgba(80, 10, 10, 0.35)';
+    context.beginPath();
+    context.ellipse(0, c.radius * 0.3, c.radius * 1.2, c.radius * 0.5, 0, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = '#39402f';
+    context.beginPath();
+    context.ellipse(0, 0, c.radius * 1.05, c.radius * 0.6, 0.25, 0, Math.PI * 2);
+    context.fill();
+  }
   context.globalAlpha = 1;
   context.restore();
 }
@@ -4360,6 +4494,78 @@ function drawHeldWeapon(r, weaponKey, color, outOfAmmo, knifeColor) {
     // trigger handle
     context.fillStyle = '#1a1a1a';
     context.fillRect(r + 6, 6, 5, 9);
+  } else if (weaponKey === 'sniper') {
+    context.fillStyle = '#2a2a2a';
+    context.fillRect(r - 2, -3, 34, 6);
+    context.fillRect(r + 30, -2, 10, 4);
+    // scope on top, two lenses on a mount
+    context.fillStyle = '#1a1a1a';
+    context.fillRect(r + 7, -11, 16, 5);
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 1;
+    context.strokeRect(r + 7, -11, 16, 5);
+    context.fillStyle = '#60a5fa';
+    context.beginPath();
+    context.arc(r + 8.5, -8.5, 2.2, 0, Math.PI * 2);
+    context.arc(r + 21.5, -8.5, 2.2, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = color;
+    context.fillRect(r + 2, -6, 5, 3);
+  } else if (weaponKey === 'flamethrower') {
+    // fuel tank slung behind the grip
+    context.fillStyle = '#6b3a1a';
+    context.fillRect(r - 11, -8, 10, 15);
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 1;
+    context.strokeRect(r - 11, -8, 10, 15);
+    context.fillStyle = color;
+    context.fillRect(r - 9, -6, 6, 3);
+    // wide nozzle barrel
+    context.fillStyle = '#3a3a3a';
+    context.fillRect(r - 1, -4, 16, 8);
+    context.beginPath();
+    context.moveTo(r + 15, -6);
+    context.lineTo(r + 24, -8);
+    context.lineTo(r + 24, 8);
+    context.lineTo(r + 15, 6);
+    context.closePath();
+    context.fill();
+    // fuel line between tank and nozzle
+    context.strokeStyle = '#2a2a2a';
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(r - 6, -8);
+    context.lineTo(r - 6, -12);
+    context.lineTo(r + 4, -12);
+    context.lineTo(r + 4, -4);
+    context.stroke();
+  } else if (weaponKey === 'crossbow') {
+    // horizontal stock/rail
+    context.fillStyle = '#5a3a1a';
+    context.fillRect(r - 2, -3, 20, 6);
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 1;
+    context.strokeRect(r - 2, -3, 20, 6);
+    // the two curved limbs that give it the crossbow silhouette
+    context.strokeStyle = '#3a2410';
+    context.lineWidth = 2.5;
+    context.lineCap = 'round';
+    context.beginPath();
+    context.moveTo(r + 10, -1);
+    context.quadraticCurveTo(r + 4, -15, r + 13, -17);
+    context.moveTo(r + 10, -1);
+    context.quadraticCurveTo(r + 4, 11, r + 13, 13);
+    context.stroke();
+    // taut bowstring connecting the limb tips
+    context.strokeStyle = 'rgba(230,230,220,0.85)';
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(r + 13, -17);
+    context.lineTo(r + 13, 13);
+    context.stroke();
+    // little sight
+    context.fillStyle = color;
+    context.fillRect(r + 1, -7, 6, 4);
   } else {
     context.fillStyle = '#1a1330';
     context.fillRect(r + 2, -5, 14, 10);
@@ -4389,6 +4595,29 @@ function drawHeldWeapon(r, weaponKey, color, outOfAmmo, knifeColor) {
 function drawZombie(z) {
   context.save();
   context.translate(z.x, z.y);
+  if (z.spawnTimer > 0) {
+    // climbing up out of the ground - a dirt mound with the zombie fading/rising into view
+    const riseProgress = 1 - z.spawnTimer / ZOMBIE_SPAWN_ANIM_TIME;
+    context.fillStyle = 'rgba(0,0,0,0.3)';
+    context.beginPath();
+    context.ellipse(0, z.radius * 0.95, z.radius * 0.8 * riseProgress, z.radius * 0.3 * riseProgress, 0, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = '#5a4a32';
+    context.beginPath();
+    context.ellipse(0, z.radius * 0.8, z.radius * 0.9, z.radius * 0.35, 0, 0, Math.PI * 2);
+    context.fill();
+    context.globalAlpha = riseProgress;
+    context.translate(0, (1 - riseProgress) * z.radius * 1.6);
+    context.fillStyle = z.bodyColor || '#4a5a3a';
+    context.beginPath();
+    context.ellipse(0, z.radius * 0.2, z.radius * 0.65, z.radius * 0.55, 0, 0, Math.PI * 2);
+    context.fill();
+    context.beginPath();
+    context.arc(0, -z.radius * 0.1, z.radius * 0.4, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+    return;
+  }
   const bob = Math.sin(z.bobPhase) * 2;
   const armSwing = Math.sin(z.bobPhase * 0.8) * (z.radius * 0.5);
   const legW = Math.max(4, z.radius * 0.4);
@@ -4471,118 +4700,205 @@ function drawZombie(z) {
     context.fill();
   }
 
-  // legs
-  context.fillStyle = '#263226';
-  context.fillRect(-legW - 1, 7 + bob, legW, legH);
-  context.fillRect(1, 7 + bob, legW, legH);
+  if (z.tierName === 'Dog') {
+    // a mangy, quadruped zombie dog instead of the usual shambler
+    const furColor = z.hitFlash > 0 ? '#ffffff' : (z.bodyColor || '#6b4a28');
+    const furDark = z.hitFlash > 0 ? '#ffffff' : '#3a2814';
+    const legSwing = Math.sin(z.bobPhase) * (z.radius * 0.35);
 
-  // shambling arms reaching forward
-  const leftHandX = -z.radius - 7, leftHandY = bob - 6 + armSwing;
-  const rightHandX = z.radius + 7, rightHandY = bob - 6 - armSwing;
-  context.strokeStyle = z.hitFlash > 0 ? '#ffffff' : '#3d6b3d';
-  context.lineWidth = Math.max(3, z.radius * 0.33);
-  context.lineCap = 'round';
-  context.beginPath();
-  context.moveTo(-z.radius + 3, bob - 2);
-  context.lineTo(leftHandX, leftHandY);
-  context.stroke();
-  context.beginPath();
-  context.moveTo(z.radius - 3, bob - 2);
-  context.lineTo(rightHandX, rightHandY);
-  context.stroke();
-
-  // clawed fingers at the end of each arm
-  context.strokeStyle = z.hitFlash > 0 ? '#ffffff' : '#1f3320';
-  context.lineWidth = Math.max(1.5, z.radius * 0.1);
-  context.lineCap = 'round';
-  for (let c = -1; c <= 1; c++) {
+    // four skeletal legs, swinging opposite pairs
+    context.strokeStyle = furDark;
+    context.lineWidth = Math.max(2, z.radius * 0.18);
+    context.lineCap = 'round';
     context.beginPath();
-    context.moveTo(leftHandX, leftHandY);
-    context.lineTo(leftHandX - 4, leftHandY + c * 4 - 2);
+    context.moveTo(-z.radius * 0.6, bob + 2); context.lineTo(-z.radius * 0.6 + legSwing, bob + z.radius * 0.9);
+    context.moveTo(-z.radius * 0.1, bob + 2); context.lineTo(-z.radius * 0.1 - legSwing, bob + z.radius * 0.9);
+    context.moveTo(z.radius * 0.1, bob + 2); context.lineTo(z.radius * 0.1 + legSwing, bob + z.radius * 0.9);
+    context.moveTo(z.radius * 0.6, bob + 2); context.lineTo(z.radius * 0.6 - legSwing, bob + z.radius * 0.9);
+    context.stroke();
+
+    // mangled stub tail
+    context.strokeStyle = furColor;
+    context.lineWidth = Math.max(2, z.radius * 0.2);
+    context.beginPath();
+    context.moveTo(-z.radius * 0.9, bob);
+    context.lineTo(-z.radius * 1.3, bob - z.radius * 0.3);
+    context.stroke();
+
+    // long, low body
+    context.fillStyle = furColor;
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 2;
+    context.beginPath();
+    context.ellipse(0, bob, z.radius * 1.1, z.radius * 0.55, 0, 0, Math.PI * 2);
+    context.fill();
+    context.stroke();
+
+    // exposed ribs for a decayed look
+    if (!z.hitFlash) {
+      context.strokeStyle = 'rgba(20,10,5,0.5)';
+      context.lineWidth = 1;
+      context.beginPath();
+      for (let r = -1; r <= 1; r++) {
+        context.moveTo(r * z.radius * 0.25, bob - z.radius * 0.4);
+        context.lineTo(r * z.radius * 0.25, bob + z.radius * 0.2);
+      }
+      context.stroke();
+    }
+
+    // head + snout
+    const headX = z.radius * 1.1, headY = bob - z.radius * 0.1;
+    context.fillStyle = furColor;
+    context.beginPath();
+    context.arc(headX, headY, z.radius * 0.5, 0, Math.PI * 2);
+    context.fill();
     context.stroke();
     context.beginPath();
-    context.moveTo(rightHandX, rightHandY);
-    context.lineTo(rightHandX + 4, rightHandY + c * 4 - 2);
+    context.ellipse(headX + z.radius * 0.55, headY + z.radius * 0.1, z.radius * 0.3, z.radius * 0.2, 0, 0, Math.PI * 2);
+    context.fill();
     context.stroke();
-  }
 
-  // torso (wider than tall so it reads as shoulders, not a ball)
-  const torsoRX = z.radius;
-  const torsoRY = z.radius * 0.75;
-  context.fillStyle = z.hitFlash > 0 ? '#ffffff' : z.bodyColor;
-  context.strokeStyle = 'rgba(0,0,0,0.5)';
-  context.lineWidth = 2;
-  traceTorsoPath(context, bob, torsoRX, torsoRY);
-  context.fill();
-  context.stroke();
-
-  // neck, so the head doesn't look like it's floating above the body
-  const headR = z.radius * 0.55;
-  const headY = bob - z.radius * 0.65;
-  context.fillStyle = z.hitFlash > 0 ? '#ffffff' : z.bodyColor;
-  context.fillRect(-headR * 0.4, headY + headR * 0.6, headR * 0.8, headR * 0.7);
-
-  // head, separate and smaller than the torso
-  context.fillStyle = z.hitFlash > 0 ? '#ffffff' : z.bodyColor;
-  context.beginPath();
-  context.arc(0, headY, headR, 0, Math.PI * 2);
-  context.fill();
-  context.stroke();
-
-  context.shadowBlur = 0;
-
-  // torn, ragged shirt patch over the lower torso
-  if (!z.hitFlash) {
-    context.fillStyle = 'rgba(30,20,15,0.35)';
+    // torn ear
+    context.fillStyle = furDark;
     context.beginPath();
-    context.moveTo(-torsoRX * 0.7, bob - 2);
-    context.lineTo(-torsoRX * 0.3, bob + 6);
-    context.lineTo(-torsoRX * 0.5, bob + 10);
-    context.lineTo(0, bob + 4);
-    context.lineTo(torsoRX * 0.2, bob + 11);
-    context.lineTo(torsoRX * 0.6, bob + 3);
-    context.lineTo(torsoRX * 0.75, bob + 9);
-    context.lineTo(torsoRX * 0.8, bob - 4);
+    context.moveTo(headX - z.radius * 0.2, headY - z.radius * 0.4);
+    context.lineTo(headX - z.radius * 0.35, headY - z.radius * 0.9);
+    context.lineTo(headX + z.radius * 0.05, headY - z.radius * 0.55);
     context.closePath();
     context.fill();
 
-    // scratch marks for a decayed look
-    context.strokeStyle = 'rgba(10,5,5,0.4)';
-    context.lineWidth = 1;
+    // glowing red eye + snarling jaw with a fang
+    context.fillStyle = '#ff3b3b';
     context.beginPath();
-    context.moveTo(-torsoRX * 0.15, bob - torsoRY * 0.5);
-    context.lineTo(-torsoRX * 0.05, bob - torsoRY * 0.1);
-    context.moveTo(torsoRX * 0.35, bob - torsoRY * 0.4);
-    context.lineTo(torsoRX * 0.42, bob + torsoRY * 0.1);
+    context.arc(headX + z.radius * 0.25, headY - z.radius * 0.08, Math.max(1.4, z.radius * 0.14), 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = '#1a0f0a';
+    context.beginPath();
+    context.ellipse(headX + z.radius * 0.6, headY + z.radius * 0.15, z.radius * 0.22, z.radius * 0.12, 0, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = '#e8e8d8';
+    context.beginPath();
+    context.moveTo(headX + z.radius * 0.75, headY + z.radius * 0.1);
+    context.lineTo(headX + z.radius * 0.82, headY + z.radius * 0.22);
+    context.lineTo(headX + z.radius * 0.68, headY + z.radius * 0.22);
+    context.closePath();
+    context.fill();
+
+    context.shadowBlur = 0;
+  } else {
+    // legs
+    context.fillStyle = '#263226';
+    context.fillRect(-legW - 1, 7 + bob, legW, legH);
+    context.fillRect(1, 7 + bob, legW, legH);
+
+    // shambling arms reaching forward
+    const leftHandX = -z.radius - 7, leftHandY = bob - 6 + armSwing;
+    const rightHandX = z.radius + 7, rightHandY = bob - 6 - armSwing;
+    context.strokeStyle = z.hitFlash > 0 ? '#ffffff' : '#3d6b3d';
+    context.lineWidth = Math.max(3, z.radius * 0.33);
+    context.lineCap = 'round';
+    context.beginPath();
+    context.moveTo(-z.radius + 3, bob - 2);
+    context.lineTo(leftHandX, leftHandY);
     context.stroke();
-  }
+    context.beginPath();
+    context.moveTo(z.radius - 3, bob - 2);
+    context.lineTo(rightHandX, rightHandY);
+    context.stroke();
 
-  // glowing red eyes on the head
-  context.fillStyle = '#ff3b3b';
-  const eyeSize = Math.max(1.6, headR * 0.3);
-  context.beginPath();
-  context.arc(-headR * 0.4, headY, eyeSize, 0, Math.PI * 2);
-  context.arc(headR * 0.4, headY, eyeSize, 0, Math.PI * 2);
-  context.fill();
-
-  // snarling mouth with a tooth
-  context.fillStyle = '#1a0f0a';
-  context.beginPath();
-  context.ellipse(0, headY + headR * 0.55, headR * 0.4, headR * 0.22, 0, 0, Math.PI * 2);
-  context.fill();
-  context.fillStyle = '#e8e8d8';
-  context.fillRect(-headR * 0.12, headY + headR * 0.45, headR * 0.16, headR * 0.22);
-
-  // boss crown spikes
-  if (z.isBoss) {
-    context.fillStyle = '#2a1f3d';
-    for (let s = -1; s <= 1; s++) {
+    // clawed fingers at the end of each arm
+    context.strokeStyle = z.hitFlash > 0 ? '#ffffff' : '#1f3320';
+    context.lineWidth = Math.max(1.5, z.radius * 0.1);
+    context.lineCap = 'round';
+    for (let c = -1; c <= 1; c++) {
       context.beginPath();
-      context.moveTo(s * headR * 0.9, headY - headR * 0.8);
-      context.lineTo(s * headR * 0.9 - 5, headY - headR * 1.6);
-      context.lineTo(s * headR * 0.9 + 5, headY - headR * 1.6);
+      context.moveTo(leftHandX, leftHandY);
+      context.lineTo(leftHandX - 4, leftHandY + c * 4 - 2);
+      context.stroke();
+      context.beginPath();
+      context.moveTo(rightHandX, rightHandY);
+      context.lineTo(rightHandX + 4, rightHandY + c * 4 - 2);
+      context.stroke();
+    }
+
+    // torso (wider than tall so it reads as shoulders, not a ball)
+    const torsoRX = z.radius;
+    const torsoRY = z.radius * 0.75;
+    context.fillStyle = z.hitFlash > 0 ? '#ffffff' : z.bodyColor;
+    context.strokeStyle = 'rgba(0,0,0,0.5)';
+    context.lineWidth = 2;
+    traceTorsoPath(context, bob, torsoRX, torsoRY);
+    context.fill();
+    context.stroke();
+
+    // neck, so the head doesn't look like it's floating above the body
+    const headR = z.radius * 0.55;
+    const headY = bob - z.radius * 0.65;
+    context.fillStyle = z.hitFlash > 0 ? '#ffffff' : z.bodyColor;
+    context.fillRect(-headR * 0.4, headY + headR * 0.6, headR * 0.8, headR * 0.7);
+
+    // head, separate and smaller than the torso
+    context.fillStyle = z.hitFlash > 0 ? '#ffffff' : z.bodyColor;
+    context.beginPath();
+    context.arc(0, headY, headR, 0, Math.PI * 2);
+    context.fill();
+    context.stroke();
+
+    context.shadowBlur = 0;
+
+    // torn, ragged shirt patch over the lower torso
+    if (!z.hitFlash) {
+      context.fillStyle = 'rgba(30,20,15,0.35)';
+      context.beginPath();
+      context.moveTo(-torsoRX * 0.7, bob - 2);
+      context.lineTo(-torsoRX * 0.3, bob + 6);
+      context.lineTo(-torsoRX * 0.5, bob + 10);
+      context.lineTo(0, bob + 4);
+      context.lineTo(torsoRX * 0.2, bob + 11);
+      context.lineTo(torsoRX * 0.6, bob + 3);
+      context.lineTo(torsoRX * 0.75, bob + 9);
+      context.lineTo(torsoRX * 0.8, bob - 4);
       context.closePath();
       context.fill();
+
+      // scratch marks for a decayed look
+      context.strokeStyle = 'rgba(10,5,5,0.4)';
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(-torsoRX * 0.15, bob - torsoRY * 0.5);
+      context.lineTo(-torsoRX * 0.05, bob - torsoRY * 0.1);
+      context.moveTo(torsoRX * 0.35, bob - torsoRY * 0.4);
+      context.lineTo(torsoRX * 0.42, bob + torsoRY * 0.1);
+      context.stroke();
+    }
+
+    // glowing red eyes on the head
+    context.fillStyle = '#ff3b3b';
+    const eyeSize = Math.max(1.6, headR * 0.3);
+    context.beginPath();
+    context.arc(-headR * 0.4, headY, eyeSize, 0, Math.PI * 2);
+    context.arc(headR * 0.4, headY, eyeSize, 0, Math.PI * 2);
+    context.fill();
+
+    // snarling mouth with a tooth
+    context.fillStyle = '#1a0f0a';
+    context.beginPath();
+    context.ellipse(0, headY + headR * 0.55, headR * 0.4, headR * 0.22, 0, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = '#e8e8d8';
+    context.fillRect(-headR * 0.12, headY + headR * 0.45, headR * 0.16, headR * 0.22);
+
+    // boss crown spikes
+    if (z.isBoss) {
+      context.fillStyle = '#2a1f3d';
+      for (let s = -1; s <= 1; s++) {
+        context.beginPath();
+        context.moveTo(s * headR * 0.9, headY - headR * 0.8);
+        context.lineTo(s * headR * 0.9 - 5, headY - headR * 1.6);
+        context.lineTo(s * headR * 0.9 + 5, headY - headR * 1.6);
+        context.closePath();
+        context.fill();
+      }
     }
   }
 
@@ -4632,6 +4948,52 @@ function drawBullet(b) {
     drawFlameBullet(b);
     return;
   }
+  if (b.weaponKey === 'crossbow') {
+    const angle = Math.atan2(b.vy, b.vx);
+    context.save();
+    context.translate(b.x, b.y);
+    context.rotate(angle);
+    // a thin wooden bolt with fletching at the back
+    context.strokeStyle = '#4a3018';
+    context.lineWidth = 2;
+    context.lineCap = 'round';
+    context.beginPath();
+    context.moveTo(-10, 0);
+    context.lineTo(8, 0);
+    context.stroke();
+    context.fillStyle = '#9ca3af';
+    context.beginPath();
+    context.moveTo(8, 0);
+    context.lineTo(3, -2.5);
+    context.lineTo(3, 2.5);
+    context.closePath();
+    context.fill();
+    context.fillStyle = '#e5e7eb';
+    context.beginPath();
+    context.moveTo(-10, 0);
+    context.lineTo(-6, -3);
+    context.lineTo(-5, 0);
+    context.lineTo(-6, 3);
+    context.closePath();
+    context.fill();
+    context.restore();
+    return;
+  }
+  // a short fading tracer behind the bullet, matching the weapon's color
+  const speed = Math.hypot(b.vx, b.vy);
+  if (speed > 0.5) {
+    const trailLen = Math.min(18, speed * 1.3);
+    context.strokeStyle = b.color || '#fde047';
+    context.globalAlpha = 0.35;
+    context.lineWidth = Math.max(1, b.radius * 0.6);
+    context.lineCap = 'round';
+    context.beginPath();
+    context.moveTo(b.x, b.y);
+    context.lineTo(b.x - (b.vx / speed) * trailLen, b.y - (b.vy / speed) * trailLen);
+    context.stroke();
+    context.globalAlpha = 1;
+  }
+
   context.fillStyle = b.color || '#fde047';
   context.beginPath();
   context.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
@@ -4727,74 +5089,75 @@ function drawPet(pet) {
   const trot = Math.sin(pet.bobPhase);
   const bob = Math.abs(trot) * 1.5;
 
-  // ground shadow, stays flat regardless of facing
+  // ground shadow, directly under the body's pivot point regardless of facing
   context.fillStyle = 'rgba(0,0,0,0.3)';
   context.beginPath();
-  context.ellipse(pet.x, pet.y + 7, 9, 3.5, 0, 0, Math.PI * 2);
+  context.ellipse(pet.x, pet.y + 6, 9, 3.5, 0, 0, Math.PI * 2);
   context.fill();
 
   context.save();
   context.translate(pet.x, pet.y - bob);
   context.rotate(pet.angle);
 
-  const furColor = '#b5793f';
-  const furDark = '#8a5a2a';
+  const furColor = pet.fur || '#b5793f';
+  const furDark = pet.furDark || '#8a5a2a';
   const legSwing = trot * 3;
 
-  // trotting legs (two pairs, swinging opposite each other)
+  // trotting legs, centered under the body (two pairs swinging opposite)
   context.strokeStyle = furDark;
   context.lineWidth = 2.2;
   context.lineCap = 'round';
   context.beginPath();
-  context.moveTo(-5, 3); context.lineTo(-5 + legSwing, 8);
-  context.moveTo(4, 3); context.lineTo(4 - legSwing, 8);
+  context.moveTo(-5, 4); context.lineTo(-5 + legSwing, 9);
+  context.moveTo(3, 4); context.lineTo(3 - legSwing, 9);
   context.stroke();
 
-  // wagging tail
+  // wagging tail, extending back from the body
   const tailWag = Math.sin(pet.bobPhase * 1.6) * 0.5;
   context.strokeStyle = furColor;
   context.lineWidth = 2.5;
   context.beginPath();
-  context.moveTo(-9, -1);
-  context.quadraticCurveTo(-15, -4 + tailWag * 4, -13, -9 + tailWag * 2);
+  context.moveTo(-8, 0);
+  context.quadraticCurveTo(-14, -3 + tailWag * 4, -12, -8 + tailWag * 2);
   context.stroke();
 
-  // body
+  // body, centered on the pivot point (pet.x, pet.y) so it stays over its
+  // own shadow no matter which way it's facing
   context.fillStyle = furColor;
   context.beginPath();
-  context.ellipse(-1, -2, 9, 5.5, 0, 0, Math.PI * 2);
+  context.ellipse(0, 0, 9, 5.5, 0, 0, Math.PI * 2);
   context.fill();
   context.strokeStyle = 'rgba(0,0,0,0.4)';
   context.lineWidth = 1;
   context.stroke();
 
-  // head + snout, facing the direction of travel
+  // head + snout, out front
   context.fillStyle = furColor;
   context.beginPath();
-  context.arc(8, -4, 4.2, 0, Math.PI * 2);
+  context.arc(9, -2, 4.2, 0, Math.PI * 2);
   context.fill();
   context.stroke();
   context.fillStyle = furDark;
   context.beginPath();
-  context.ellipse(12, -3, 2.2, 1.6, 0, 0, Math.PI * 2);
+  context.ellipse(13, -1, 2.2, 1.6, 0, 0, Math.PI * 2);
   context.fill();
   context.fillStyle = '#1a1a1a';
   context.beginPath();
-  context.arc(13.5, -3, 0.8, 0, Math.PI * 2);
+  context.arc(14.5, -1, 0.8, 0, Math.PI * 2);
   context.fill();
 
   // perked ears
   context.fillStyle = furDark;
   context.beginPath();
-  context.moveTo(5, -7);
-  context.lineTo(4, -12);
-  context.lineTo(7.5, -8);
+  context.moveTo(6, -5);
+  context.lineTo(5, -10);
+  context.lineTo(8.5, -6);
   context.closePath();
   context.fill();
   context.beginPath();
-  context.moveTo(10, -7);
-  context.lineTo(11.5, -12);
-  context.lineTo(13, -7.5);
+  context.moveTo(11, -5);
+  context.lineTo(12.5, -10);
+  context.lineTo(14, -5.5);
   context.closePath();
   context.fill();
 
@@ -4927,6 +5290,36 @@ function drawPlayerHUD(p, barY) {
 const MINIMAP_RADIUS = 62;
 const MINIMAP_WORLD_RANGE = 700;
 
+function drawMinimapLegend(cx, cy) {
+  const items = [
+    ['#ffffff', 'You'],
+    ['#ef4444', 'Zombie'],
+    ['#ff2222', 'Boss'],
+    ['#fde047', 'Golden'],
+    ['#60a5fa', 'Landmark'],
+    ['#4ade80', 'Health'],
+    ['#93c5fd', 'Hazard']
+  ];
+  const legendX = cx - MINIMAP_RADIUS - 86;
+  let legendY = cy - MINIMAP_RADIUS + 2;
+  context.save();
+  context.fillStyle = 'rgba(0,0,0,0.45)';
+  context.fillRect(legendX - 8, legendY - 10, 86, items.length * 11 + 8);
+  context.font = '600 8px "DM Sans", sans-serif';
+  context.textAlign = 'left';
+  context.textBaseline = 'middle';
+  for (const [color, label] of items) {
+    context.fillStyle = color;
+    context.beginPath();
+    context.arc(legendX, legendY, 2.5, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = '#ffffff';
+    context.fillText(label, legendX + 7, legendY);
+    legendY += 11;
+  }
+  context.restore();
+}
+
 function drawMinimap() {
   const cx = canvas.width - 80;
   const cy = canvas.height - 80;
@@ -4966,9 +5359,9 @@ function drawMinimap() {
   }
   for (const z of zombies) {
     const dx = (z.x - camera.x) * scale, dy = (z.y - camera.y) * scale;
-    context.fillStyle = z.isBoss ? '#ff2222' : '#ef4444';
+    context.fillStyle = z.isGolden ? '#fde047' : (z.isBoss ? '#ff2222' : '#ef4444');
     context.beginPath();
-    context.arc(cx + dx, cy + dy, z.isBoss ? 4 : 2, 0, Math.PI * 2);
+    context.arc(cx + dx, cy + dy, z.isBoss ? 4 : (z.isGolden ? 3 : 2), 0, Math.PI * 2);
     context.fill();
   }
   for (const pk of ammoPickups) {
@@ -5012,6 +5405,7 @@ function drawMinimap() {
   context.beginPath();
   context.arc(cx, cy, MINIMAP_RADIUS, 0, Math.PI * 2);
   context.stroke();
+  drawMinimapLegend(cx, cy);
   context.restore();
 }
 
@@ -5036,6 +5430,20 @@ function drawHUD() {
     context.font = '800 12px "DM Sans", sans-serif';
     context.fillStyle = '#ff5533';
     context.fillText('RAPID FIRE! (' + Math.ceil(rapidFireTimer / 60) + 's)', canvas.width - 14, comboCount > 1 ? 60 : 42);
+  }
+
+  // kill feed: a short fading log of recent notable moments
+  if (killFeed.length > 0) {
+    context.textAlign = 'right';
+    context.font = '700 11px "DM Sans", sans-serif';
+    let feedY = canvas.height - 90;
+    for (const entry of killFeed) {
+      context.globalAlpha = Math.min(1, entry.life / 40);
+      context.fillStyle = entry.color;
+      context.fillText(entry.text, canvas.width - 14, feedY);
+      context.globalAlpha = 1;
+      feedY += 16;
+    }
   }
 
   // wave
@@ -5118,9 +5526,22 @@ function drawHUD() {
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.globalAlpha = Math.min(1, waveMessageTimer / 30);
-    context.fillStyle = '#fde047';
-    context.font = '800 38px "DM Sans", sans-serif';
-    context.fillText(waveMessage, canvas.width / 2, canvas.height / 2);
+    if (isMilestoneMessage) {
+      const pulse = 1 + Math.sin(frameCount * 0.2) * 0.08;
+      context.save();
+      context.translate(canvas.width / 2, canvas.height / 2);
+      context.scale(pulse, pulse);
+      context.shadowColor = '#fde047';
+      context.shadowBlur = 25;
+      context.fillStyle = '#fde047';
+      context.font = '800 54px "DM Sans", sans-serif';
+      context.fillText(waveMessage, 0, 0);
+      context.restore();
+    } else {
+      context.fillStyle = '#fde047';
+      context.font = '800 38px "DM Sans", sans-serif';
+      context.fillText(waveMessage, canvas.width / 2, canvas.height / 2);
+    }
     context.globalAlpha = 1;
   }
 
@@ -5398,9 +5819,15 @@ window.addEventListener('keyup', (e) => {
 function clearAllKeys() {
   for (const k in keys) keys[k] = false;
 }
-window.addEventListener('blur', clearAllKeys);
+// losing focus mid-fight shouldn't cost you a death - pause automatically,
+// same as pressing the pause button yourself
+function autoPauseOnBlur() {
+  clearAllKeys();
+  if (phase === 'playing') togglePause();
+}
+window.addEventListener('blur', autoPauseOnBlur);
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) clearAllKeys();
+  if (document.hidden) autoPauseOnBlur();
 });
 startBtn.addEventListener('click', () => {
   ensureAudio();
