@@ -530,7 +530,7 @@ function playShoot(weaponKey) {
   else if (weaponKey === 'rifle') beep(500, 0.05, 'square', 0.07, 650);
   else if (weaponKey === 'rocket') beep(90, 0.3, 'sawtooth', 0.2, 170);
   else if (weaponKey === 'smg') beep(380, 0.04, 'square', 0.07, 460);
-  else if (weaponKey === 'crossbow') beep(250, 0.06, 'sine', 0.04, 150);
+  else if (weaponKey === 'minigun') beep(300, 0.03, 'square', 0.06, 340);
   else beep(420, 0.07, 'square', 0.09, 520);
 }
 function playZombieHit() { beep(140, 0.07, 'square', 0.06, 90); }
@@ -629,8 +629,10 @@ const CHARACTERS = [
     role: 'Sharpshooter', roleDesc: '+2 Bullet damage, +1 Pierce', unlockWave: 20 },
   { name: 'Marcus', light: '#fdba74', dark: '#c2410c', cap: '#431407', headwear: 'bandana', startWeapon: 'flamethrower',
     role: 'Pyro', roleDesc: '+50% Burn Damage, -15% Grenade Cooldown', unlockWave: 30 },
-  { name: 'Zara',  light: '#a5f3fc', dark: '#0e7490', cap: '#083344', headwear: 'beanie', startWeapon: 'crossbow',
-    role: 'Engineer', roleDesc: '+50% Turret Damage, +50% Turret Duration', unlockWave: 40 }
+  { name: 'Zara',  light: '#a5f3fc', dark: '#0e7490', cap: '#083344', headwear: 'beanie', startWeapon: 'minigun',
+    role: 'Engineer', roleDesc: '+50% Turret Damage, +50% Turret Duration', unlockWave: 40 },
+  { name: 'Duke',  light: '#fecaca', dark: '#991b1b', cap: '#450a0a', headwear: 'bandana', startWeapon: 'pistol',
+    role: 'Brawler', roleDesc: '+150% Melee Damage, Haymaker ability stuns', unlockWave: 50 }
 ];
 
 function getBestWave() {
@@ -788,10 +790,11 @@ const WEAPON_TYPES = {
   sniper:  { name: 'Sniper',  color: '#f43f5e', cooldown: 50, damage: 7, pellets: 1, spread: 0,    ammoCost: 1, maxAmmo: 10, bulletRadius: 5, pierce: 2 },
   flamethrower: { name: 'Flamethrower', color: '#fb923c', cooldown: 2, damage: 1, pellets: 1, spread: 0.25, ammoCost: 1, maxAmmo: 120, bulletRadius: 7,
     maxRange: 140, burnDamage: 2, burnDuration: 90 },
-  crossbow: { name: 'Crossbow', color: '#78350f', cooldown: 35, damage: 5, pellets: 1, spread: 0, ammoCost: 1, maxAmmo: 16, bulletRadius: 4,
-    pierce: 1, silent: true, retrieveAmmo: true }
+  minigun: { name: 'Minigun', color: '#fbbf24', cooldown: 9, damage: 1, pellets: 1, spread: 0.1, ammoCost: 1, maxAmmo: 90, bulletRadius: 3.5 }
 };
-const WEAPON_ORDER = ['pistol', 'smg', 'shotgun', 'rifle', 'rocket', 'sniper', 'flamethrower', 'crossbow'];
+const WEAPON_ORDER = ['pistol', 'smg', 'shotgun', 'rifle', 'rocket', 'sniper', 'flamethrower', 'minigun'];
+// minigun fire rate ramps up the longer you hold it on a target, maxing out at this many frames of continuous fire
+const MINIGUN_SPIN_MAX = 50;
 let selectedP1Weapon = CHARACTERS[selectedP1Character].startWeapon;
 let selectedP2Weapon = CHARACTERS[selectedP2Character].startWeapon;
 
@@ -864,10 +867,39 @@ function getNightFactor() {
   return (1 - Math.cos((frameCount / DAY_NIGHT_PERIOD) * Math.PI * 2)) / 2;
 }
 function getNightStatMultiplier() {
-  return 1 + getNightFactor() * 0.5;
+  return (1 + getNightFactor() * 0.5) * (bloodMoonTimer > 0 ? BLOOD_MOON_HEALTH_MULT : 1);
 }
 function getNightSpeedMultiplier() {
-  return 1 + getNightFactor() * 0.25;
+  return (1 + getNightFactor() * 0.25) * (bloodMoonTimer > 0 ? BLOOD_MOON_SPEED_MULT : 1);
+}
+
+// blood moon: a rare, extra-dangerous full-night event - zombies hit harder
+// and have more health, but every kill is worth double score while it's active
+const BLOOD_MOON_MIN_WAVE = 6;
+const BLOOD_MOON_DURATION = 600;
+const BLOOD_MOON_HEALTH_MULT = 1.4;
+const BLOOD_MOON_SPEED_MULT = 1.15;
+const BLOOD_MOON_SCORE_MULT = 2;
+let bloodMoonTimer = 0;
+let bloodMoonCooldownTimer = 1800 + Math.random() * 1800;
+function playBloodMoonRise() { beep(100, 0.5, 'sawtooth', 0.2, 300); }
+function updateBloodMoon() {
+  if (bloodMoonTimer > 0) {
+    bloodMoonTimer--;
+  } else {
+    bloodMoonCooldownTimer--;
+    if (bloodMoonCooldownTimer <= 0) {
+      bloodMoonCooldownTimer = 2600 + Math.random() * 1800;
+      if (wave >= BLOOD_MOON_MIN_WAVE && getNightFactor() > 0.6) {
+        bloodMoonTimer = BLOOD_MOON_DURATION;
+        waveMessage = 'BLOOD MOON RISES!';
+        waveMessageTimer = 110;
+        isMilestoneMessage = false;
+        addKillFeed('Blood Moon! Tougher zombies, double score', '#ef4444');
+        playBloodMoonRise();
+      }
+    }
+  }
 }
 
 // zombies ramp up hard with wave number - doubling roughly every 20 waves -
@@ -1420,7 +1452,9 @@ const ZOMBIE_TIERS = [
   { name: 'Raider', minWave: 6, radius: 16, speedMult: 0.85, healthBase: 2, damage: 9, color: '#5a4a3a', glow: null,
     canThrow: true },
   { name: 'Dog', minWave: 7, radius: 10, speedMult: 2.1, healthBase: 1, damage: 7, color: '#78502a', glow: null,
-    packSize: 3 }
+    packSize: 3 },
+  { name: 'Shaman', minWave: 12, radius: 17, speedMult: 0.75, healthBase: 3, damage: 8, color: '#6d28d9', glow: '#c084fc',
+    buffsNearby: true }
 ];
 let tierSeen = {};
 
@@ -1429,6 +1463,7 @@ function pickZombieTier() {
   const weights = available.map(t => {
     let w = 1 + Math.max(0, wave - t.minWave) * 0.4;
     if (t.name === 'Boomer' || t.name === 'Venom') w *= 1.8;
+    if (t.name === 'Shaman') w *= 0.4;
     return w;
   });
   const total = weights.reduce((a, b) => a + b, 0);
@@ -1722,6 +1757,7 @@ function createPlayer(index, characterIndex, totalPlayers, chosenWeapon) {
     fortifyTimer: 0,
     muzzleFlashTimer: 0,
     flameGlowTimer: 0,
+    minigunSpin: 0,
     armor: 0,
     maxArmor: 100
   };
@@ -1977,6 +2013,8 @@ function resetGame() {
   windAngle = 0;
   rainTimer = 0;
   rainCooldownTimer = 1200 + Math.random() * 900;
+  bloodMoonTimer = 0;
+  bloodMoonCooldownTimer = 1800 + Math.random() * 1800;
   flareUsed = false;
   flareTimer = 0;
   turrets = [];
@@ -2277,9 +2315,35 @@ function pushTierZombie(tier, x, y) {
     damageReduction: tier.damageReduction || 0,
     canThrow: tier.canThrow || false,
     rangedCooldown: 0,
+    buffsNearby: tier.buffsNearby || false,
+    buffPulseTimer: 90,
+    buffedTimer: 0,
     alerted: true,
     spawnTimer: ZOMBIE_SPAWN_ANIM_TIME
   });
+}
+
+// at higher waves, a normal zombie occasionally mutates with a random extra edge -
+// keeps late-game spawns from feeling too same-y
+const MUTATION_MIN_WAVE = 15;
+const MUTATION_CHANCE = 0.15;
+function maybeMutateZombie(z) {
+  if (wave < MUTATION_MIN_WAVE || Math.random() >= MUTATION_CHANCE) return;
+  const roll = Math.random();
+  if (roll < 0.34) {
+    z.mutation = 'fast';
+    z.speed *= 1.6;
+    z.glow = z.glow || '#38bdf8';
+  } else if (roll < 0.67) {
+    z.mutation = 'tough';
+    z.health = Math.round(z.health * 2);
+    z.maxHealth = z.health;
+    z.glow = z.glow || '#f97316';
+  } else {
+    z.mutation = 'savage';
+    z.damage = Math.round(z.damage * 1.8);
+    z.glow = z.glow || '#ef4444';
+  }
 }
 
 function spawnZombie() {
@@ -2292,6 +2356,7 @@ function spawnZombie() {
   tierSeen[tier.name] = true;
   discoverTier(tier.name);
   pushTierZombie(tier, x, y);
+  maybeMutateZombie(zombies[zombies.length - 1]);
 
   // pack zombies (like Dogs) bring a couple of friends along
   if (tier.packSize) {
@@ -2464,6 +2529,10 @@ function shoot(p) {
   const weapon = WEAPON_TYPES[p.currentWeaponKey];
   if (p.shootCooldown > 0 || p.ammo < weapon.ammoCost) return;
   p.shootCooldown = getShootCooldownFrames(weapon, p.currentWeaponKey);
+  if (p.currentWeaponKey === 'minigun') {
+    const spinRatio = p.minigunSpin / MINIGUN_SPIN_MAX;
+    p.shootCooldown = Math.max(2, Math.round(p.shootCooldown * (1 - spinRatio * 0.75)));
+  }
   p.ammo -= weapon.ammoCost;
   p.muzzleFlashTimer = 4;
   if (p.currentWeaponKey === 'flamethrower') p.flameGlowTimer = 14;
@@ -2513,7 +2582,7 @@ function meleeAttack(p) {
   p.meleeCooldown = MELEE_COOLDOWN_FRAMES;
   p.meleeFlashTimer = 10;
   playMeleeSwing();
-  const dmg = 1 + Math.floor((wave - 1) / 3);
+  const dmg = (1 + Math.floor((wave - 1) / 3)) * (p.character.role === 'Brawler' ? 2.5 : 1);
   for (const z of zombies) {
     if (Math.hypot(z.x - p.x, z.y - p.y) < p.radius + MELEE_RANGE) {
       z.health -= dmg * (1 - z.damageReduction);
@@ -2740,6 +2809,19 @@ function useAbility(p) {
     throwGrenade(p, p.angle - 0.4);
     throwGrenade(p, p.angle);
     throwGrenade(p, p.angle + 0.4);
+  } else if (role === 'Brawler') {
+    // haymaker: one huge stunning punch in a wide radius around the player
+    const dmg = (3 + Math.floor((wave - 1) / 3)) * 3;
+    for (const z of zombies) {
+      if (Math.hypot(z.x - p.x, z.y - p.y) < p.radius + MELEE_RANGE * 1.8) {
+        z.health -= dmg * (1 - z.damageReduction);
+        z.hitFlash = 10;
+        z.stunTimer = Math.max(z.stunTimer || 0, 40);
+        makeParticles(z.x, z.y, '#fbbf24', 10);
+        spawnDamageNumber(z.x, z.y - z.radius, dmg * (1 - z.damageReduction));
+      }
+    }
+    makeParticles(p.x, p.y, '#fbbf24', 20);
   }
   playAbilityActivate();
 }
@@ -2752,6 +2834,7 @@ function update() {
   pruneDistantChunks();
   updateDustStorm();
   updateRain();
+  updateBloodMoon();
   updateMiniEvent();
   updateSafeZone();
   updateFirePatches();
@@ -2958,17 +3041,21 @@ function update() {
     resolveObstacleCollision(p, false);
 
     const target = findNearestZombie(p);
+    let isSpinningUp = false;
     if (target) {
       p.angle = Math.atan2(target.y - p.y, target.x - p.x);
       const weapon = WEAPON_TYPES[p.currentWeaponKey];
       if (phase === 'playing') {
         if (p.ammo >= weapon.ammoCost) {
           shoot(p);
+          isSpinningUp = p.currentWeaponKey === 'minigun';
         } else if (p.meleeCooldown <= 0 && Math.hypot(target.x - p.x, target.y - p.y) < p.radius + MELEE_RANGE) {
           meleeAttack(p);
         }
       }
     }
+    // the minigun's barrel winds up the longer it's actively firing, and spins back down the moment it stops
+    p.minigunSpin = isSpinningUp ? Math.min(MINIGUN_SPIN_MAX, p.minigunSpin + 1) : Math.max(0, p.minigunSpin - 3);
   }
 
   // bullets
@@ -3115,7 +3202,9 @@ function update() {
     }
     if (z.stunTimer > 0) z.stunTimer--;
     if (z.frozenTimer > 0) z.frozenTimer--;
+    if (z.buffedTimer > 0) z.buffedTimer--;
     const frozenMult = z.frozenTimer > 0 ? 0.15 : 1;
+    const buffMult = z.buffedTimer > 0 ? 1.4 : 1;
     if (z.confusedTimer > 0) {
       z.confusedTimer--;
       if (!z.wanderAngle || Math.random() < 0.03) z.wanderAngle = Math.random() * Math.PI * 2;
@@ -3169,7 +3258,7 @@ function update() {
       if (chaseTarget) {
         const ang = Math.atan2(chaseTarget.y - z.y, chaseTarget.x - z.x);
         const inSafeZone = safeZone && Math.hypot(z.x - safeZone.x, z.y - safeZone.y) < safeZone.radius;
-        const moveSpeed = (inSafeZone ? z.speed * 0.35 : z.speed) * frozenMult;
+        const moveSpeed = (inSafeZone ? z.speed * 0.35 : z.speed) * frozenMult * buffMult;
         z.x += Math.cos(ang) * moveSpeed;
         z.y += Math.sin(ang) * moveSpeed;
       }
@@ -3187,6 +3276,20 @@ function update() {
         life: 14 + Math.random() * 8,
         color: 'rgba(160,140,100,0.35)'
       });
+    }
+
+    // shamans periodically pulse a speed buff out to nearby zombies
+    if (z.buffsNearby && z.alerted && !(z.stunTimer > 0)) {
+      z.buffPulseTimer--;
+      if (z.buffPulseTimer <= 0) {
+        z.buffPulseTimer = 90;
+        for (const other of zombies) {
+          if (other !== z && Math.hypot(other.x - z.x, other.y - z.y) < 150) {
+            other.buffedTimer = 150;
+          }
+        }
+        makeParticles(z.x, z.y, '#c084fc', 12);
+      }
     }
 
     // armed zombies chuck debris at you from range while they close in
@@ -3365,7 +3468,15 @@ function update() {
       comboCount++;
       comboTimer = COMBO_WINDOW;
       const multiplier = 1 + Math.min(2, comboCount * 0.1);
-      score += Math.round(10 * multiplier);
+      score += Math.round(10 * multiplier * (bloodMoonTimer > 0 ? BLOOD_MOON_SCORE_MULT : 1));
+
+      // every 10 kills in one streak gets a big on-screen callout
+      if (comboCount % 10 === 0) {
+        waveMessage = comboCount + 'x KILLING SPREE!';
+        waveMessageTimer = 70;
+        isMilestoneMessage = false;
+        addKillFeed(comboCount + 'x kill streak!', '#fb923c');
+      }
 
       zombies.splice(i, 1);
     }
@@ -4211,7 +4322,7 @@ function drawPlayer(p) {
     context.rotate(p.angle);
     const equippedWeapon = WEAPON_TYPES[p.currentWeaponKey];
     const outOfAmmo = p.ammo < equippedWeapon.ammoCost;
-    drawHeldWeapon(p.radius, p.currentWeaponKey, equippedWeapon.color, outOfAmmo, p.character.dark);
+    drawHeldWeapon(p.radius, p.currentWeaponKey, equippedWeapon.color, outOfAmmo, p.character.dark, p.minigunSpin);
 
     // muzzle flash right at the end of the barrel
     if (!outOfAmmo && p.muzzleFlashTimer > 0) {
@@ -4434,7 +4545,7 @@ function drawKnife(r, handleColor) {
   context.fillRect(r - 9, -4, 2, 8);
 }
 
-function drawHeldWeapon(r, weaponKey, color, outOfAmmo, knifeColor) {
+function drawHeldWeapon(r, weaponKey, color, outOfAmmo, knifeColor, spinFrames) {
   context.fillStyle = '#334155';
   context.fillRect(2, -4, r + 4, 8);
   context.strokeStyle = 'rgba(0,0,0,0.4)';
@@ -4539,33 +4650,35 @@ function drawHeldWeapon(r, weaponKey, color, outOfAmmo, knifeColor) {
     context.lineTo(r + 4, -12);
     context.lineTo(r + 4, -4);
     context.stroke();
-  } else if (weaponKey === 'crossbow') {
-    // horizontal stock/rail
-    context.fillStyle = '#5a3a1a';
-    context.fillRect(r - 2, -3, 20, 6);
+  } else if (weaponKey === 'minigun') {
+    const spinRatio = (spinFrames || 0) / MINIGUN_SPIN_MAX;
+    const barrelSpin = frameCount * (0.15 + spinRatio * 0.9);
+    // ammo box feeding the gun from below
+    context.fillStyle = '#3a2f14';
+    context.fillRect(r - 6, 4, 12, 10);
     context.strokeStyle = 'rgba(0,0,0,0.5)';
     context.lineWidth = 1;
-    context.strokeRect(r - 2, -3, 20, 6);
-    // the two curved limbs that give it the crossbow silhouette
-    context.strokeStyle = '#3a2410';
-    context.lineWidth = 2.5;
-    context.lineCap = 'round';
+    context.strokeRect(r - 6, 4, 12, 10);
+    // central hub
+    context.fillStyle = '#2a2a2a';
     context.beginPath();
-    context.moveTo(r + 10, -1);
-    context.quadraticCurveTo(r + 4, -15, r + 13, -17);
-    context.moveTo(r + 10, -1);
-    context.quadraticCurveTo(r + 4, 11, r + 13, 13);
-    context.stroke();
-    // taut bowstring connecting the limb tips
-    context.strokeStyle = 'rgba(230,230,220,0.85)';
-    context.lineWidth = 1;
-    context.beginPath();
-    context.moveTo(r + 13, -17);
-    context.lineTo(r + 13, 13);
-    context.stroke();
-    // little sight
+    context.arc(r + 8, 0, 6, 0, Math.PI * 2);
+    context.fill();
+    // four rotating barrels fanned out around the hub - they spin faster the longer it's been firing
+    for (let bIdx = 0; bIdx < 4; bIdx++) {
+      const bAngle = barrelSpin + bIdx * (Math.PI / 2);
+      const bx = r + 8 + Math.cos(bAngle) * 3.5;
+      const by = Math.sin(bAngle) * 3.5;
+      context.save();
+      context.translate(bx, by);
+      context.fillStyle = '#4a4a4a';
+      context.fillRect(0, -1.3, 18, 2.6);
+      context.restore();
+    }
     context.fillStyle = color;
-    context.fillRect(r + 1, -7, 6, 4);
+    context.beginPath();
+    context.arc(r + 8, 0, 2.5, 0, Math.PI * 2);
+    context.fill();
   } else {
     context.fillStyle = '#1a1330';
     context.fillRect(r + 2, -5, 14, 10);
@@ -4632,6 +4745,10 @@ function drawZombie(z) {
   if (z.glow) {
     context.shadowColor = z.glow;
     context.shadowBlur = 16;
+  } else if (z.buffedTimer > 0) {
+    // a faint purple shimmer shows this zombie's been sped up by a shaman nearby
+    context.shadowColor = '#c084fc';
+    context.shadowBlur = 10;
   }
 
   // small flickering flames while burning
@@ -4946,37 +5063,6 @@ function drawMedKit(kit) {
 function drawBullet(b) {
   if (b.isFlame) {
     drawFlameBullet(b);
-    return;
-  }
-  if (b.weaponKey === 'crossbow') {
-    const angle = Math.atan2(b.vy, b.vx);
-    context.save();
-    context.translate(b.x, b.y);
-    context.rotate(angle);
-    // a thin wooden bolt with fletching at the back
-    context.strokeStyle = '#4a3018';
-    context.lineWidth = 2;
-    context.lineCap = 'round';
-    context.beginPath();
-    context.moveTo(-10, 0);
-    context.lineTo(8, 0);
-    context.stroke();
-    context.fillStyle = '#9ca3af';
-    context.beginPath();
-    context.moveTo(8, 0);
-    context.lineTo(3, -2.5);
-    context.lineTo(3, 2.5);
-    context.closePath();
-    context.fill();
-    context.fillStyle = '#e5e7eb';
-    context.beginPath();
-    context.moveTo(-10, 0);
-    context.lineTo(-6, -3);
-    context.lineTo(-5, 0);
-    context.lineTo(-6, 3);
-    context.closePath();
-    context.fill();
-    context.restore();
     return;
   }
   // a short fading tracer behind the bullet, matching the weapon's color
@@ -5509,6 +5595,12 @@ function drawHUD() {
     context.fillStyle = '#4ade80';
     context.fillText('SURVIVOR NEARBY! (' + Math.ceil(rescueEvent.timer / 60) + 's)', canvas.width / 2, 116);
   }
+  if (bloodMoonTimer > 0) {
+    const pulse = 0.6 + 0.4 * Math.sin(frameCount * 0.2);
+    context.font = '800 13px "DM Sans", sans-serif';
+    context.fillStyle = 'rgba(239, 68, 68, ' + pulse + ')';
+    context.fillText('BLOOD MOON (' + Math.ceil(bloodMoonTimer / 60) + 's) - 2x SCORE', canvas.width / 2, 132);
+  }
   if (zombies.length === 0 && zombiesSpawnedThisWave >= zombiesToSpawnThisWave) {
     const nextWave = wave + 1;
     const nextIsBoss = nextWave % 5 === 0;
@@ -5538,7 +5630,7 @@ function drawHUD() {
       context.fillText(waveMessage, 0, 0);
       context.restore();
     } else {
-      context.fillStyle = '#fde047';
+      context.fillStyle = waveMessage.indexOf('KILLING SPREE') !== -1 ? '#fb923c' : '#fde047';
       context.font = '800 38px "DM Sans", sans-serif';
       context.fillText(waveMessage, canvas.width / 2, canvas.height / 2);
     }
@@ -5725,6 +5817,19 @@ function drawAtmosphereOverlay() {
   const nightFactor = getNightFactor();
   if (nightFactor > 0.02) {
     context.fillStyle = 'rgba(8, 10, 35, ' + (nightFactor * 0.55) + ')';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  if (bloodMoonTimer > 0) {
+    context.fillStyle = 'rgba(120, 0, 10, 0.22)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    const pulse = 0.5 + 0.5 * Math.sin(frameCount * 0.1);
+    const grad = context.createRadialGradient(
+      canvas.width / 2, canvas.height / 2, canvas.width * 0.3,
+      canvas.width / 2, canvas.height / 2, canvas.width * 0.75
+    );
+    grad.addColorStop(0, 'rgba(160, 0, 20, 0)');
+    grad.addColorStop(1, 'rgba(160, 0, 20, ' + (0.3 + pulse * 0.2) + ')');
+    context.fillStyle = grad;
     context.fillRect(0, 0, canvas.width, canvas.height);
   }
   if (isAnyPlayerCritical()) {
