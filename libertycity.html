@@ -542,7 +542,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0b1224);
 scene.fog = new THREE.FogExp2(0x0b1224, 0.0032);
 
-const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.5, 520);
+const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.5, 700);
 
 const hemiLight = new THREE.HemisphereLight(0xbae6fd, 0x1e293b, 1.05);
 scene.add(hemiLight);
@@ -554,7 +554,7 @@ dirLight.shadow.mapSize.width = 2048;
 dirLight.shadow.mapSize.height = 2048;
 dirLight.shadow.camera.near = 10;
 dirLight.shadow.camera.far = 420;
-const d = 175;
+const d = 220;
 dirLight.shadow.camera.left = -d;
 dirLight.shadow.camera.right = d;
 dirLight.shadow.camera.top = d;
@@ -668,9 +668,9 @@ function updateWeather(dt) {
 // ==========================================
 // 3. PROCEDURAL PBR TEXTURES & CITY WORLD
 // ==========================================
-const CITY_EDGE = 196;
-const SAND_END = 222;
-const OCEAN_END = 250;
+const CITY_EDGE = 266;
+const SAND_END = 292;
+const OCEAN_END = 320;
 const CITY_LIMIT = OCEAN_END;
 const colliders = [];
 const trafficLights = [];
@@ -793,32 +793,33 @@ function makeBuildingTexture(baseColor, accentColor, seed) {
 const asphaltTex = makeAsphaltTexture();
 const sidewalkTex = makeSidewalkTexture();
 
-const groundGeo = new THREE.PlaneGeometry(540, 540);
+const groundGeo = new THREE.PlaneGeometry(OCEAN_END * 2 + 60, OCEAN_END * 2 + 60);
 const groundMat = new THREE.MeshStandardMaterial({ color: 0x0b111e, roughness: 0.92 });
 const ground = new THREE.Mesh(groundGeo, groundMat);
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-const roadCoords = [-210, -140, -70, 0, 70, 140, 210];
+const roadCoords = [-280, -210, -140, -70, 0, 70, 140, 210, 280];
 const roadMat = new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 0.82, metalness: 0.08 });
 const lineMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
 const whiteMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0 });
 
+const ROAD_SPAN = OCEAN_END * 2 + 40;
 roadCoords.forEach(coord => {
- const ns = new THREE.Mesh(new THREE.PlaneGeometry(16, 440), roadMat);
+ const ns = new THREE.Mesh(new THREE.PlaneGeometry(16, ROAD_SPAN), roadMat);
  ns.rotation.x = -Math.PI / 2;
  ns.position.set(coord, 0.03, 0);
  ns.receiveShadow = true;
  scene.add(ns);
 
- const ew = new THREE.Mesh(new THREE.PlaneGeometry(440, 16), roadMat);
+ const ew = new THREE.Mesh(new THREE.PlaneGeometry(ROAD_SPAN, 16), roadMat);
  ew.rotation.x = -Math.PI / 2;
  ew.position.set(0, 0.04, coord);
  ew.receiveShadow = true;
  scene.add(ew);
 
- for (let i = -210; i <= 210; i += 14) {
+ for (let i = -CITY_EDGE; i <= CITY_EDGE; i += 14) {
    const dash1 = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 5), lineMat);
    dash1.rotation.x = -Math.PI / 2;
    dash1.position.set(coord, 0.05, i);
@@ -902,7 +903,7 @@ const billboardTexts = [
  ['METRO SUBWAY', '#022c22', '#4ade80']
 ];
 
-const blockCenters = [-175, -105, -35, 35, 105, 175];
+const blockCenters = [-245, -175, -105, -35, 35, 105, 175, 245];
 const neonColors = [0x38bdf8, 0xf472b6, 0xa855f7, 0x22d3ee, 0xf59e0b];
 
 const ciIndex = v => blockCenters.indexOf(v);
@@ -1864,6 +1865,45 @@ function createVehicleMesh(color, type = 'sport') {
    return group;
  }
 
+ if (type === 'tank') {
+   const paintMat = new THREE.MeshStandardMaterial({ color, roughness: 0.75, metalness: 0.3 });
+   const bodyW = 3.2, bodyL = 6.0;
+
+   const hull = new THREE.Mesh(new THREE.BoxGeometry(bodyW, 1.2, bodyL), paintMat);
+   hull.position.y = 0.9;
+   hull.castShadow = true;
+   group.add(hull);
+
+   const trackMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
+   [-bodyW / 2 - 0.1, bodyW / 2 + 0.1].forEach(tx => {
+     const track = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, bodyL + 0.6), trackMat);
+     track.position.set(tx, 0.45, 0);
+     track.castShadow = true;
+     group.add(track);
+   });
+
+   const turretPivot = new THREE.Group();
+   turretPivot.position.set(0, 1.5, -0.3);
+   group.add(turretPivot);
+
+   const turret = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.5, 0.9, 10), paintMat);
+   turret.position.y = 0.45;
+   turret.castShadow = true;
+   turretPivot.add(turret);
+
+   const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 4.2, 10), new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6 }));
+   barrel.rotation.x = Math.PI / 2;
+   barrel.position.set(0, 0.45, 2.6);
+   turretPivot.add(barrel);
+
+   const hatch = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.15, 10), trackMat);
+   hatch.position.set(0, 0.95, -0.6);
+   turretPivot.add(hatch);
+
+   group.userData = { lightBar: null, bodyW, bodyL, wheels: [], paintMat };
+   return group;
+ }
+
  const isVan = type === 'van' || type === 'boss';
  const isCop = type === 'cop';
  const isTaxi = type === 'taxi';
@@ -2085,9 +2125,9 @@ function spawnVehicle(x, z, rotY, color, type = 'sport', isAiTraffic = false) {
  scene.add(mesh);
  const v = {
    x, z, rotY, speed: 0, altitude: 0,
-   maxSpeed: type === 'plane' ? 70 : (type === 'jetski' ? 50 : (type === 'boat' ? 34 : (type === 'moto' ? 54 : (type === 'sport' ? 46 : (type === 'cop' ? 44 : 36))))),
-   hp: type === 'boss' ? 450 : (type === 'van' ? 220 : (type === 'plane' ? 160 : (type === 'boat' ? 180 : ((type === 'moto' || type === 'jetski') ? 55 : 140)))),
-   maxHp: type === 'boss' ? 450 : (type === 'plane' ? 160 : (type === 'boat' ? 180 : ((type === 'moto' || type === 'jetski') ? 55 : 140))),
+   maxSpeed: type === 'plane' ? 70 : (type === 'tank' ? 22 : (type === 'jetski' ? 50 : (type === 'boat' ? 34 : (type === 'moto' ? 54 : (type === 'sport' ? 46 : (type === 'cop' ? 44 : 36)))))),
+   hp: type === 'boss' ? 450 : (type === 'tank' ? 500 : (type === 'van' ? 220 : (type === 'plane' ? 160 : (type === 'boat' ? 180 : ((type === 'moto' || type === 'jetski') ? 55 : 140))))),
+   maxHp: type === 'boss' ? 450 : (type === 'tank' ? 500 : (type === 'plane' ? 160 : (type === 'boat' ? 180 : ((type === 'moto' || type === 'jetski') ? 55 : 140)))),
    color, type, mesh, isAiTraffic, isBossTarget: false, isTheftTarget: false, destroyed: false
  };
  vehicles.push(v);
@@ -2106,6 +2146,7 @@ spawnVehicle(-20, 236, Math.PI, 0xef4444, 'jetski', false);
 spawnVehicle(20, 236, Math.PI, 0xfacc15, 'jetski', false);
 spawnVehicle(-12, 225, Math.PI, 0x38bdf8, 'boat', false);
 spawnVehicle(-175, 95, 0, 0x3f6212, 'plane', false);
+spawnVehicle(-195, 70, Math.PI / 2, 0x4d5a1e, 'tank', false);
 
 const trafficColors = [0xfacc15, 0xe2e8f0, 0x64748b, 0x0ea5e9, 0xa855f7, 0xf97316];
 roadCoords.forEach((rc, i) => {
@@ -2123,8 +2164,8 @@ const particles = [];
 
 function spawnHelicopter(slotIdx) {
  const angle = (slotIdx / 4) * Math.PI * 2;
- const hx = Math.max(-225, Math.min(225, player.x + Math.cos(angle) * 65));
- const hz = Math.max(-225, Math.min(225, player.z + Math.sin(angle) * 65));
+ const hx = Math.max(-CITY_EDGE + 40, Math.min(CITY_EDGE - 40, player.x + Math.cos(angle) * 65));
+ const hz = Math.max(-CITY_EDGE + 40, Math.min(CITY_EDGE - 40, player.z + Math.sin(angle) * 65));
  const hy = 22 + slotIdx * 2.5;
  const mesh = createHelicopterMesh();
  mesh.position.set(hx, hy, hz);
@@ -2179,7 +2220,7 @@ spawnNPC(-39, 10, 'cop');
 [[-18, -18], [18, -18], [-18, 20], [18, 20]].forEach(([gx, gz]) => {
  spawnNPC(-175 + gx, 85 + gz, 'swat');
 });
-for (let i = 0; i < 32; i++) {
+for (let i = 0; i < 44; i++) {
  const rx = (Math.random() - 0.5) * 2 * CITY_EDGE;
  const rz = (Math.random() - 0.5) * 2 * CITY_EDGE;
  if (!checkCollision(rx, rz, 1.5)) spawnNPC(rx, rz, 'civilian');
@@ -2866,6 +2907,12 @@ function toggleVehicle() {
    if (nearest.type === 'cop') {
      addWanted(2);
      showToast('POLICE CRUISER HIJACKED! +2 WANTED STARS');
+   } else if (nearest.type === 'plane') {
+     addWanted(3);
+     showToast('MILITARY PLANE HIJACKED! +3 WANTED STARS');
+   } else if (nearest.type === 'tank') {
+     addWanted(4);
+     showToast('MILITARY TANK HIJACKED! +4 WANTED STARS');
    }
    saveGameState();
  }
@@ -2911,6 +2958,7 @@ function triggerRocketBlast(bx, bz) {
 
 function firePlayerWeapon() {
  if (player.fireCooldown > 0) return;
+ if (player.inVehicle && player.inVehicle.type === 'tank') { fireTankCannon(); return; }
  const w = player.weapons[player.weapon];
  if (player.weapon !== 'fists' && w.ammo <= 0) {
    selectWeapon('fists');
@@ -2922,7 +2970,7 @@ function firePlayerWeapon() {
  AudioEngine.shoot(player.weapon);
 
  const originX = player.inVehicle ? player.inVehicle.x : player.x;
- const originY = (player.inVehicle ? 0 : player.y) + 1.5;
+ const originY = (player.inVehicle ? (player.inVehicle.altitude || 0) : player.y) + 1.5;
  const originZ = player.inVehicle ? player.inVehicle.z : player.z;
  const aimYaw = camYaw + Math.PI;
  if (!player.inVehicle) player.rotY = aimYaw;
@@ -2949,6 +2997,26 @@ function firePlayerWeapon() {
      mesh: bMesh
    });
  }
+}
+
+function fireTankCannon() {
+ player.fireCooldown = 1.4;
+ AudioEngine.shoot('rpg');
+ const v = player.inVehicle;
+ const aimYaw = camYaw + Math.PI;
+ const bMesh = new THREE.Mesh(new THREE.SphereGeometry(0.4, 8, 8), new THREE.MeshBasicMaterial({ color: 0xf97316 }));
+ bMesh.position.set(v.x, 1.6, v.z);
+ scene.add(bMesh);
+ bullets.push({
+   x: v.x, y: 1.6, z: v.z,
+   vx: Math.sin(aimYaw) * 60,
+   vz: Math.cos(aimYaw) * 60,
+   dmg: 220,
+   life: 110 / 60,
+   fromPlayer: true,
+   explosive: true,
+   mesh: bMesh
+ });
 }
 
 function spawnExplosion(x, z) {
@@ -3085,7 +3153,8 @@ function startRace() {
  if (!player.inVehicle) { showToast('GET IN A VEHICLE TO RACE!'); return; }
  if (player.cash < raceEntryFee) { showToast('NOT ENOUGH CASH FOR ENTRY FEE!'); return; }
  player.cash -= raceEntryFee;
- raceCheckpoints = [{ x: -205, z: -205 }, { x: 205, z: -205 }, { x: 205, z: 205 }, { x: -205, z: 205 }];
+ const rcp = CITY_EDGE + 10;
+ raceCheckpoints = [{ x: -rcp, z: -rcp }, { x: rcp, z: -rcp }, { x: rcp, z: rcp }, { x: -rcp, z: rcp }];
  raceCheckpointIdx = 0;
  raceRivals = [];
  [0xef4444, 0x22c55e].forEach((c, i) => {
@@ -3376,7 +3445,7 @@ function respawnCashStash(stash) {
 }
 
 (function populateCashStashes() {
- for (let i = 0; i < 10; i++) {
+ for (let i = 0; i < 14; i++) {
    let x, z, tries = 0;
    do { x = (Math.random() - 0.5) * 2 * CITY_EDGE; z = (Math.random() - 0.5) * 2 * CITY_EDGE; tries++; } while (checkCollision(x, z, 2) && tries < 40);
    cashStashes.push(spawnCashStashAt(x, z));
@@ -4044,8 +4113,8 @@ function animate(now) {
    if (copSpawnTimer <= 0 && activeCops < player.wanted * 2 + 1) {
      copSpawnTimer = 5;
      const angle = Math.random() * Math.PI * 2;
-     const sx = Math.max(-225, Math.min(225, player.x + Math.cos(angle) * 48));
-     const sz = Math.max(-225, Math.min(225, player.z + Math.sin(angle) * 48));
+     const sx = Math.max(-CITY_EDGE + 40, Math.min(CITY_EDGE - 40, player.x + Math.cos(angle) * 48));
+     const sz = Math.max(-CITY_EDGE + 40, Math.min(CITY_EDGE - 40, player.z + Math.sin(angle) * 48));
      const reinforcementRole = player.wanted >= 6 ? 'swat' : 'cop';
      if (!checkCollision(sx, sz, 1.5)) spawnNPC(sx, sz, reinforcementRole);
    }
@@ -4244,8 +4313,18 @@ function animate(now) {
    const vx = Math.sin(v.rotY) * v.speed * dt;
    const vz = Math.cos(v.rotY) * v.speed * dt;
 
+   if (v.type === 'plane') {
+     const takeoffSpeed = 28;
+     if (throttle > 0 && Math.abs(v.speed) > takeoffSpeed) {
+       v.altitude = Math.min(60, (v.altitude || 0) + 10 * dt);
+     } else if ((v.altitude || 0) > 0) {
+       v.altitude = Math.max(0, (v.altitude || 0) - 6 * dt);
+     }
+   }
+   const inFlight = v.type === 'plane' && v.altitude > 4;
+
    const needsWater = v.type === 'jetski' || v.type === 'boat';
-   const blockedMove = checkCollision(v.x + vx, v.z + vz, 2.0) || (needsWater && !isOverWater(v.x + vx, v.z + vz));
+   const blockedMove = (!inFlight && checkCollision(v.x + vx, v.z + vz, 2.0)) || (needsWater && !isOverWater(v.x + vx, v.z + vz));
    if (!blockedMove) {
      v.x += vx;
      v.z += vz;
@@ -4254,12 +4333,13 @@ function animate(now) {
    }
 
    player.x = v.x;
-   player.y = 0;
+   player.y = v.type === 'plane' ? (v.altitude || 0) : 0;
    player.z = v.z;
    checkStuntRamp(v);
    const hopY = vehicleHop > 0 ? Math.sin((0.6 - vehicleHop) / 0.6 * Math.PI) * 2.2 : 0;
-   v.mesh.position.set(v.x, hopY, v.z);
+   v.mesh.position.set(v.x, hopY + (v.type === 'plane' ? (v.altitude || 0) : 0), v.z);
    v.mesh.rotation.y = v.rotY;
+   if (v.type === 'plane') v.mesh.rotation.z = -steer * 0.3;
 
    if (v.type === 'moto' || v.type === 'jetski' || v.type === 'boat') {
      const seatY = v.type === 'moto' ? 0.55 : (v.type === 'jetski' ? 0.42 : 1.1);
@@ -4290,7 +4370,7 @@ function animate(now) {
    }
 
    npcs.forEach(n => {
-     if (n.hp > 0 && Math.abs(v.speed) > 12 && Math.hypot(n.x - v.x, n.z - v.z) < 2.6) {
+     if (n.hp > 0 && !inFlight && Math.abs(v.speed) > 12 && Math.hypot(n.x - v.x, n.z - v.z) < 2.6) {
        n.hp = 0;
        n.mesh.rotation.x = Math.PI / 2;
        if (n.role === 'cop' || n.role === 'swat') addWanted(2);
@@ -4311,13 +4391,19 @@ function animate(now) {
 
    if (v !== player.inVehicle && v.isAiTraffic) {
      const spd = v.isBossTarget ? 22 : 13;
-     const nx = v.x + Math.sin(v.rotY) * spd * dt;
-     const nz = v.z + Math.cos(v.rotY) * spd * dt;
-     if (checkCollision(nx, nz, 2.2) || Math.abs(nx) > 165 || Math.abs(nz) > 165) {
-       v.rotY += Math.PI / 2;
+     if (Math.abs(v.x) > CITY_EDGE - 20 || Math.abs(v.z) > CITY_EDGE - 20) {
+       v.rotY = Math.atan2(-v.x, -v.z);
+       v.x += Math.sin(v.rotY) * spd * dt;
+       v.z += Math.cos(v.rotY) * spd * dt;
      } else {
-       v.x = nx;
-       v.z = nz;
+       const nx = v.x + Math.sin(v.rotY) * spd * dt;
+       const nz = v.z + Math.cos(v.rotY) * spd * dt;
+       if (checkCollision(nx, nz, 2.2) || Math.abs(nx) > CITY_EDGE - 20 || Math.abs(nz) > CITY_EDGE - 20) {
+         v.rotY += Math.PI / 2;
+       } else {
+         v.x = nx;
+         v.z = nz;
+       }
      }
      v.mesh.position.set(v.x, 0, v.z);
      v.mesh.rotation.y = v.rotY;
@@ -4541,13 +4627,13 @@ function animate(now) {
  }
 
  const camDist = player.inVehicle ? 13.0 : 8.2;
- const camHeight = (player.inVehicle ? 4.8 : 3.4) + (player.inVehicle ? 0 : player.y * 0.75);
+ const camHeight = (player.inVehicle ? 4.8 : 3.4) + player.y * 0.75;
  const targetCamX = player.x + Math.sin(camYaw) * Math.cos(camPitch) * camDist;
  const targetCamY = camHeight + Math.sin(camPitch) * camDist;
  const targetCamZ = player.z + Math.cos(camYaw) * Math.cos(camPitch) * camDist;
 
  camera.position.lerp(new THREE.Vector3(targetCamX, targetCamY, targetCamZ), 0.22);
- camera.lookAt(player.x, 1.85 + (player.inVehicle ? 0 : player.y * 0.75), player.z);
+ camera.lookAt(player.x, 1.85 + player.y * 0.75, player.z);
 
  document.getElementById('cashDisplay').textContent = `$${player.cash.toLocaleString()}`;
  document.getElementById('hpFill').style.width = `${(player.hp / player.maxHp) * 100}%`;
