@@ -1377,8 +1377,9 @@ function isOverWater(x, z) {
    stripEW(foamMat, 3, sign * SAND_END, 0.11);
  });
 
- // Decorated South Beach (palms, umbrellas, dock, sign)
- [[-70, 152], [-15, 158], [55, 150], [95, 156]].forEach(([tx, tz]) => {
+ // Decorated South Beach (palms, umbrellas, dock, sign) -- positions track the
+ // current sand/ocean bands so they stay on the actual beach if the map resizes.
+ [[-70, sandMid - 8], [-15, sandMid - 2], [55, sandMid - 10], [95, sandMid - 4]].forEach(([tx, tz]) => {
    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.4, 5.5, 8), new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.85 }));
    trunk.position.set(tx, 2.75, tz);
    trunk.rotation.z = 0.12;
@@ -1390,7 +1391,7 @@ function isOverWater(x, z) {
    scene.add(trunk, leaves);
  });
 
- [[-40, 180], [30, 182]].forEach(([ux, uz]) => {
+ [[-40, sandMid + 8], [30, sandMid + 10]].forEach(([ux, uz]) => {
    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 2.4, 8), new THREE.MeshStandardMaterial({ color: 0xf8fafc }));
    pole.position.set(ux, 1.2, uz);
    const canopy = new THREE.Mesh(new THREE.ConeGeometry(1.6, 0.9, 10), new THREE.MeshStandardMaterial({ color: 0xf472b6, roughness: 0.6 }));
@@ -1400,18 +1401,18 @@ function isOverWater(x, z) {
 
  const dockMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
  const dock = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 26), dockMat);
- dock.position.set(0, 0.35, 215);
+ dock.position.set(0, 0.35, oceanMid);
  dock.castShadow = true;
  scene.add(dock);
  for (let dz = -10; dz <= 10; dz += 5) {
    const piling = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.5, 8), dockMat);
-   piling.position.set(0, -0.4, 215 + dz);
+   piling.position.set(0, -0.4, oceanMid + dz);
    scene.add(piling);
  }
 
  const signTex = makeSignTexture('SOUTH BEACH', '#0ea5e9', '#f8fafc');
  const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(18, 4), new THREE.MeshBasicMaterial({ map: signTex }));
- signMesh.position.set(0, 7, 148);
+ signMesh.position.set(0, 7, CITY_EDGE - 20);
  scene.add(signMesh);
 })();
 
@@ -2142,9 +2143,10 @@ spawnVehicle(24, -14, Math.PI, 0xf59e0b, 'sport', false);
 spawnVehicle(94, -92, 0, 0x10b981, 'van', false);
 spawnVehicle(-28, 30, Math.PI / 2, 0x22d3ee, 'moto', false);
 spawnVehicle(40, -10, -Math.PI / 2, 0xf472b6, 'moto', false);
-spawnVehicle(-20, 236, Math.PI, 0xef4444, 'jetski', false);
-spawnVehicle(20, 236, Math.PI, 0xfacc15, 'jetski', false);
-spawnVehicle(-12, 225, Math.PI, 0x38bdf8, 'boat', false);
+const beachOceanMid = (SAND_END + OCEAN_END) / 2;
+spawnVehicle(-20, beachOceanMid, Math.PI, 0xef4444, 'jetski', false);
+spawnVehicle(20, beachOceanMid, Math.PI, 0xfacc15, 'jetski', false);
+spawnVehicle(-12, beachOceanMid - 11, Math.PI, 0x38bdf8, 'boat', false);
 spawnVehicle(-175, 95, 0, 0x3f6212, 'plane', false);
 spawnVehicle(-195, 70, Math.PI / 2, 0x4d5a1e, 'tank', false);
 
@@ -4391,20 +4393,40 @@ function animate(now) {
 
    if (v !== player.inVehicle && v.isAiTraffic) {
      const spd = v.isBossTarget ? 22 : 13;
-     if (Math.abs(v.x) > CITY_EDGE - 20 || Math.abs(v.z) > CITY_EDGE - 20) {
+     const edge = CITY_EDGE - 20;
+     if (Math.abs(v.x) > edge || Math.abs(v.z) > edge) {
        v.rotY = Math.atan2(-v.x, -v.z);
        v.x += Math.sin(v.rotY) * spd * dt;
        v.z += Math.cos(v.rotY) * spd * dt;
      } else {
        const nx = v.x + Math.sin(v.rotY) * spd * dt;
        const nz = v.z + Math.cos(v.rotY) * spd * dt;
-       if (checkCollision(nx, nz, 2.2) || Math.abs(nx) > CITY_EDGE - 20 || Math.abs(nz) > CITY_EDGE - 20) {
-         v.rotY += Math.PI / 2;
+       if (checkCollision(nx, nz, 2.2) || Math.abs(nx) > edge || Math.abs(nz) > edge) {
+         v.rotY += Math.PI / 2 + (Math.random() - 0.5) * 0.7;
        } else {
          v.x = nx;
          v.z = nz;
        }
      }
+
+     // Progress watchdog: whatever the cause -- a tight gap between two buildings, a corner
+     // at the map edge, anything -- a traffic car that genuinely hasn't gone anywhere in a
+     // couple of seconds gets relocated toward the middle of the map instead of being left
+     // to struggle (or visibly spin in place) forever. This check only looks at real
+     // movement over time, so it can't be fooled by the car's own turning logic.
+     v.stuckCheckTimer = (v.stuckCheckTimer || 0) + dt;
+     if (v.stuckCheckTimer > 2.5) {
+       const moved = Math.hypot(v.x - (v.lastCheckX ?? v.x), v.z - (v.lastCheckZ ?? v.z));
+       if (moved < 3) {
+         const scale = (CITY_EDGE - 60) / Math.max(Math.abs(v.x), Math.abs(v.z), 1);
+         v.x *= scale;
+         v.z *= scale;
+       }
+       v.lastCheckX = v.x;
+       v.lastCheckZ = v.z;
+       v.stuckCheckTimer = 0;
+     }
+
      v.mesh.position.set(v.x, 0, v.z);
      v.mesh.rotation.y = v.rotY;
      if (v.mesh.userData.wheels) {
