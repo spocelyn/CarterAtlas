@@ -86,11 +86,11 @@
    color: #fff; box-shadow: 0 8px 25px rgba(0,0,0,0.6); display: none;
  }
  #toastBanner {
-   position: absolute; top: 120px; left: 50%; transform: translateX(-50%);
+   position: absolute; top: 100px; left: 50%; transform: translateX(-50%);
    background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95));
-   color: #090d16; padding: 12px 26px; border-radius: 10px;
-   font-size: 16px; font-weight: 900; letter-spacing: 0.5px;
-   box-shadow: 0 12px 30px rgba(0,0,0,0.6); display: none; text-align: center;
+   color: #090d16; padding: 8px 18px; border-radius: 8px; max-width: 72vw;
+   font-size: 13px; font-weight: 800; letter-spacing: 0.3px;
+   box-shadow: 0 10px 24px rgba(0,0,0,0.55); display: none; text-align: center;
  }
  #crosshair {
    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -109,19 +109,19 @@
  }
  .modal-card {
    background: #0f172a; border: 1px solid rgba(56, 189, 248, 0.35);
-   border-radius: 16px; padding: 28px; width: 460px; max-width: 92vw;
-   max-height: 88vh; overflow-y: auto;
+   border-radius: 14px; padding: 18px; width: 380px; max-width: 88vw;
+   max-height: 82vh; overflow-y: auto;
    box-shadow: 0 25px 60px rgba(0,0,0,0.8);
  }
- .modal-card h2 { font-size: 24px; font-weight: 900; margin-bottom: 6px; color: #fff; }
- .modal-card p { font-size: 13.5px; color: #94a3b8; margin-bottom: 18px; line-height: 1.5; }
+ .modal-card h2 { font-size: 19px; font-weight: 900; margin-bottom: 5px; color: #fff; }
+ .modal-card p { font-size: 12px; color: #94a3b8; margin-bottom: 13px; line-height: 1.4; }
  .shop-item {
    display: flex; justify-content: space-between; align-items: center;
-   background: #1e293b; padding: 12px 14px; border-radius: 10px; margin-bottom: 10px;
+   background: #1e293b; padding: 9px 11px; border-radius: 9px; margin-bottom: 8px;
    border: 1px solid rgba(255,255,255,0.06);
  }
- .shop-item-info h4 { font-size: 15px; color: #f8fafc; }
- .shop-item-info span { font-size: 12px; color: #94a3b8; }
+ .shop-item-info h4 { font-size: 13px; color: #f8fafc; }
+ .shop-item-info span { font-size: 11px; color: #94a3b8; }
  .btn {
    background: #0284c7; color: #fff; border: none; padding: 9px 16px;
    border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer;
@@ -183,7 +183,7 @@
      <b>Left Click / Space</b>: Shoot &nbsp;|&nbsp; <b>1-7 / Q</b>: Switch Gun<br>
      <b>F</b>: Enter / Hijack Car &nbsp;|&nbsp; <b>E</b>: Interact / Shop / Diner<br>
      <b>Shift</b>: Sprint / Nitro &nbsp;|&nbsp; <b>R</b>: Reset Car &nbsp;|&nbsp; <b>P</b>: Pause Menu<br>
-     <b>T</b>: Trunk Stash (in car) &nbsp;|&nbsp; <b>H</b>: Hail a Cab &nbsp;|&nbsp; <b>G</b>: Call Backup &nbsp;|&nbsp; <b>C</b>: Parachute
+     <b>T</b>: Trunk Stash (in car) &nbsp;|&nbsp; <b>H</b>: Hail a Cab &nbsp;|&nbsp; <b>G</b>: Call Backup &nbsp;|&nbsp; <b>C</b>: Parachute &nbsp;|&nbsp; <b>M</b>: Radio &nbsp;|&nbsp; <b>B</b>: Take Black Market Deal
    </div>
  </div>
 </div>
@@ -254,6 +254,23 @@
      </div>
      <button class="btn" onclick="buyArmor(300)">$300</button>
    </div>
+   <p style="margin-bottom:8px; font-weight:700; color:#e2e8f0;">Permanent Upgrades (+30% Damage)</p>
+   <div class="shop-item">
+     <div class="shop-item-info"><h4>Pistol Upgrade</h4></div>
+     <button class="btn btn-gold" onclick="buyWeaponUpgrade('pistol', 600)">$600</button>
+   </div>
+   <div class="shop-item">
+     <div class="shop-item-info"><h4>SMG Upgrade</h4></div>
+     <button class="btn btn-gold" onclick="buyWeaponUpgrade('smg', 1000)">$1,000</button>
+   </div>
+   <div class="shop-item">
+     <div class="shop-item-info"><h4>Rifle Upgrade</h4></div>
+     <button class="btn btn-gold" onclick="buyWeaponUpgrade('rifle', 1800)">$1,800</button>
+   </div>
+   <div class="shop-item">
+     <div class="shop-item-info"><h4>Sniper Upgrade</h4></div>
+     <button class="btn btn-gold" onclick="buyWeaponUpgrade('sniper', 2500)">$2,500</button>
+   </div>
    <button class="btn btn-close" onclick="closeModals()">Leave Store [ESC]</button>
  </div>
 </div>
@@ -280,7 +297,7 @@
    <div class="shop-item">
      <div class="shop-item-info">
        <h4>Take the Elevator to the Helipad</h4>
-       <span>Reach the roof, then press [C] to deploy your parachute and glide down</span>
+       <span>Stand on the helipad, press [J] to jump off, then [C] to deploy your parachute</span>
      </div>
      <button class="btn" onclick="rideToHelipad()">Go Up</button>
    </div>
@@ -357,6 +374,19 @@
      <button class="btn" style="background:#38bdf8; margin-left:6px;" onclick="repaintVehicle(0x38bdf8)">Blue</button>
      <button class="btn" style="background:#fbbf24; margin-left:6px; color:#090d16;" onclick="repaintVehicle(0xfbbf24)">Gold</button>
      <button class="btn" style="background:#18181b; border:1px solid #475569; margin-left:6px;" onclick="repaintVehicle(0x18181b)">Black</button>
+   </div>
+   <p style="margin-bottom:8px; font-weight:700; color:#e2e8f0;">Performance Shop — current vehicle you arrived in</p>
+   <div class="shop-item">
+     <div class="shop-item-info"><h4>Engine Upgrade</h4><span>+25% top speed, permanent</span></div>
+     <button class="btn btn-gold" onclick="buyVehicleSpeedUpgrade()">$400</button>
+   </div>
+   <div class="shop-item">
+     <div class="shop-item-info"><h4>Armor Plating</h4><span>+50% durability, permanent, full repair</span></div>
+     <button class="btn btn-gold" onclick="buyVehicleArmorUpgrade()">$400</button>
+   </div>
+   <div class="shop-item">
+     <div class="shop-item-info"><h4>Insurance Policy</h4><span>Destroyed? It gets towed back to this garage instead of being gone for good</span></div>
+     <button class="btn btn-gold" onclick="buyVehicleInsurance()">$300</button>
    </div>
    <button class="btn btn-close" onclick="closeModals()">Leave Garage [ESC]</button>
  </div>
@@ -455,17 +485,52 @@
  </div>
 </div>
 
+<!-- Casino Modal -->
+<div id="casinoModal" class="modal-overlay" style="display:none;">
+ <div class="modal-card" style="text-align:center;">
+   <h2 style="color:#fbbf24;">🎰 NEON CITY CASINO</h2>
+   <p>Pull the lever for $100 a spin. Cash: <b id="casinoCash" style="color:#4ade80;">$500</b></p>
+   <p id="casinoResult" style="font-size:18px; font-weight:800; color:#f8fafc; min-height:28px;">Good luck.</p>
+   <button class="btn btn-gold" style="width:100%; padding:14px; font-size:16px;" onclick="spinSlots()">PULL LEVER ($100)</button>
+   <button class="btn btn-close" onclick="closeModals()">Leave Casino [ESC]</button>
+ </div>
+</div>
+
+<!-- Bank Modal -->
+<div id="bankModal" class="modal-overlay" style="display:none;">
+ <div class="modal-card">
+   <h2 style="color:#4ade80;">🏦 NEON CITY BANK</h2>
+   <p>On hand: <b id="bankCash" style="color:#4ade80;">$500</b> &nbsp;|&nbsp; In the bank (safe from busts): <b id="bankBalance" style="color:#38bdf8;">$0</b></p>
+   <div class="shop-item">
+     <div class="shop-item-info"><h4>Deposit</h4><span>Keeps your cash safe if you're busted or wasted</span></div>
+     <button class="btn" onclick="depositCash(500)">+$500</button>
+     <button class="btn btn-gold" style="margin-left:6px;" onclick="depositCash('all')">Deposit All</button>
+   </div>
+   <div class="shop-item">
+     <div class="shop-item-info"><h4>Withdraw</h4><span>Move money back to cash on hand</span></div>
+     <button class="btn" onclick="withdrawCash(500)">-$500</button>
+     <button class="btn btn-gold" style="margin-left:6px;" onclick="withdrawCash('all')">Withdraw All</button>
+   </div>
+   <div class="shop-item">
+     <div class="shop-item-info"><h4>Breach the Vault</h4><span>Start the bank heist (+3 Wanted Stars, big payout if you make it out)</span></div>
+     <button class="btn btn-red" onclick="startHeistFromBank()">Start Heist</button>
+   </div>
+   <button class="btn btn-close" onclick="closeModals()">Leave Bank [ESC]</button>
+ </div>
+</div>
+
 <!-- Pause Menu -->
 <div id="pauseModal" class="modal-overlay" style="display:none;">
- <div class="modal-card" style="text-align:center; width:420px;">
-   <h2 style="font-size:28px;">PAUSED</h2>
+ <div class="modal-card" style="text-align:center; width:340px;">
+   <h2 style="font-size:21px;">PAUSED</h2>
    <p id="pauseMissionText" style="color:#f59e0b; font-weight:700;">—</p>
-   <div style="display:flex; justify-content:space-around; margin-bottom:14px; font-size:13px; color:#94a3b8;">
-     <div>CASH<br><b id="pauseCash" style="color:#4ade80; font-size:18px;">$0</b></div>
-     <div>WANTED<br><b id="pauseWanted" style="color:#facc15; font-size:18px;">0 / 6</b></div>
+   <div style="display:flex; justify-content:space-around; margin-bottom:11px; font-size:12px; color:#94a3b8;">
+     <div>CASH<br><b id="pauseCash" style="color:#4ade80; font-size:15px;">$0</b></div>
+     <div>WANTED<br><b id="pauseWanted" style="color:#facc15; font-size:15px;">0 / 6</b></div>
    </div>
-   <canvas id="pauseMapCanvas" width="360" height="360" style="width:100%; max-width:360px; border-radius:12px; border:2px solid rgba(56,189,248,0.4); background:#090d16;"></canvas>
-   <button class="btn btn-gold" style="width:100%; padding:12px; margin-top:14px;" onclick="closeModals()">RESUME [ESC]</button>
+   <canvas id="pauseMapCanvas" width="280" height="280" style="width:100%; max-width:280px; border-radius:12px; border:2px solid rgba(56,189,248,0.4); background:#090d16;"></canvas>
+   <p id="pauseCompletion" style="font-size:11px; color:#94a3b8; margin-top:8px; line-height:1.5;"></p>
+   <button class="btn btn-gold" style="width:100%; padding:10px; margin-top:4px;" onclick="closeModals()">RESUME [ESC]</button>
  </div>
 </div>
 
@@ -523,6 +588,10 @@ const AudioEngine = {
  },
  sirenPulse(high) {
    this.playTone(high ? 780 : 580, 'sine', 0.22, 0.035);
+ },
+ radioNote(n, vol = 0.07) {
+   if (!n) return;
+   this.playTone(n.f, n.type, n.dur, (n.vol != null ? n.vol : vol), n.slide || 0);
  }
 };
 
@@ -536,7 +605,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
+renderer.toneMappingExposure = 1.22;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0b1224);
@@ -571,25 +640,26 @@ scene.add(cityBounce);
 // ==========================================
 const DAY_CYCLE_SECONDS = 260;
 let dayTime = 0.30;
-const skyNight = new THREE.Color(0x05070f);
-const skyDusk = new THREE.Color(0xff7a3d);
-const skyDay = new THREE.Color(0x4fa8dc);
+let nightFactor = 0;
+const nightLitMaterials = [];
+const streetlightBulbs = [];
 
 function updateDayNight(dt) {
  dayTime = (dayTime + dt / DAY_CYCLE_SECONDS) % 1;
  const sunAngle = dayTime * Math.PI * 2;
  const sunHeight = Math.sin(sunAngle - Math.PI / 2);
  const dayFactor = THREE.MathUtils.clamp((sunHeight + 1) / 2, 0, 1);
- const horizonFactor = Math.max(0, 1 - Math.abs(sunHeight) / 0.35);
 
  dirLight.position.set(Math.cos(sunAngle) * 150, Math.max(12, sunHeight * 180 + 40), Math.sin(sunAngle) * 90);
  dirLight.intensity = 0.18 + Math.max(0, sunHeight) * 1.1;
  hemiLight.intensity = 0.32 + dayFactor * 0.9;
+ // Sky and fog stay one fixed color around the clock (set once above) -- only
+ // the lighting and the night-glow materials still change with the time of day.
 
- const skyColor = skyNight.clone().lerp(skyDay, dayFactor);
- skyColor.lerp(skyDusk, horizonFactor * 0.6);
- scene.background.copy(skyColor);
- scene.fog.color.copy(skyColor);
+ nightFactor = 1 - dayFactor;
+ const windowGlow = Math.max(0, nightFactor - 0.25) * 1.5;
+ nightLitMaterials.forEach(m => { m.emissiveIntensity = windowGlow; });
+ streetlightBulbs.forEach(m => { m.emissiveIntensity = windowGlow; });
 }
 
 let isRaining = false;
@@ -663,16 +733,20 @@ function updateWeather(dt) {
  } else {
    lightningLight.intensity = 0;
  }
+
+ roadMat.roughness = isRaining ? 0.16 : 0.82;
+ roadMat.metalness = isRaining ? 0.5 : 0.08;
 }
 
 // ==========================================
 // 3. PROCEDURAL PBR TEXTURES & CITY WORLD
 // ==========================================
-const CITY_EDGE = 266;
-const SAND_END = 292;
-const OCEAN_END = 320;
+const CITY_EDGE = 406;
+const SAND_END = 432;
+const OCEAN_END = 502;
 const CITY_LIMIT = OCEAN_END;
 const colliders = [];
+const buildingDoors = [];
 const trafficLights = [];
 
 function addBoxCollider(x, z, w, d) {
@@ -790,6 +864,34 @@ function makeBuildingTexture(baseColor, accentColor, seed) {
  return tex;
 }
 
+function makeFabricTexture(weave) {
+ const c = document.createElement('canvas');
+ c.width = 64; c.height = 64;
+ const ctx = c.getContext('2d');
+ ctx.fillStyle = '#ffffff';
+ ctx.fillRect(0, 0, 64, 64);
+ ctx.globalAlpha = 0.12;
+ for (let y = 0; y < 64; y += weave) {
+   ctx.fillStyle = '#000000';
+   ctx.fillRect(0, y, 64, 1);
+ }
+ for (let x = 0; x < 64; x += weave) {
+   ctx.fillRect(x, 0, 1, 64);
+ }
+ ctx.globalAlpha = 0.06;
+ for (let i = 0; i < 180; i++) {
+   ctx.fillStyle = Math.random() < 0.5 ? '#000000' : '#ffffff';
+   ctx.fillRect(Math.random() * 64, Math.random() * 64, 1, 1);
+ }
+ const tex = new THREE.CanvasTexture(c);
+ tex.wrapS = THREE.RepeatWrapping;
+ tex.wrapT = THREE.RepeatWrapping;
+ tex.repeat.set(3, 3);
+ return tex;
+}
+const fabricTexFine = makeFabricTexture(3);
+const fabricTexCoarse = makeFabricTexture(5);
+
 const asphaltTex = makeAsphaltTexture();
 const sidewalkTex = makeSidewalkTexture();
 
@@ -800,7 +902,7 @@ ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-const roadCoords = [-280, -210, -140, -70, 0, 70, 140, 210, 280];
+const roadCoords = [-420, -350, -280, -210, -140, -70, 0, 70, 140, 210, 280, 350, 420];
 const roadMat = new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 0.82, metalness: 0.08 });
 const lineMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
 const whiteMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0 });
@@ -896,6 +998,35 @@ const buildingTextures = [
  makeBuildingTexture('#18181b', '#a855f7', 5.2)
 ];
 
+function makeBuildingEmissiveTexture(seed) {
+ const c = document.createElement('canvas');
+ c.width = 256; c.height = 512;
+ const ctx = c.getContext('2d');
+ ctx.fillStyle = '#000000';
+ ctx.fillRect(0, 0, 256, 512);
+ for (let y = 14; y < 496; y += 22) {
+   for (let x = 9; x < 246; x += 24) {
+     const hash = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
+     const frac = hash - Math.floor(hash);
+     if (frac > 0.32) {
+       ctx.fillStyle = frac > 0.78 ? '#fff3c4' : (frac > 0.56 ? '#bfe9ff' : '#e9d5ff');
+       ctx.fillRect(x, y, 15, 14);
+     }
+   }
+ }
+ const tex = new THREE.CanvasTexture(c);
+ tex.wrapS = THREE.RepeatWrapping;
+ tex.wrapT = THREE.RepeatWrapping;
+ return tex;
+}
+
+const buildingEmissiveTextures = [
+ makeBuildingEmissiveTexture(1.1),
+ makeBuildingEmissiveTexture(2.4),
+ makeBuildingEmissiveTexture(3.7),
+ makeBuildingEmissiveTexture(5.2)
+];
+
 const billboardTexts = [
  ['TIMES PLAZA • 24/7', '#090d16', '#38bdf8'],
  ['EMPIRE FINANCE', '#0f172a', '#facc15'],
@@ -903,7 +1034,7 @@ const billboardTexts = [
  ['METRO SUBWAY', '#022c22', '#4ade80']
 ];
 
-const blockCenters = [-245, -175, -105, -35, 35, 105, 175, 245];
+const blockCenters = [-385, -315, -245, -175, -105, -35, 35, 105, 175, 245, 315, 385];
 const neonColors = [0x38bdf8, 0xf472b6, 0xa855f7, 0x22d3ee, 0xf59e0b];
 
 const ciIndex = v => blockCenters.indexOf(v);
@@ -915,7 +1046,8 @@ const landmarkBlocks = new Set([
  `${ciIndex(-105)},${ciIndex(105)}`,  // warehouse
  `${ciIndex(175)},${ciIndex(-35)}`,   // eastside property
  `${ciIndex(175)},${ciIndex(105)}`,   // bank
- `${ciIndex(-175)},${ciIndex(105)}`   // military base
+ `${ciIndex(-175)},${ciIndex(105)}`,  // military base
+ `${ciIndex(-245)},${ciIndex(-35)}`   // casino
 ]);
 const parkBlockKey = `${ciIndex(35)},${ciIndex(35)}`;
 
@@ -961,17 +1093,21 @@ blockCenters.forEach((bx, ix) => {
    sw.receiveShadow = true;
    scene.add(sw);
 
-   const offsets = [[-11, -11], [11, 11]];
+   const offsets = [[-12, -12], [12, 12]];
    offsets.forEach(([ox, oz], idx) => {
-     const h = 26 + ((ix * 11 + iz * 17 + idx * 23) % 44);
-     const w = 20;
-     const d = 20;
+     const h = 34 + ((ix * 11 + iz * 17 + idx * 23) % 54);
+     const w = 22;
+     const d = 22;
      const bTex = buildingTextures[(ix + iz + idx) % buildingTextures.length];
      const bMat = new THREE.MeshStandardMaterial({
        map: bTex,
        roughness: 0.32,
-       metalness: 0.45
+       metalness: 0.45,
+       emissiveMap: buildingEmissiveTextures[(ix + iz + idx) % buildingEmissiveTextures.length],
+       emissive: 0xffffff,
+       emissiveIntensity: 0
      });
+     nightLitMaterials.push(bMat);
      const bMesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bMat);
      bMesh.position.set(bx + ox, h / 2, bz + oz);
      bMesh.castShadow = true;
@@ -1010,6 +1146,20 @@ blockCenters.forEach((bx, ix) => {
      trim.position.set(bx + ox, h - 1, bz + oz);
      scene.add(trim);
 
+     const doorFrameMat = new THREE.MeshBasicMaterial({ color: trimColor });
+     const doorFrame = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 3.8), doorFrameMat);
+     doorFrame.position.set(bx + ox, 1.9, bz + oz + d / 2 + 0.07);
+     scene.add(doorFrame);
+     const doorMat = new THREE.MeshStandardMaterial({
+       color: 0x4b4039, roughness: 0.55, metalness: 0.1,
+       emissive: 0xfbbf24, emissiveIntensity: 0
+     });
+     nightLitMaterials.push(doorMat);
+     const door = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 3.4), doorMat);
+     door.position.set(bx + ox, 1.8, bz + oz + d / 2 + 0.1);
+     scene.add(door);
+     buildingDoors.push({ x: bx + ox, z: bz + oz + d / 2 + 1.8, radius: 2.6, tint: trimColor });
+
      if (idx === 0) {
        const bb = billboardTexts[(ix + iz) % billboardTexts.length];
        const bbTex = makeSignTexture(bb[0], bb[1], bb[2]);
@@ -1029,6 +1179,29 @@ blockCenters.forEach((bx, ix) => {
    scene.add(hydrant, treeTrunk, treeCrown);
  });
 });
+
+// ==========================================
+// 3B. STREETLIGHTS (glow at night) & DISTANT SKYLINE
+// ==========================================
+function createStreetlight(x, z) {
+ const poleMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.4 });
+ const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 7, 8), poleMat);
+ pole.position.set(x, 3.5, z);
+ const arm = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.15, 0.15), poleMat);
+ arm.position.set(x + 0.8, 6.9, z);
+ const bulbMat = new THREE.MeshStandardMaterial({ color: 0xfff3c4, emissive: 0xfff3c4, emissiveIntensity: 0 });
+ const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 10), bulbMat);
+ bulb.position.set(x + 1.5, 6.75, z);
+ scene.add(pole, arm, bulb);
+ streetlightBulbs.push(bulbMat);
+}
+// Roads are 16 units wide (8 to each side of the coordinate), so the lamp has to
+// sit well past that -- onto the sidewalk -- or it ends up planted in the road.
+for (let i = 1; i < roadCoords.length - 1; i += 2) {
+ for (let j = 1; j < roadCoords.length - 1; j += 2) {
+   createStreetlight(roadCoords[i] + 11, roadCoords[j] + 11);
+ }
+}
 
 // --- LANDMARK 1: NCPD CENTRAL POLICE STATION (-35, -35) ---
 const policeLights = [];
@@ -1298,43 +1471,163 @@ const policeLights = [];
  scene.add(pad);
 
  const hangar = new THREE.Mesh(
-   new THREE.BoxGeometry(28, 14, 22),
+   new THREE.BoxGeometry(36, 18, 28),
    new THREE.MeshStandardMaterial({ color: 0x3f6212, roughness: 0.7 })
  );
- hangar.position.set(mx, 7, mz - 8);
+ hangar.position.set(mx, 9, mz - 8);
  hangar.castShadow = true;
  scene.add(hangar);
- addBoxCollider(mx, mz - 8, 28, 22);
+ addBoxCollider(mx, mz - 8, 36, 28);
 
  const archMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
- const arch = new THREE.Mesh(new THREE.CylinderGeometry(7, 7, 22, 16, 1, false, 0, Math.PI), archMat);
+ const arch = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 28, 16, 1, false, 0, Math.PI), archMat);
  arch.rotation.z = Math.PI / 2;
- arch.position.set(mx, 14, mz - 8);
+ arch.position.set(mx, 18, mz - 8);
  scene.add(arch);
 
- const runway = new THREE.Mesh(new THREE.BoxGeometry(10, 0.3, 70), new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85 }));
- runway.position.set(mx, 0.2, mz + 55);
+ const runway = new THREE.Mesh(new THREE.BoxGeometry(12, 0.3, 90), new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.85 }));
+ runway.position.set(mx, 0.2, mz + 60);
  runway.receiveShadow = true;
  scene.add(runway);
  const runwayLineMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
- for (let rz = -30; rz <= 30; rz += 8) {
+ for (let rz = -40; rz <= 40; rz += 8) {
    const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 4), runwayLineMat);
    stripe.rotation.x = -Math.PI / 2;
-   stripe.position.set(mx, 0.36, mz + 55 + rz);
+   stripe.position.set(mx, 0.36, mz + 60 + rz);
    scene.add(stripe);
  }
 
  const fenceMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.5 });
- for (let fx = -24; fx <= 24; fx += 8) {
+ for (let fx = -30; fx <= 30; fx += 8) {
    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 3, 6), fenceMat);
-   post.position.set(mx + fx, 1.5, mz - 24);
+   post.position.set(mx + fx, 1.5, mz - 28);
    scene.add(post);
  }
 
  const signTex = makeSignTexture('RESTRICTED - MILITARY', '#3f6212', '#fef08a');
- const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(24, 4.5), new THREE.MeshBasicMaterial({ map: signTex }));
- signMesh.position.set(mx, 12, mz + 3.3);
+ const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(30, 5.5), new THREE.MeshBasicMaterial({ map: signTex }));
+ signMesh.position.set(mx, 15, mz + 6.3);
  scene.add(signMesh);
+})();
+
+// --- LANDMARK: NEON CITY CASINO (-245, -35) ---
+const casinoBulbMats = [];
+let casinoBeacon = null;
+(function buildCasino() {
+ const cx = -245, cz = -35;
+ const pad = new THREE.Mesh(new THREE.BoxGeometry(50, 0.34, 50), new THREE.MeshStandardMaterial({ map: sidewalkTex }));
+ pad.position.set(cx, 0.17, cz);
+ scene.add(pad);
+
+ const casinoBldg = new THREE.Mesh(
+   new THREE.BoxGeometry(32, 20, 28),
+   new THREE.MeshStandardMaterial({ color: 0x4c1d95, roughness: 0.3, metalness: 0.3 })
+ );
+ casinoBldg.position.set(cx, 10, cz);
+ casinoBldg.castShadow = true;
+ scene.add(casinoBldg);
+ addBoxCollider(cx, cz, 32, 28);
+
+ const trimMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+ const trim = new THREE.Mesh(new THREE.BoxGeometry(32.5, 1.0, 28.5), trimMat);
+ trim.position.set(cx, 20, cz);
+ scene.add(trim);
+
+ for (let bx = -12; bx <= 12; bx += 6) {
+   const bulbMat = new THREE.MeshBasicMaterial({ color: 0xf472b6 });
+   const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), bulbMat);
+   bulb.position.set(cx + bx, 20.8, cz + 14.3);
+   scene.add(bulb);
+   casinoBulbMats.push(bulbMat);
+ }
+
+ const signTex = makeSignTexture('NEON CITY CASINO', '#1e1b4b', '#fbbf24');
+ const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(26, 5), new THREE.MeshBasicMaterial({ map: signTex }));
+ signMesh.position.set(cx, 15, cz + 14.3);
+ scene.add(signMesh);
+
+ const beaconPole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 4, 8), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+ beaconPole.position.set(cx, 22, cz);
+ scene.add(beaconPole);
+ casinoBeacon = new THREE.Mesh(
+   new THREE.ConeGeometry(2.6, 9, 18, 1, true),
+   new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.16, side: THREE.DoubleSide })
+ );
+ casinoBeacon.position.set(cx, 28.5, cz);
+ casinoBeacon.rotation.x = Math.PI;
+ scene.add(casinoBeacon);
+})();
+
+// --- SHARED BUILDING INTERIOR (one reusable room, far off the playable map) ---
+// Tucked into the gap just past the outermost row of buildings but before the
+// sand/ocean ring, straddling the outer road at z=0 so nothing else is ever
+// built there. Must stay inside CITY_LIMIT or checkCollision() treats
+// everything out there as always-blocked, making the room unwalkable.
+const INTERIOR_X = 420;
+const INTERIOR_Z = 0;
+let interiorAccentMat = null;
+const interiorStageGroup = new THREE.Group();
+(function buildInteriorStage() {
+ const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+ const wallMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
+ interiorAccentMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.5, emissive: 0x38bdf8, emissiveIntensity: 0.25 });
+
+ const floor = new THREE.Mesh(new THREE.BoxGeometry(20, 0.3, 14), floorMat);
+ floor.position.set(INTERIOR_X, 0.15, INTERIOR_Z);
+ floor.receiveShadow = true;
+ interiorStageGroup.add(floor);
+
+ const ceiling = new THREE.Mesh(new THREE.BoxGeometry(20, 0.3, 14), floorMat);
+ ceiling.position.set(INTERIOR_X, 6, INTERIOR_Z);
+ interiorStageGroup.add(ceiling);
+
+ const northWall = new THREE.Mesh(new THREE.BoxGeometry(20, 6, 0.4), interiorAccentMat);
+ northWall.position.set(INTERIOR_X, 3, INTERIOR_Z + 7);
+ interiorStageGroup.add(northWall);
+ addBoxCollider(INTERIOR_X, INTERIOR_Z + 7, 20, 0.4);
+
+ [-1, 1].forEach(side => {
+   const eastWestWall = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6, 14), wallMat);
+   eastWestWall.position.set(INTERIOR_X + side * 10, 3, INTERIOR_Z);
+   interiorStageGroup.add(eastWestWall);
+   addBoxCollider(INTERIOR_X + side * 10, INTERIOR_Z, 0.4, 14);
+ });
+
+ // South wall with a door gap in the middle
+ [-6, 6].forEach(sx => {
+   const seg = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 0.4), wallMat);
+   seg.position.set(INTERIOR_X + sx, 3, INTERIOR_Z - 7);
+   interiorStageGroup.add(seg);
+   addBoxCollider(INTERIOR_X + sx, INTERIOR_Z - 7, 8, 0.4);
+ });
+
+ const exitRing = new THREE.Mesh(new THREE.RingGeometry(1.6, 2.4, 24), new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide }));
+ exitRing.rotation.x = -Math.PI / 2;
+ exitRing.position.set(INTERIOR_X, 0.35, INTERIOR_Z - 6);
+ interiorStageGroup.add(exitRing);
+
+ const deskMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.6 });
+ const desk = new THREE.Mesh(new THREE.BoxGeometry(4, 1.1, 1.4), deskMat);
+ desk.position.set(INTERIOR_X, 0.55, INTERIOR_Z + 3.5);
+ desk.castShadow = true;
+ interiorStageGroup.add(desk);
+
+ const benchMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.75 });
+ [-7, 7].forEach(bx => {
+   const bench = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.5, 3), benchMat);
+   bench.position.set(INTERIOR_X + bx, 0.25, INTERIOR_Z);
+   interiorStageGroup.add(bench);
+ });
+
+ const lampLight = new THREE.PointLight(0xfff3c4, 0.9, 20);
+ lampLight.position.set(INTERIOR_X, 5.4, INTERIOR_Z);
+ interiorStageGroup.add(lampLight);
+
+ // Hidden by default -- this room is only ever meant to be seen from inside
+ // (enterBuilding/exitBuilding toggle this). Otherwise it's a strange little
+ // walled structure with no purpose sitting out in the open near the map edge.
+ interiorStageGroup.visible = false;
+ scene.add(interiorStageGroup);
 })();
 
 // --- LANDMARK 6: BEACH & OCEAN RING (ALL 4 SIDES) ---
@@ -1427,7 +1720,8 @@ const zones = [
  { id: 'race', name: 'Street Race Start', x: 150, z: -150, radius: 4.5, color: 0x22c55e, prompt: 'Press [E] to Start a $200 Street Race (Winner Takes the Pot)' },
  { id: 'boutique', name: 'Neon Threads Boutique', x: 35, z: 42, radius: 4.0, color: 0xf472b6, prompt: 'Press [E] to Browse Neon Threads Boutique' },
  { id: 'property', name: 'Eastside Property', x: 175, z: -20, radius: 4.5, color: 0xfbbf24, prompt: 'Press [E] to Manage Eastside Property' },
- { id: 'bank', name: 'Neon City Bank', x: 175, z: 122, radius: 4.5, color: 0x4ade80, prompt: 'Press [E] to Case Neon City Bank' }
+ { id: 'bank', name: 'Neon City Bank', x: 175, z: 122, radius: 4.5, color: 0x4ade80, prompt: 'Press [E] to Case Neon City Bank' },
+ { id: 'casino', name: 'Neon City Casino', x: -245, z: -19, radius: 4.5, color: 0xfacc15, prompt: 'Press [E] to Enter the Casino' }
 ];
 
 zones.forEach(z => {
@@ -1462,10 +1756,10 @@ scene.add(waypointGroup);
 function createCharacterMesh(shirtColor, pantsColor, isCop = false, skinTone = 0xf1c27d, hairColor = 0x1c1917, isPlayer = false) {
  const group = new THREE.Group();
 
- const skinMat = new THREE.MeshStandardMaterial({ color: skinTone, roughness: 0.58 });
- const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.65 });
- const jacketMat = new THREE.MeshStandardMaterial({ color: isPlayer ? 0x0f172a : shirtColor, roughness: 0.45, metalness: 0.15 });
- const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.78 });
+ const skinMat = new THREE.MeshStandardMaterial({ color: skinTone, roughness: 0.52 });
+ const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.6, map: fabricTexFine });
+ const jacketMat = new THREE.MeshStandardMaterial({ color: isPlayer ? 0x0f172a : shirtColor, roughness: 0.38, metalness: 0.2, map: fabricTexCoarse });
+ const pantsMat = new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.74, map: fabricTexCoarse });
  const shoeMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.4 });
  const soleMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.8 });
 
@@ -1484,15 +1778,15 @@ function createCharacterMesh(shirtColor, pantsColor, isCop = false, skinTone = 0
    const hipPivot = new THREE.Group();
    hipPivot.position.set(sideX, 1.12, 0);
 
-   const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.165, 0.135, 0.52, 14), pantsMat);
+   const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.165, 0.135, 0.52, 18), pantsMat);
    thigh.position.y = -0.26;
    thigh.castShadow = true;
 
    const kneePivot = new THREE.Group();
    kneePivot.position.set(0, -0.52, 0);
 
-   const kneeJoint = new THREE.Mesh(new THREE.SphereGeometry(0.135, 12, 12), pantsMat);
-   const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.10, 0.50, 14), pantsMat);
+   const kneeJoint = new THREE.Mesh(new THREE.SphereGeometry(0.135, 14, 14), pantsMat);
+   const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.10, 0.50, 18), pantsMat);
    shin.position.y = -0.25;
    shin.castShadow = true;
 
@@ -1510,36 +1804,43 @@ function createCharacterMesh(shirtColor, pantsColor, isCop = false, skinTone = 0
  const leftLegPivot = buildLeg(-0.20);
  const rightLegPivot = buildLeg(0.20);
 
- const pelvis = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.32, 0.24, 16), pantsMat);
+ const pelvis = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.32, 0.24, 20), pantsMat);
  pelvis.scale.set(1.08, 1, 0.72);
  pelvis.position.y = 1.14;
- const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.07, 16), new THREE.MeshStandardMaterial({ color: 0x090d16 }));
+ const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.07, 20), new THREE.MeshStandardMaterial({ color: 0x090d16 }));
  belt.scale.set(1.08, 1, 0.74);
  belt.position.y = 1.24;
  const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.08, 0.04), new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.8 }));
  buckle.position.set(0, 1.24, 0.26);
 
- const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.33, 0.92, 18), isPlayer ? jacketMat : shirtMat);
+ const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.33, 0.92, 26), isPlayer ? jacketMat : shirtMat);
  torso.scale.set(1.14, 1.0, 0.68);
  torso.position.y = 1.72;
  torso.castShadow = true;
 
  if (isPlayer) {
-   const innerShirt = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.20, 0.88, 12), shirtMat);
+   const innerShirt = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.20, 0.88, 16), shirtMat);
    innerShirt.scale.set(0.95, 1, 0.72);
    innerShirt.position.set(0, 1.72, 0.06);
    bodyRoot.add(innerShirt);
+
+   [-0.16, 0.16].forEach(lx => {
+     const lapel = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.34, 0.03), jacketMat);
+     lapel.position.set(lx, 1.98, 0.22);
+     lapel.rotation.z = lx < 0 ? 0.22 : -0.22;
+     bodyRoot.add(lapel);
+   });
  }
 
  [-0.50, 0.50].forEach(sx => {
-   const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 12), isPlayer ? jacketMat : shirtMat);
+   const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 16), isPlayer ? jacketMat : shirtMat);
    shoulder.position.set(sx, 2.08, 0);
    bodyRoot.add(shoulder);
  });
 
- const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.125, 0.145, 0.24, 14), skinMat);
+ const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.125, 0.145, 0.24, 16), skinMat);
  neck.position.y = 2.25;
- const collar = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.045, 8, 16), isPlayer ? jacketMat : shirtMat);
+ const collar = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.045, 10, 18), isPlayer ? jacketMat : shirtMat);
  collar.rotation.x = Math.PI / 2;
  collar.position.y = 2.18;
 
@@ -1551,13 +1852,13 @@ function createCharacterMesh(shirtColor, pantsColor, isCop = false, skinTone = 0
  cranium.castShadow = true;
  headGroup.add(cranium);
 
- const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.21, 16, 16), skinMat);
+ const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.21, 20, 20), skinMat);
  jaw.scale.set(0.88, 0.85, 0.95);
  jaw.position.set(0, -0.11, 0.04);
  headGroup.add(jaw);
 
  [-0.25, 0.25].forEach(ex => {
-   const ear = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 10), skinMat);
+   const ear = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 12), skinMat);
    ear.scale.set(0.45, 1.1, 0.75);
    ear.position.set(ex, 0.0, -0.02);
    headGroup.add(ear);
@@ -1572,11 +1873,11 @@ function createCharacterMesh(shirtColor, pantsColor, isCop = false, skinTone = 0
  const browMat = new THREE.MeshStandardMaterial({ color: hairColor });
 
  [-0.09, 0.09].forEach(ox => {
-   const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.036, 10, 10), eyeWhiteMat);
+   const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.036, 12, 12), eyeWhiteMat);
    eyeWhite.scale.set(1.1, 0.75, 0.6);
    eyeWhite.position.set(ox, 0.045, 0.245);
 
-   const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 8), pupilMat);
+   const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.02, 10, 10), pupilMat);
    pupil.position.set(ox, 0.045, 0.262);
 
    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.018, 0.025), browMat);
@@ -1608,23 +1909,26 @@ function createCharacterMesh(shirtColor, pantsColor, isCop = false, skinTone = 0
    shoulderPivot.position.set(sideX, 2.06, 0);
 
    const armSleeveMat = isPlayer ? jacketMat : shirtMat;
-   const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.125, 0.105, 0.42, 12), armSleeveMat);
+   const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.125, 0.105, 0.42, 16), armSleeveMat);
    upperArm.position.y = -0.21;
    upperArm.castShadow = true;
 
    const elbowPivot = new THREE.Group();
    elbowPivot.position.set(0, -0.42, 0);
 
-   const elbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.10, 10, 10), isPlayer ? armSleeveMat : skinMat);
-   const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.085, 0.40, 12), isPlayer ? armSleeveMat : skinMat);
+   const elbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.10, 12, 12), isPlayer ? armSleeveMat : skinMat);
+   const forearm = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.085, 0.40, 16), isPlayer ? armSleeveMat : skinMat);
    forearm.position.y = -0.20;
    forearm.castShadow = true;
 
-   const hand = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 10), skinMat);
-   hand.scale.set(0.85, 1.15, 0.95);
+   const hand = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), skinMat);
+   hand.scale.set(0.8, 1.2, 0.6);
    hand.position.y = -0.42;
 
-   elbowPivot.add(elbowJoint, forearm, hand);
+   const thumb = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), skinMat);
+   thumb.position.set(sideX < 0 ? -0.06 : 0.06, -0.37, 0.04);
+
+   elbowPivot.add(elbowJoint, forearm, hand, thumb);
 
    let gun = null;
    if (hasGun) {
@@ -1716,6 +2020,45 @@ function createVehicleMesh(color, type = 'sport') {
    });
 
    group.userData = { lightBar: null, bodyW, bodyL, wheels: motoWheels, paintMat };
+   return group;
+ }
+
+ if (type === 'dirtbike') {
+   const paintMat = new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.5 });
+   const bodyW = 0.95, bodyL = 2.5;
+
+   const frame = new THREE.Mesh(new THREE.BoxGeometry(bodyW, 0.4, bodyL), paintMat);
+   frame.position.y = 0.72;
+   frame.castShadow = true;
+   group.add(frame);
+
+   const seat = new THREE.Mesh(new THREE.BoxGeometry(bodyW * 0.75, 0.15, 1.0), new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.8 }));
+   seat.position.set(0, 1.0, -0.15);
+   group.add(seat);
+
+   const handlebar = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 0.08), new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.5 }));
+   handlebar.position.set(0, 1.2, 1.05);
+   group.add(handlebar);
+
+   const fender = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.6), new THREE.MeshStandardMaterial({ color: 0xf8fafc }));
+   fender.position.set(0, 1.0, 1.25);
+   fender.rotation.x = -0.3;
+   group.add(fender);
+
+   const dirtTireGeo = new THREE.CylinderGeometry(0.52, 0.52, 0.34, 14);
+   dirtTireGeo.rotateZ(Math.PI / 2);
+   const dirtTireMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.95 });
+   const dirtWheels = [];
+   [[0, 1.2], [0, -1.2]].forEach(([wx, wz]) => {
+     const wheelGroup = new THREE.Group();
+     const tire = new THREE.Mesh(dirtTireGeo, dirtTireMat);
+     wheelGroup.add(tire);
+     wheelGroup.position.set(wx, 0.52, wz);
+     group.add(wheelGroup);
+     dirtWheels.push(wheelGroup);
+   });
+
+   group.userData = { lightBar: null, bodyW, bodyL, wheels: dirtWheels, paintMat };
    return group;
  }
 
@@ -1905,6 +2248,57 @@ function createVehicleMesh(color, type = 'sport') {
    return group;
  }
 
+ if (type === 'heli') {
+   const paintMat = new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.6 });
+   const bodyW = 2.4, bodyL = 5.2;
+   const skidMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.7 });
+   const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.8, transparent: true, opacity: 0.55 });
+
+   const fuselage = new THREE.Mesh(new THREE.BoxGeometry(bodyW, 2.0, bodyL), paintMat);
+   fuselage.castShadow = true;
+   group.add(fuselage);
+
+   const cockpit = new THREE.Mesh(new THREE.SphereGeometry(1.15, 14, 14), glassMat);
+   cockpit.scale.set(0.9, 0.8, 1.1);
+   cockpit.position.set(0, -0.05, 2.1);
+   group.add(cockpit);
+
+   const tailBoom = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.5, 4.8, 10), paintMat);
+   tailBoom.rotation.x = Math.PI / 2;
+   tailBoom.position.set(0, 0.25, -4.4);
+   const tailFin = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.6, 1.0), paintMat);
+   tailFin.position.set(0, 0.65, -6.6);
+   group.add(tailBoom, tailFin);
+
+   [-1.05, 1.05].forEach(sx => {
+     const skid = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4.4, 8), skidMat);
+     skid.rotation.x = Math.PI / 2;
+     skid.position.set(sx, -1.3, 0.2);
+     const strut1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.65, 0.1), skidMat);
+     strut1.position.set(sx * 0.85, -1.05, 1.2);
+     const strut2 = strut1.clone();
+     strut2.position.z = -1.0;
+     group.add(skid, strut1, strut2);
+   });
+
+   const rotorHub = new THREE.Group();
+   rotorHub.position.set(0, 1.25, 0.2);
+   const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.55, 10), skidMat);
+   const blade1 = new THREE.Mesh(new THREE.BoxGeometry(10.5, 0.07, 0.38), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+   blade1.position.y = 0.22;
+   const blade2 = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.07, 10.5), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+   blade2.position.y = 0.22;
+   rotorHub.add(mast, blade1, blade2);
+   group.add(rotorHub);
+
+   const tailRotor = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.9, 0.2), skidMat);
+   tailRotor.position.set(0.22, 0.65, -6.6);
+   group.add(tailRotor);
+
+   group.userData = { lightBar: null, bodyW, bodyL, wheels: [], paintMat, rotorHub, tailRotor };
+   return group;
+ }
+
  const isVan = type === 'van' || type === 'boss';
  const isCop = type === 'cop';
  const isTaxi = type === 'taxi';
@@ -2027,35 +2421,42 @@ function createHelicopterMesh() {
  const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.72 });
  const skidMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8 });
 
+ // Whole model shifted up 1.5 units from how it was originally laid out: the
+ // landing skids were the lowest part at local y=-1.45, so placing the group at
+ // ground level (y=0, same convention every other vehicle uses) buried the
+ // skids about 1.5 units into the ground. Skids now land right at y=0.
+ const Y = 1.5;
+
  const fuselage = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.0, 5.2), bodyMat);
+ fuselage.position.y = Y;
  fuselage.castShadow = true;
  const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.46, 0.42, 5.26), stripeMat);
- stripe.position.y = -0.2;
+ stripe.position.y = -0.2 + Y;
  const cockpit = new THREE.Mesh(new THREE.SphereGeometry(1.22, 16, 16), glassMat);
  cockpit.scale.set(0.95, 0.85, 1.15);
- cockpit.position.set(0, -0.05, 2.3);
+ cockpit.position.set(0, -0.05 + Y, 2.3);
  group.add(fuselage, stripe, cockpit);
 
  const tailBoom = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.55, 5.4, 12), bodyMat);
  tailBoom.rotation.x = Math.PI / 2;
- tailBoom.position.set(0, 0.25, -4.8);
+ tailBoom.position.set(0, 0.25 + Y, -4.8);
  const tailFin = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.8, 1.1), stripeMat);
- tailFin.position.set(0, 0.7, -7.2);
+ tailFin.position.set(0, 0.7 + Y, -7.2);
  group.add(tailBoom, tailFin);
 
  [-1.15, 1.15].forEach(sx => {
    const skid = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4.8, 8), skidMat);
    skid.rotation.x = Math.PI / 2;
-   skid.position.set(sx, -1.45, 0.2);
+   skid.position.set(sx, -1.45 + Y, 0.2);
    const strut1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.7, 0.1), skidMat);
-   strut1.position.set(sx * 0.85, -1.15, 1.3);
+   strut1.position.set(sx * 0.85, -1.15 + Y, 1.3);
    const strut2 = strut1.clone();
    strut2.position.z = -1.1;
    group.add(skid, strut1, strut2);
  });
 
  const rotorHub = new THREE.Group();
- rotorHub.position.set(0, 1.35, 0.2);
+ rotorHub.position.set(0, 1.35 + Y, 0.2);
  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.65, 10), skidMat);
  const blade1 = new THREE.Mesh(new THREE.BoxGeometry(11.5, 0.08, 0.42), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
  blade1.position.y = 0.25;
@@ -2065,20 +2466,20 @@ function createHelicopterMesh() {
  group.add(rotorHub);
 
  const tailRotor = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.2, 0.24), skidMat);
- tailRotor.position.set(0.25, 0.7, -7.2);
+ tailRotor.position.set(0.25, 0.7 + Y, -7.2);
  group.add(tailRotor);
 
  const searchBeam = new THREE.Mesh(
    new THREE.ConeGeometry(4.2, 24, 16, 1, true),
    new THREE.MeshBasicMaterial({ color: 0xfef9c3, transparent: true, opacity: 0.16, side: THREE.DoubleSide })
  );
- searchBeam.position.set(0, -13.0, 2.2);
+ searchBeam.position.set(0, -13.0 + Y, 2.2);
  group.add(searchBeam);
 
  const redStrobe = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 8), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
- redStrobe.position.set(-0.9, -1.0, 2.0);
+ redStrobe.position.set(-0.9, -1.0 + Y, 2.0);
  const blueStrobe = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 8), new THREE.MeshBasicMaterial({ color: 0x3b82f6 }));
- blueStrobe.position.set(0.9, -1.0, 2.0);
+ blueStrobe.position.set(0.9, -1.0 + Y, 2.0);
  group.add(redStrobe, blueStrobe);
 
  group.userData = { rotorHub, tailRotor, redStrobe, blueStrobe };
@@ -2101,6 +2502,7 @@ const player = {
  wanted: 0,
  wantedTimer: 0,
  inVehicle: null,
+ insideBuilding: null,
  weapon: 'fists',
  weapons: {
    fists: { name: 'Fists', ammo: Infinity, dmg: 22, rate: 0.38, range: 3.2, spread: 0, pellets: 1 },
@@ -2118,6 +2520,22 @@ const player = {
 player.mesh.position.set(player.x, 0, player.z);
 scene.add(player.mesh);
 
+const weaponBaseDmg = {};
+Object.keys(player.weapons).forEach(k => { weaponBaseDmg[k] = player.weapons[k].dmg; });
+const weaponUpgrades = { pistol: false, smg: false, shotgun: false, rifle: false, sniper: false, rpg: false };
+
+function buyWeaponUpgrade(key, cost) {
+ if (weaponUpgrades[key]) { showToast('ALREADY UPGRADED!'); return; }
+ if (player.cash < cost) { showToast('NOT ENOUGH CASH!'); return; }
+ player.cash -= cost;
+ weaponUpgrades[key] = true;
+ player.weapons[key].dmg = Math.round(weaponBaseDmg[key] * 1.3);
+ AudioEngine.cash();
+ document.getElementById('shopCash').textContent = `$${player.cash}`;
+ showToast(`${player.weapons[key].name.toUpperCase()} UPGRADED! +30% DAMAGE, PERMANENTLY`);
+ saveGameState();
+}
+
 const vehicles = [];
 function spawnVehicle(x, z, rotY, color, type = 'sport', isAiTraffic = false) {
  const mesh = createVehicleMesh(color, type);
@@ -2126,9 +2544,9 @@ function spawnVehicle(x, z, rotY, color, type = 'sport', isAiTraffic = false) {
  scene.add(mesh);
  const v = {
    x, z, rotY, speed: 0, altitude: 0,
-   maxSpeed: type === 'plane' ? 70 : (type === 'tank' ? 22 : (type === 'jetski' ? 50 : (type === 'boat' ? 34 : (type === 'moto' ? 54 : (type === 'sport' ? 46 : (type === 'cop' ? 44 : 36)))))),
-   hp: type === 'boss' ? 450 : (type === 'tank' ? 500 : (type === 'van' ? 220 : (type === 'plane' ? 160 : (type === 'boat' ? 180 : ((type === 'moto' || type === 'jetski') ? 55 : 140))))),
-   maxHp: type === 'boss' ? 450 : (type === 'tank' ? 500 : (type === 'plane' ? 160 : (type === 'boat' ? 180 : ((type === 'moto' || type === 'jetski') ? 55 : 140)))),
+   maxSpeed: type === 'plane' ? 70 : (type === 'heli' ? 48 : (type === 'tank' ? 22 : (type === 'jetski' ? 50 : (type === 'boat' ? 34 : (type === 'dirtbike' ? 58 : (type === 'moto' ? 54 : (type === 'sport' ? 46 : (type === 'cop' ? 44 : 36)))))))),
+   hp: type === 'boss' ? 450 : (type === 'tank' ? 500 : (type === 'van' ? 220 : (type === 'plane' ? 160 : (type === 'heli' ? 140 : (type === 'boat' ? 180 : ((type === 'moto' || type === 'jetski' || type === 'dirtbike') ? 55 : 140)))))),
+   maxHp: type === 'boss' ? 450 : (type === 'tank' ? 500 : (type === 'plane' ? 160 : (type === 'heli' ? 140 : (type === 'boat' ? 180 : ((type === 'moto' || type === 'jetski' || type === 'dirtbike') ? 55 : 140))))),
    color, type, mesh, isAiTraffic, isBossTarget: false, isTheftTarget: false, destroyed: false
  };
  vehicles.push(v);
@@ -2149,6 +2567,8 @@ spawnVehicle(20, beachOceanMid, Math.PI, 0xfacc15, 'jetski', false);
 spawnVehicle(-12, beachOceanMid - 11, Math.PI, 0x38bdf8, 'boat', false);
 spawnVehicle(-175, 95, 0, 0x3f6212, 'plane', false);
 spawnVehicle(-195, 70, Math.PI / 2, 0x4d5a1e, 'tank', false);
+spawnVehicle(35, 50, Math.PI, 0xf8fafc, 'heli', false);
+spawnVehicle(45, 15, Math.PI / 2, 0xf97316, 'dirtbike', false);
 
 const trafficColors = [0xfacc15, 0xe2e8f0, 0x64748b, 0x0ea5e9, 0xa855f7, 0xf97316];
 roadCoords.forEach((rc, i) => {
@@ -2646,7 +3066,16 @@ function saveGameState() {
      outfitPants: player.mesh.userData.pantsMat.color.getHex(),
      trunkStash: { ...trunkStash },
      propertyOwned,
-     propertyRent
+     propertyRent,
+     turfClaimed: turfSpots.map(t => t.claimed),
+     treasureFound,
+     vehicleTypesDriven: Array.from(vehicleTypesDriven),
+     bankBalance,
+     weaponUpgrades: { ...weaponUpgrades },
+     collectiblesFound: collectibles.map(c => c.collected),
+     heistsCompleted,
+     kingpinTriggered,
+     kingpinDefeated
    };
    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
  } catch (e) {}
@@ -2694,6 +3123,42 @@ function loadGameState() {
    if (state.trunkStash) Object.assign(trunkStash, state.trunkStash);
    propertyOwned = !!state.propertyOwned;
    propertyRent = typeof state.propertyRent === 'number' ? state.propertyRent : 0;
+   if (Array.isArray(state.turfClaimed)) {
+     state.turfClaimed.forEach((claimed, i) => {
+       if (claimed && turfSpots[i]) {
+         turfSpots[i].claimed = true;
+         turfSpots[i].retakeTimer = 90 + Math.random() * 60;
+         turfSpots[i].gang.forEach(g => { g.hp = 0; g.mesh.visible = false; });
+       }
+     });
+   }
+   if (Array.isArray(state.collectiblesFound)) {
+     state.collectiblesFound.forEach((found, i) => {
+       if (found && collectibles[i]) {
+         collectibles[i].collected = true;
+         collectibles[i].mesh.visible = false;
+       }
+     });
+   }
+   heistsCompleted = typeof state.heistsCompleted === 'number' ? state.heistsCompleted : 0;
+   if (state.kingpinDefeated) {
+     kingpinTriggered = true;
+     kingpinDefeated = true;
+   } else if (state.kingpinTriggered) {
+     triggerBossFight();
+   }
+   treasureFound = !!state.treasureFound;
+   if (treasureFound) treasureChest.visible = false;
+   if (Array.isArray(state.vehicleTypesDriven)) state.vehicleTypesDriven.forEach(t => vehicleTypesDriven.add(t));
+   bankBalance = typeof state.bankBalance === 'number' ? state.bankBalance : 0;
+   if (state.weaponUpgrades) {
+     Object.keys(state.weaponUpgrades).forEach(k => {
+       if (state.weaponUpgrades[k] && weaponUpgrades.hasOwnProperty(k)) {
+         weaponUpgrades[k] = true;
+         if (weaponBaseDmg[k] !== undefined) player.weapons[k].dmg = Math.round(weaponBaseDmg[k] * 1.3);
+       }
+     });
+   }
 
    player.mesh.position.set(player.x, player.y, player.z);
    player.mesh.rotation.y = player.rotY;
@@ -2789,6 +3254,8 @@ window.addEventListener('keydown', e => {
  if (e.code === 'KeyH') openFastTravel();
  if (e.code === 'KeyG') recruitAlly();
  if (e.code === 'KeyC' && !e.repeat) deployParachute();
+ if (e.code === 'KeyM') cycleRadio();
+ if (e.code === 'KeyB') acceptBlackMarket();
  if (e.code === 'KeyR' && player.inVehicle) {
    player.inVehicle.rotY += Math.PI / 2;
    player.inVehicle.speed = 0;
@@ -2821,6 +3288,13 @@ window.addEventListener('mouseup', () => { mouseDown = false; });
 // ==========================================
 function checkCollision(x, z, radius = 1.2) {
  if (Math.abs(x) > CITY_LIMIT || Math.abs(z) > CITY_LIMIT) return true;
+ return hitsBuildingOnly(x, z, radius);
+}
+
+// Same building check as checkCollision, but without the map-edge rule -- for cases
+// (like deciding whether a low-flying aircraft just crashed) that need to know
+// specifically "did this hit a building", not "is this out of bounds".
+function hitsBuildingOnly(x, z, radius = 1.2) {
  for (let i = 0; i < colliders.length; i++) {
    const c = colliders[i];
    if (Math.abs(x - c.x) < c.w / 2 + radius && Math.abs(z - c.z) < c.d / 2 + radius) {
@@ -2833,7 +3307,12 @@ function checkCollision(x, z, radius = 1.2) {
 function addWanted(stars) {
  const prev = player.wanted;
  player.wanted = Math.min(6, player.wanted + stars);
- player.wantedTimer = 24;
+ // Only reset the heat-decay clock when the star count actually went up. Once
+ // you're capped at 6, killing a pursuing cop in self-defense still calls this
+ // (their role check doesn't know you're already maxed out) -- if that kept
+ // restarting the timer, the clock could never run out while you're fighting
+ // for your life, which is exactly when you're forced to fight back.
+ if (player.wanted > prev) player.wantedTimer = 24;
  if (player.wanted === 6 && prev < 6) {
    showToast('★★★★★★ 6-STAR ALERT! 4 NCPD HELICOPTERS DISPATCHED!');
  }
@@ -2903,7 +3382,8 @@ function toggleVehicle() {
    player.vy = 0;
    player.isGrounded = true;
    nearest.isAiTraffic = false;
-   player.mesh.visible = (nearest.type === 'moto' || nearest.type === 'jetski' || nearest.type === 'boat');
+   vehicleTypesDriven.add(nearest.type);
+   player.mesh.visible = (nearest.type === 'moto' || nearest.type === 'dirtbike' || nearest.type === 'jetski' || nearest.type === 'boat');
    if (player.mesh.visible) player.mesh.userData.shadowDisc.visible = false;
    document.getElementById('speedo').style.display = 'block';
    if (nearest.type === 'cop') {
@@ -2915,6 +3395,9 @@ function toggleVehicle() {
    } else if (nearest.type === 'tank') {
      addWanted(4);
      showToast('MILITARY TANK HIJACKED! +4 WANTED STARS');
+   } else if (nearest.type === 'heli') {
+     addWanted(2);
+     showToast('HELICOPTER HIJACKED! +2 WANTED STARS');
    }
    saveGameState();
  }
@@ -2927,7 +3410,12 @@ function triggerRocketBlast(bx, bz) {
    if (n.hp > 0 && Math.hypot(n.x - bx, n.z - bz) < 9.5) {
      n.hp = 0;
      n.mesh.rotation.x = Math.PI / 2;
-     if (n.role === 'gang') player.cash += 75;
+     if (n.role === 'gang') {
+       const mult = registerKillCombo();
+       const reward = Math.round(75 * mult);
+       player.cash += reward;
+       if (mult > 1) showToast(`🔥 COMBO x${comboCount}! +$${reward}`);
+     }
    }
  });
  vehicles.forEach(v => {
@@ -3037,6 +3525,66 @@ function spawnExplosion(x, z) {
      vz: (Math.random() - 0.5) * 22,
      life: 0.75
    });
+ }
+}
+
+function crashVehicle(v) {
+ // Aircraft get a real falling/spinning/smoking crash sequence instead of just
+ // vanishing with an explosion at ground level -- updateCrashingAircraft(dt)
+ // drives the actual fall and only explodes once it hits the ground.
+ v.crashing = true;
+ v.crashFallSpeed = 0;
+ v.crashSpinX = (Math.random() - 0.5) * 16;
+ v.crashSpinZ = (Math.random() - 0.5) * 16;
+ v.crashSmokeTimer = 0;
+ const exitX = v.x, exitZ = v.z;
+ player.inVehicle = null;
+ player.mesh.visible = true;
+ player.mesh.userData.shadowDisc.visible = true;
+ player.mesh.userData.leftLeg.rotation.x = 0;
+ player.mesh.userData.rightLeg.rotation.x = 0;
+ player.mesh.userData.leftLeg.userData.knee.rotation.x = 0;
+ player.mesh.userData.rightLeg.userData.knee.rotation.x = 0;
+ player.x = exitX;
+ player.y = 0;
+ player.z = exitZ;
+ player.vy = 0;
+ player.isGrounded = true;
+ player.mesh.position.set(player.x, 0, player.z);
+ document.getElementById('speedo').style.display = 'none';
+ showToast('💥 CRASHING!');
+ damagePlayer(60);
+ saveGameState();
+}
+
+function updateCrashingAircraft(dt) {
+ for (const v of vehicles) {
+   if (!v.crashing) continue;
+   v.crashFallSpeed += 40 * dt;
+   v.altitude = Math.max(0, (v.altitude || 0) - v.crashFallSpeed * dt);
+   v.mesh.rotation.x += v.crashSpinX * dt;
+   v.mesh.rotation.z += v.crashSpinZ * dt;
+   v.mesh.position.set(v.x, v.altitude, v.z);
+
+   v.crashSmokeTimer -= dt;
+   if (v.crashSmokeTimer <= 0) {
+     v.crashSmokeTimer = 0.08;
+     const smoke = new THREE.Mesh(
+       new THREE.SphereGeometry(0.5, 8, 8),
+       new THREE.MeshBasicMaterial({ color: 0x1f2937, transparent: true, opacity: 0.6 })
+     );
+     smoke.position.set(v.x, v.altitude + 0.5, v.z);
+     scene.add(smoke);
+     particles.push({ mesh: smoke, vx: (Math.random() - 0.5) * 2, vy: 2.5, vz: (Math.random() - 0.5) * 2, life: 0.9 });
+   }
+
+   if (v.altitude <= 0) {
+     spawnExplosion(v.x, v.z);
+     v.crashing = false;
+     v.destroyed = true;
+     v.mesh.visible = false;
+     showToast('💥 CRASHED!');
+   }
  }
 }
 
@@ -3267,13 +3815,109 @@ function repaintVehicle(hex) {
  saveGameState();
 }
 
+function buyVehicleSpeedUpgrade() {
+ if (!garageTargetVehicle || garageTargetVehicle.destroyed) { showToast('ARRIVE IN A VEHICLE TO UPGRADE IT!'); return; }
+ if (garageTargetVehicle.speedUpgraded) { showToast('ENGINE ALREADY UPGRADED!'); return; }
+ if (player.cash < 400) { showToast('NOT ENOUGH CASH!'); return; }
+ player.cash -= 400;
+ garageTargetVehicle.speedUpgraded = true;
+ garageTargetVehicle.maxSpeed = Math.round(garageTargetVehicle.maxSpeed * 1.25);
+ AudioEngine.cash();
+ document.getElementById('garageCash').textContent = `$${player.cash}`;
+ showToast('ENGINE UPGRADED! +25% TOP SPEED');
+ saveGameState();
+}
+
+function buyVehicleArmorUpgrade() {
+ if (!garageTargetVehicle || garageTargetVehicle.destroyed) { showToast('ARRIVE IN A VEHICLE TO UPGRADE IT!'); return; }
+ if (garageTargetVehicle.armorUpgraded) { showToast('ARMOR ALREADY UPGRADED!'); return; }
+ if (player.cash < 400) { showToast('NOT ENOUGH CASH!'); return; }
+ player.cash -= 400;
+ garageTargetVehicle.armorUpgraded = true;
+ garageTargetVehicle.maxHp = Math.round(garageTargetVehicle.maxHp * 1.5);
+ garageTargetVehicle.hp = garageTargetVehicle.maxHp;
+ AudioEngine.cash();
+ document.getElementById('garageCash').textContent = `$${player.cash}`;
+ showToast('ARMOR PLATING INSTALLED! +50% DURABILITY');
+ saveGameState();
+}
+
+function buyVehicleInsurance() {
+ if (!garageTargetVehicle || garageTargetVehicle.destroyed) { showToast('ARRIVE IN A VEHICLE TO INSURE IT!'); return; }
+ if (garageTargetVehicle.insured) { showToast('ALREADY INSURED!'); return; }
+ if (player.cash < 300) { showToast('NOT ENOUGH CASH!'); return; }
+ player.cash -= 300;
+ garageTargetVehicle.insured = true;
+ AudioEngine.cash();
+ document.getElementById('garageCash').textContent = `$${player.cash}`;
+ showToast('VEHICLE INSURED — IT WILL BE TOWED HOME IF DESTROYED!');
+ saveGameState();
+}
+
+function updateInsuredVehicles(dt) {
+ vehicles.forEach(v => {
+   if (!v.destroyed || !v.insured) return;
+   v.insuranceTimer = (v.insuranceTimer || 0) + dt;
+   if (v.insuranceTimer > 8) {
+     v.destroyed = false;
+     v.hp = v.maxHp;
+     v.insuranceTimer = 0;
+     v.speed = 0;
+     v.x = 123; v.z = -100; v.rotY = 0;
+     v.mesh.position.set(123, 0, -100);
+     v.mesh.rotation.y = 0;
+     v.mesh.visible = true;
+     showToast('🚗 YOUR INSURED VEHICLE WAS TOWED HOME — PICK IT UP AT THE GARAGE!');
+   }
+ });
+}
+
 // ==========================================
 // 9E. SIDE HUSTLES — DELIVERY & GRAND THEFT JOBS
 // ==========================================
 function spawnSideJob() {
+ if (isRaining && Math.random() < 0.4) {
+   let sx, sz, tries = 0;
+   do { sx = (Math.random() - 0.5) * 2 * CITY_EDGE; sz = (Math.random() - 0.5) * 2 * CITY_EDGE; tries++; } while ((checkCollision(sx, sz, 3) || Math.hypot(sx - player.x, sz - player.z) < 30) && tries < 40);
+   const dist = Math.hypot(sx - player.x, sz - player.z);
+   const reward = Math.round(400 + dist * 3);
+   const timeLimit = Math.max(30, dist / 9);
+   const mesh = new THREE.Mesh(new THREE.RingGeometry(2.0, 3.0, 24), new THREE.MeshBasicMaterial({ color: 0x22d3ee, side: THREE.DoubleSide }));
+   mesh.rotation.x = -Math.PI / 2;
+   mesh.position.set(sx, 0.38, sz);
+   scene.add(mesh);
+   sideJob = { type: 'storm_job', x: sx, z: sz, reward, timeLeft: timeLimit, mesh };
+   showToast(`⛈ STORM CONTRACT: HIGH-RISK DELIVERY FOR $${reward.toLocaleString()}!`);
+   return;
+ }
  const theftCandidates = vehicles.filter(v => !v.destroyed && v !== player.inVehicle && v.type !== 'cop' && v.type !== 'taxi');
- const doTheft = Math.random() < 0.5 && theftCandidates.length > 0;
- if (doTheft) {
+ const roll = Math.random();
+ const doTheft = roll < 0.25 && theftCandidates.length > 0;
+ const doHitchhiker = !doTheft && roll < 0.5;
+ const doRobbery = !doTheft && !doHitchhiker && roll < 0.75;
+ if (doRobbery) {
+   const spot = Math.random() < 0.5 ? { x: 35, z: -18 } : { x: -35, z: 25 };
+   const reward = 500 + Math.floor(Math.random() * 300);
+   const mesh = new THREE.Mesh(new THREE.RingGeometry(2.0, 3.0, 24), new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide }));
+   mesh.rotation.x = -Math.PI / 2;
+   mesh.position.set(spot.x, 0.38, spot.z);
+   scene.add(mesh);
+   sideJob = { type: 'store_robbery', x: spot.x, z: spot.z, reward, timeLeft: 60, mesh };
+   showToast('🔫 SMASH & GRAB OPPORTUNITY — HIT THE MARKED STORE BEFORE TIME RUNS OUT!');
+ } else if (doHitchhiker) {
+   let px2, pz2, tries0 = 0;
+   do { px2 = (Math.random() - 0.5) * 2 * CITY_EDGE; pz2 = (Math.random() - 0.5) * 2 * CITY_EDGE; tries0++; } while ((checkCollision(px2, pz2, 2) || Math.hypot(px2 - player.x, pz2 - player.z) < 25) && tries0 < 40);
+   const hitchhiker = spawnNPC(px2, pz2, 'civilian');
+   let dx2, dz2, tries1 = 0;
+   do { dx2 = (Math.random() - 0.5) * 2 * CITY_EDGE; dz2 = (Math.random() - 0.5) * 2 * CITY_EDGE; tries1++; } while (checkCollision(dx2, dz2, 3) && tries1 < 40);
+   const mesh = new THREE.Mesh(new THREE.RingGeometry(2.0, 3.0, 24), new THREE.MeshBasicMaterial({ color: 0x22d3ee, side: THREE.DoubleSide }));
+   mesh.rotation.x = -Math.PI / 2;
+   mesh.position.set(px2, 0.38, pz2);
+   scene.add(mesh);
+   const reward = 300 + Math.floor(Math.random() * 300);
+   sideJob = { type: 'hitchhiker', phase: 'pickup', npc: hitchhiker, x: px2, z: pz2, dropX: dx2, dropZ: dz2, reward, timeLeft: 110, mesh };
+   showToast('🧍 A HITCHHIKER NEEDS A RIDE — PICK THEM UP AT THE CYAN MARKER!');
+ } else if (doTheft) {
    const target = theftCandidates[Math.floor(Math.random() * theftCandidates.length)];
    target.isTheftTarget = true;
    if (target.mesh.userData.paintMat) target.mesh.userData.paintMat.color.setHex(0xfbbf24);
@@ -3315,6 +3959,37 @@ function updateSideJob(dt) {
    if (sideJobCooldown <= 0) spawnSideJob();
    return;
  }
+ if (sideJob.type === 'hitchhiker') {
+   sideJob.timeLeft -= dt;
+   if (sideJob.timeLeft <= 0) {
+     if (sideJob.npc.hp > 0) { sideJob.npc.hp = 0; sideJob.npc.mesh.visible = false; }
+     cancelSideJob(false);
+     return;
+   }
+   const px = player.inVehicle ? player.inVehicle.x : player.x;
+   const pz = player.inVehicle ? player.inVehicle.z : player.z;
+   if (sideJob.phase === 'pickup') {
+     if (Math.hypot(px - sideJob.x, pz - sideJob.z) < 5.5) {
+       sideJob.npc.hp = 0;
+       sideJob.npc.mesh.visible = false;
+       sideJob.phase = 'dropoff';
+       sideJob.x = sideJob.dropX;
+       sideJob.z = sideJob.dropZ;
+       sideJob.mesh.position.set(sideJob.x, 0.38, sideJob.z);
+       sideJob.timeLeft = 80;
+       showToast('🧍 HITCHHIKER ABOARD — DROP THEM AT THE NEW MARKER!');
+     }
+   } else if (Math.hypot(px - sideJob.x, pz - sideJob.z) < 5.5) {
+     player.cash += sideJob.reward;
+     AudioEngine.cash();
+     showToast(`✅ HITCHHIKER DROPPED OFF! +$${sideJob.reward.toLocaleString()}`);
+     scene.remove(sideJob.mesh);
+     sideJob = null;
+     sideJobCooldown = 45 + Math.random() * 60;
+     saveGameState();
+   }
+   return;
+ }
  if (sideJob.type === 'grand_theft' && sideJob.targetVehicle.destroyed) {
    const job = sideJob;
    scene.remove(job.mesh);
@@ -3340,7 +4015,18 @@ function updateSideJob(dt) {
  if (qualifies && Math.hypot(px - sideJob.x, pz - sideJob.z) < 5.5) {
    player.cash += sideJob.reward;
    AudioEngine.cash();
-   showToast(`✅ JOB COMPLETE! +$${sideJob.reward.toLocaleString()}`);
+   if (sideJob.type === 'store_robbery') {
+     addWanted(2);
+     for (let i = 0; i < 2; i++) {
+       const ang = (i / 2) * Math.PI * 2;
+       let gx = sideJob.x + Math.cos(ang) * 3, gz = sideJob.z + Math.sin(ang) * 3;
+       if (checkCollision(gx, gz, 1)) { gx = sideJob.x; gz = sideJob.z; }
+       spawnNPC(gx, gz, 'gang');
+     }
+     showToast(`🚨 SMASH & GRAB! +$${sideJob.reward.toLocaleString()} — GUARDS ARE ON YOU!`);
+   } else {
+     showToast(`✅ JOB COMPLETE! +$${sideJob.reward.toLocaleString()}`);
+   }
    if (sideJob.targetVehicle) {
      sideJob.targetVehicle.isTheftTarget = false;
      if (sideJob.targetVehicle.mesh.userData.paintMat) sideJob.targetVehicle.mesh.userData.paintMat.color.setHex(sideJob.targetVehicle.color);
@@ -3408,15 +4094,34 @@ function tickWorldTimers(dt) {
  if (vehicleHop > 0) vehicleHop = Math.max(0, vehicleHop - dt);
 }
 
+let stuntComboCount = 0;
+let stuntComboTimer = 0;
+
+function registerStuntCombo() {
+ stuntComboCount++;
+ stuntComboTimer = 7;
+ return 1 + Math.floor((stuntComboCount - 1) / 2) * 0.5;
+}
+
+function updateStuntCombo(dt) {
+ if (stuntComboTimer > 0) {
+   stuntComboTimer -= dt;
+   if (stuntComboTimer <= 0) stuntComboCount = 0;
+ }
+}
+
 function checkStuntRamp(v) {
  if (Math.abs(v.speed) < 22) return;
  for (const r of stuntRamps) {
    if (r.cooldown <= 0 && Math.hypot(v.x - r.x, v.z - r.z) < 4.5) {
      r.cooldown = 10;
      vehicleHop = 0.6;
-     player.cash += r.reward;
+     const mult = registerStuntCombo();
+     const reward = Math.round(r.reward * mult);
+     player.cash += reward;
      AudioEngine.cash();
-     showToast(`🚀 STUNT JUMP! +$${r.reward.toLocaleString()}`);
+     if (mult > 1) showToast(`🚀 STUNT COMBO x${stuntComboCount}! +$${reward.toLocaleString()}`);
+     else showToast(`🚀 STUNT JUMP! +$${reward.toLocaleString()}`);
      saveGameState();
      break;
    }
@@ -3478,6 +4183,49 @@ function updateCashStashes(dt) {
 }
 
 // ==========================================
+// 9HB. HIDDEN COLLECTIBLES — SPRAY TAGS
+// ==========================================
+const COLLECTIBLE_COUNT = 10;
+const collectibles = [];
+(function populateCollectibles() {
+ for (let i = 0; i < COLLECTIBLE_COUNT; i++) {
+   let x, z, tries = 0;
+   do { x = (Math.random() - 0.5) * 2 * CITY_EDGE; z = (Math.random() - 0.5) * 2 * CITY_EDGE; tries++; } while (checkCollision(x, z, 2) && tries < 40);
+   const mesh = new THREE.Group();
+   const can = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.0, 12), new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: 0xa855f7, emissiveIntensity: 0.6, metalness: 0.4, roughness: 0.3 }));
+   can.position.y = 1.3;
+   mesh.add(can);
+   mesh.position.set(x, 0, z);
+   scene.add(mesh);
+   collectibles.push({ x, z, mesh, collected: false, spin: Math.random() * 10 });
+ }
+})();
+
+function updateCollectibles(dt) {
+ const px = player.inVehicle ? player.inVehicle.x : player.x;
+ const pz = player.inVehicle ? player.inVehicle.z : player.z;
+ collectibles.forEach(c => {
+   if (c.collected) return;
+   c.spin += dt * 2.2;
+   c.mesh.rotation.y = c.spin;
+   c.mesh.position.y = 1.0 + Math.sin(c.spin * 1.3) * 0.2;
+   if (Math.hypot(px - c.x, pz - c.z) < 3.0) {
+     c.collected = true;
+     c.mesh.visible = false;
+     player.cash += 250;
+     AudioEngine.cash();
+     const total = collectibles.filter(cc => cc.collected).length;
+     showToast(`🎨 SPRAY TAG FOUND! (${total}/${COLLECTIBLE_COUNT}) +$250`);
+     if (total === COLLECTIBLE_COUNT) {
+       player.cash += 5000;
+       showToast('🏆 ALL SPRAY TAGS FOUND! BONUS +$5,000');
+     }
+     saveGameState();
+   }
+ });
+}
+
+// ==========================================
 // 9I. NEON THREADS BOUTIQUE — OUTFITS
 // ==========================================
 function buyOutfit(shirtHex, pantsHex, cost) {
@@ -3504,7 +4252,15 @@ function openPauseMenu() {
    : 'ALL 30 MISSIONS COMPLETE — FREE ROAM';
  document.getElementById('pauseCash').textContent = `$${player.cash.toLocaleString()}`;
  document.getElementById('pauseWanted').textContent = `${player.wanted} / 6`;
- renderMinimap(pauseMapCtx, 360, 0.26);
+ const turfClaimedCount = turfSpots.filter(t => t.claimed).length;
+ const collectedCount = collectibles.filter(c => c.collected).length;
+ document.getElementById('pauseCompletion').innerHTML =
+   `Missions: ${currentMissionIdx}/${missions.length} &nbsp;|&nbsp; Properties: ${propertyOwned ? 1 : 0}/1<br>` +
+   `Turf claimed: ${turfClaimedCount}/${turfSpots.length} &nbsp;|&nbsp; Vehicles driven: ${vehicleTypesDriven.size}/${TOTAL_VEHICLE_TYPES}<br>` +
+   `Spray tags: ${collectedCount}/${COLLECTIBLE_COUNT} &nbsp;|&nbsp; Bank balance: $${Math.floor(bankBalance).toLocaleString()}` +
+   `${treasureFound ? ' &nbsp;|&nbsp; 💰 Treasure found' : ''}` +
+   `${kingpinDefeated ? ' &nbsp;|&nbsp; 👑 Kingpin defeated' : ''}`;
+ renderMinimap(pauseMapCtx, 280, 0.2);
  document.getElementById('pauseModal').style.display = 'flex';
 }
 
@@ -3603,9 +4359,9 @@ scene.add(parachuteCanopy);
 
 function rideToHelipad() {
  closeModals();
- player.x = -35; player.y = 17; player.vy = 0; player.isGrounded = false; player.z = -39;
+ player.x = -35; player.y = 17; player.vy = 0; player.isGrounded = true; player.z = -39;
  player.mesh.position.set(player.x, player.y, player.z);
- showToast('🛗 ON THE ROOF — PRESS [C] TO DEPLOY YOUR PARACHUTE!');
+ showToast('🛗 ON THE ROOF — PRESS [J] TO JUMP, THEN [C] FOR YOUR PARACHUTE!');
 }
 
 function deployParachute() {
@@ -3620,7 +4376,43 @@ function deployParachute() {
 // ==========================================
 let heistActive = false;
 let heistTimer = 0;
+let heistsCompleted = 0;
 const heistEscapePoint = { x: 105, z: -85 };
+
+// ==========================================
+// 9EB. THE KINGPIN — ONE-TIME BOSS FIGHT
+// ==========================================
+let kingpinTriggered = false;
+let kingpinDefeated = false;
+let kingpinBoss = null;
+const kingpinSpot = { x: 50, z: 50 };
+
+function triggerBossFight() {
+ if (kingpinTriggered) return;
+ kingpinTriggered = true;
+ kingpinBoss = spawnNPC(kingpinSpot.x, kingpinSpot.z, 'gang');
+ kingpinBoss.hp = 600;
+ kingpinBoss.isKingpin = true;
+ kingpinBoss.mesh.scale.set(1.3, 1.3, 1.3);
+ if (kingpinBoss.mesh.userData.shirtMat) kingpinBoss.mesh.userData.shirtMat.color.setHex(0xfbbf24);
+ for (let i = 0; i < 2; i++) {
+   const ang = (i / 2) * Math.PI * 2;
+   spawnNPC(kingpinSpot.x + Math.cos(ang) * 4, kingpinSpot.z + Math.sin(ang) * 4, 'gang');
+ }
+ waypointGroup.position.set(kingpinSpot.x, 0, kingpinSpot.z);
+ showToast('👑 THE KINGPIN HAS COME OUT OF HIDING AT CENTRAL PARK PLAZA — END HIM!');
+}
+
+function updateBossFight(dt) {
+ if (!kingpinTriggered || kingpinDefeated || !kingpinBoss) return;
+ if (kingpinBoss.hp <= 0) {
+   kingpinDefeated = true;
+   player.cash += 10000;
+   AudioEngine.cash();
+   showToast('👑 THE KINGPIN IS DEAD! +$10,000 — NEON CITY IS YOURS');
+   saveGameState();
+ }
+}
 
 function startHeist() {
  if (heistActive) { showToast('HEIST ALREADY IN PROGRESS!'); return; }
@@ -3647,6 +4439,8 @@ function updateHeist(dt) {
    AudioEngine.cash();
    showToast(`🏦 HEIST COMPLETE! YOU ESCAPED WITH $${payout.toLocaleString()}`);
    heistActive = false;
+   heistsCompleted++;
+   if (heistsCompleted >= 3) triggerBossFight();
    updateMissionHUD();
    saveGameState();
    return;
@@ -3697,6 +4491,43 @@ function updateProperty(dt) {
 }
 
 // ==========================================
+// 9O2. BANK — DEPOSITS SAFE FROM BUSTED/WASTED LOSSES, PLUS THE HEIST
+// ==========================================
+let bankBalance = 0;
+
+function refreshBankModal() {
+ document.getElementById('bankCash').textContent = `$${player.cash.toLocaleString()}`;
+ document.getElementById('bankBalance').textContent = `$${Math.floor(bankBalance).toLocaleString()}`;
+}
+
+function depositCash(amount) {
+ const amt = amount === 'all' ? player.cash : Math.min(player.cash, amount);
+ if (amt <= 0) { showToast('NOTHING TO DEPOSIT!'); return; }
+ player.cash -= amt;
+ bankBalance += amt;
+ AudioEngine.cash();
+ refreshBankModal();
+ showToast(`DEPOSITED $${amt.toLocaleString()}`);
+ saveGameState();
+}
+
+function withdrawCash(amount) {
+ const amt = amount === 'all' ? bankBalance : Math.min(bankBalance, amount);
+ if (amt <= 0) { showToast('NOTHING TO WITHDRAW!'); return; }
+ bankBalance -= amt;
+ player.cash += Math.floor(amt);
+ AudioEngine.cash();
+ refreshBankModal();
+ showToast(`WITHDREW $${Math.floor(amt).toLocaleString()}`);
+ saveGameState();
+}
+
+function startHeistFromBank() {
+ closeModals();
+ startHeist();
+}
+
+// ==========================================
 // 9P. BOUNTY HUNTS
 // ==========================================
 let bountyTarget = null;
@@ -3708,10 +4539,19 @@ function spawnBountyTarget() {
  do { x = (Math.random() - 0.5) * 2 * CITY_EDGE; z = (Math.random() - 0.5) * 2 * CITY_EDGE; tries++; } while (checkCollision(x, z, 2) && tries < 40);
  const npc = spawnNPC(x, z, 'gang');
  npc.hp = 220;
+ const bodyguards = [];
+ for (let i = 0; i < 2; i++) {
+   const angle = Math.random() * Math.PI * 2;
+   let gx = x + Math.cos(angle) * 4, gz = z + Math.sin(angle) * 4;
+   if (checkCollision(gx, gz, 1)) { gx = x; gz = z; }
+   const bg = spawnNPC(gx, gz, 'gang');
+   bg.hp = 100;
+   bodyguards.push(bg);
+ }
  const name = bountyNames[Math.floor(Math.random() * bountyNames.length)];
  const reward = 700 + Math.floor(Math.random() * 600);
- bountyTarget = { npc, name, reward };
- showToast(`🎯 BOUNTY: "${name}" IS WANTED, ALIVE OR DEAD — $${reward.toLocaleString()}`);
+ bountyTarget = { npc, name, reward, bodyguards };
+ showToast(`🎯 BOUNTY: "${name}" IS WANTED, ALIVE OR DEAD — $${reward.toLocaleString()} (BRINGS BODYGUARDS)`);
 }
 
 function updateBountyHunt(dt) {
@@ -3787,16 +4627,404 @@ function updateAlly(dt) {
 }
 
 // ==========================================
+// 9R. GANG TERRITORY TAKEOVER
+// ==========================================
+const turfSpots = [
+ { x: -105, z: 92, claimed: false, gang: [] },
+ { x: 140, z: 70, claimed: false, gang: [] }
+];
+
+function spawnTurfGang(t) {
+ for (let i = 0; i < 4; i++) {
+   const angle = (i / 4) * Math.PI * 2;
+   let gx = t.x + Math.cos(angle) * 7, gz = t.z + Math.sin(angle) * 7;
+   if (checkCollision(gx, gz, 1)) { gx = t.x; gz = t.z; }
+   t.gang.push(spawnNPC(gx, gz, 'gang'));
+ }
+}
+turfSpots.forEach(spawnTurfGang);
+
+function reviveTurfGang(t) {
+ t.gang.forEach((g, i) => {
+   const angle = (i / 4) * Math.PI * 2;
+   let gx = t.x + Math.cos(angle) * 7, gz = t.z + Math.sin(angle) * 7;
+   if (checkCollision(gx, gz, 1)) { gx = t.x; gz = t.z; }
+   g.x = gx; g.z = gz;
+   g.hp = 85;
+   g.mesh.visible = true;
+   g.mesh.rotation.x = 0;
+   g.mesh.position.set(gx, 0, gz);
+ });
+}
+
+function updateTurf(dt) {
+ turfSpots.forEach(t => {
+   if (!t.claimed) {
+     const alive = t.gang.filter(g => g.hp > 0).length;
+     if (alive === 0) {
+       t.claimed = true;
+       t.retakeTimer = 90 + Math.random() * 60;
+       player.cash += 1200;
+       AudioEngine.cash();
+       showToast('🏴 TURF CLAIMED! +$1,200');
+       saveGameState();
+     }
+     return;
+   }
+   t.retakeTimer -= dt;
+   if (t.retakeTimer <= 0) {
+     t.claimed = false;
+     reviveTurfGang(t);
+     showToast('⚠ RIVAL GANG IS RETAKING THEIR TURF — DEFEND IT!');
+   }
+ });
+}
+
+// ==========================================
+// 9S. UNDERWATER TREASURE
+// ==========================================
+let treasureFound = false;
+const treasureSpot = { x: 60, z: (SAND_END + OCEAN_END) / 2 + 6 };
+const treasureChest = new THREE.Group();
+(function buildTreasureChest() {
+ const treasureMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.7 });
+ const base = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.2, 1.4), treasureMat);
+ base.position.y = 0.6;
+ const lid = new THREE.Mesh(
+   new THREE.CylinderGeometry(1.1, 1.1, 1.4, 10, 1, false, 0, Math.PI),
+   new THREE.MeshStandardMaterial({ color: 0xfbbf24, metalness: 0.5 })
+ );
+ lid.rotation.z = Math.PI / 2;
+ lid.position.set(0, 1.2, 0);
+ treasureChest.add(base, lid);
+ treasureChest.position.set(treasureSpot.x, -0.8, treasureSpot.z);
+ scene.add(treasureChest);
+})();
+
+function updateTreasure(dt) {
+ if (treasureFound) return;
+ treasureChest.rotation.y += dt * 0.4;
+ const px = player.inVehicle ? player.inVehicle.x : player.x;
+ const pz = player.inVehicle ? player.inVehicle.z : player.z;
+ if (Math.hypot(px - treasureSpot.x, pz - treasureSpot.z) < 4) {
+   treasureFound = true;
+   treasureChest.visible = false;
+   player.cash += 2000;
+   AudioEngine.cash();
+   showToast('💰 SUNKEN TREASURE FOUND! +$2,000');
+   saveGameState();
+ }
+}
+
+// ==========================================
+// 9T. CAR RADIO
+// ==========================================
+// ==========================================
+// 9T2. ORIGINAL RADIO SOUNDTRACK (synthesized, 8-beat loops)
+// ==========================================
+function N(f, type, dur, vol, slide) { return { f, type, dur, vol, slide }; }
+const radioTracks = [
+ {
+   name: 'NIGHT DRIVE 88',
+   bpm: 96,
+   bass: [N(220, 'triangle', 0.3, 0.06), N(261.63, 'triangle', 0.3, 0.06), N(329.63, 'triangle', 0.3, 0.06), N(392.0, 'triangle', 0.3, 0.06),
+          N(220, 'triangle', 0.3, 0.06), N(261.63, 'triangle', 0.3, 0.06), N(329.63, 'triangle', 0.3, 0.06), N(293.66, 'triangle', 0.3, 0.06)],
+   lead: [null, N(880, 'sine', 0.22, 0.045), null, N(1046.5, 'sine', 0.22, 0.045), null, N(880, 'sine', 0.22, 0.045), null, N(783.99, 'sine', 0.22, 0.045)],
+   kick: [N(55, 'sine', 0.2, 0.09, -20), null, null, null, N(55, 'sine', 0.2, 0.09, -20), null, null, null]
+ },
+ {
+   name: 'CHROME PURSUIT',
+   bpm: 140,
+   bass: [N(146.83, 'square', 0.14, 0.08), N(146.83, 'square', 0.14, 0.08), N(174.61, 'square', 0.14, 0.08), N(146.83, 'square', 0.14, 0.08),
+          N(155.56, 'square', 0.14, 0.08), N(146.83, 'square', 0.14, 0.08), N(196.0, 'square', 0.14, 0.08), N(146.83, 'square', 0.14, 0.08)],
+   lead: [N(1800, 'triangle', 0.04, 0.03), N(1800, 'triangle', 0.04, 0.03), N(1800, 'triangle', 0.04, 0.03), N(1800, 'triangle', 0.04, 0.03),
+          N(1800, 'triangle', 0.04, 0.03), N(1800, 'triangle', 0.04, 0.03), N(1800, 'triangle', 0.04, 0.03), N(1800, 'triangle', 0.04, 0.03)],
+   kick: [N(220, 'sawtooth', 0.5, 0.05, -180), null, null, null, null, null, null, null]
+ },
+ {
+   name: 'NEON STATIC',
+   bpm: 80,
+   bass: null,
+   lead: [null, null, null, null, null, null, null, N(523.25, 'square', 0.12, 0.05)],
+   kick: null,
+   chords: [
+     [N(130.81, 'sawtooth', 0.5, 0.045), N(155.56, 'sawtooth', 0.5, 0.04), N(196.0, 'sawtooth', 0.5, 0.04), N(65.41, 'sine', 0.5, 0.05)],
+     null,
+     [N(207.65, 'sawtooth', 0.5, 0.045), N(261.63, 'sawtooth', 0.5, 0.04), N(311.13, 'sawtooth', 0.5, 0.04), N(103.83, 'sine', 0.5, 0.05)],
+     null,
+     [N(233.08, 'sawtooth', 0.5, 0.045), N(293.66, 'sawtooth', 0.5, 0.04), N(349.23, 'sawtooth', 0.5, 0.04), N(116.54, 'sine', 0.5, 0.05)],
+     null,
+     [N(196.0, 'sawtooth', 0.5, 0.045), N(233.08, 'sawtooth', 0.5, 0.04), N(293.66, 'sawtooth', 0.5, 0.04), N(98.0, 'sine', 0.5, 0.05)],
+     null
+   ]
+ },
+ {
+   name: 'SUNSET HUSTLE',
+   bpm: 72,
+   bass: [N(174.61, 'triangle', 0.3, 0.05), null, N(220.0, 'triangle', 0.3, 0.05), null, N(261.63, 'triangle', 0.3, 0.05), null, N(293.66, 'triangle', 0.3, 0.05), null],
+   lead: [null, N(300, 'triangle', 0.08, 0.02), null, N(300, 'triangle', 0.08, 0.02), null, N(300, 'triangle', 0.08, 0.02), null, N(300, 'triangle', 0.08, 0.02)],
+   kick: null,
+   chords: [
+     [N(349.23, 'sine', 1.1, 0.04), N(440.0, 'sine', 1.1, 0.035), N(523.25, 'sine', 1.1, 0.035)],
+     null, null, null,
+     [N(261.63, 'sine', 1.1, 0.04), N(329.63, 'sine', 1.1, 0.035), N(392.0, 'sine', 1.1, 0.035)],
+     null, null, null
+   ]
+ }
+];
+let radioIdx = -1;
+let radioBeatTimer = 0;
+let radioBeatIndex = 0;
+
+function cycleRadio() {
+ if (!player.inVehicle) { showToast('GET IN A VEHICLE FIRST!'); return; }
+ radioIdx++;
+ if (radioIdx >= radioTracks.length) radioIdx = -1;
+ radioBeatIndex = 0;
+ radioBeatTimer = 0;
+ if (radioIdx === -1) {
+   showToast('📻 RADIO OFF');
+ } else {
+   showToast(`📻 NOW PLAYING: ${radioTracks[radioIdx].name}`);
+   AudioEngine.cash();
+ }
+}
+
+function updateRadioMusic(dt) {
+ if (!player.inVehicle || radioIdx === -1) return;
+ const chaseMode = player.wanted > 0;
+ const track = chaseMode ? radioTracks[1] : radioTracks[radioIdx];
+ radioBeatTimer -= dt;
+ if (radioBeatTimer > 0) return;
+ radioBeatTimer = 60 / track.bpm;
+ const i = radioBeatIndex % 8;
+ if (track.bass) AudioEngine.radioNote(track.bass[i]);
+ if (track.lead) AudioEngine.radioNote(track.lead[i]);
+ if (track.kick) AudioEngine.radioNote(track.kick[i]);
+ if (track.chords && track.chords[i]) track.chords[i].forEach(n => AudioEngine.radioNote(n));
+ radioBeatIndex++;
+}
+
+const radioChatterLines = [
+ "You're locked in to the sound of Neon City after dark.",
+ "Stay safe out there — the streets are wild tonight.",
+ "This next one's for everybody running from the cops right now.",
+ "Keep it tuned, more hits coming your way all night long.",
+ "Traffic's wild downtown — drive safe, or don't, your call.",
+ "Big shoutout to everyone still grinding for that cash in Neon City."
+];
+let radioChatterTimer = 30;
+
+function updateRadioChatter(dt) {
+ if (!player.inVehicle || radioIdx === -1) { radioChatterTimer = 30; return; }
+ radioChatterTimer -= dt;
+ if (radioChatterTimer <= 0) {
+   radioChatterTimer = 35 + Math.random() * 25;
+   const line = radioChatterLines[Math.floor(Math.random() * radioChatterLines.length)];
+   showToast(`📻 ${radioTracks[radioIdx].name}: "${line}"`);
+ }
+}
+
+// ==========================================
+// 9U. COMPLETION TRACKER
+// ==========================================
+const vehicleTypesDriven = new Set();
+const TOTAL_VEHICLE_TYPES = 12;
+
+// ==========================================
+// 9V. KILL COMBO BONUS
+// ==========================================
+let comboCount = 0;
+let comboTimer = 0;
+
+function registerKillCombo() {
+ comboCount++;
+ comboTimer = 4;
+ return 1 + Math.floor((comboCount - 1) / 3) * 0.5;
+}
+
+// ==========================================
+// 9Q2. COP ROADBLOCKS AT HIGH WANTED LEVEL
+// ==========================================
+let roadblockCooldown = 10;
+const roadblockEntities = [];
+
+function spawnRoadblock() {
+ const heading = player.inVehicle ? player.inVehicle.rotY : player.rotY;
+ const dist = 45;
+ const cx = player.x + Math.sin(heading) * dist;
+ const cz = player.z + Math.cos(heading) * dist;
+ if (Math.abs(cx) > CITY_EDGE - 20 || Math.abs(cz) > CITY_EDGE - 20) return;
+ if (checkCollision(cx, cz, 6)) return;
+ const perpX = Math.cos(heading), perpZ = -Math.sin(heading);
+ const v1 = spawnVehicle(cx + perpX * 4, cz + perpZ * 4, heading + Math.PI / 2, 0x1e3a8a, 'cop', false);
+ const v2 = spawnVehicle(cx - perpX * 4, cz - perpZ * 4, heading + Math.PI / 2, 0x1e3a8a, 'cop', false);
+ const n1 = spawnNPC(cx + perpX * 4, cz + perpZ * 4 - 1.5, 'swat');
+ const n2 = spawnNPC(cx - perpX * 4, cz - perpZ * 4 - 1.5, 'swat');
+ roadblockEntities.push(v1, v2, n1, n2);
+ showToast('🚧 ROADBLOCK AHEAD — THE COPS HAVE SET UP A BLOCKADE!');
+}
+
+function clearRoadblocks() {
+ while (roadblockEntities.length) {
+   const e = roadblockEntities.pop();
+   if (e.mesh) e.mesh.visible = false;
+   if ('destroyed' in e) e.destroyed = true;
+   if ('hp' in e) e.hp = 0;
+ }
+}
+
+function updateRoadblocks(dt) {
+ if (player.wanted >= 3) {
+   roadblockCooldown -= dt;
+   if (roadblockCooldown <= 0 && roadblockEntities.length < 8) {
+     roadblockCooldown = 14 + Math.random() * 8;
+     spawnRoadblock();
+   }
+ } else if (roadblockEntities.length) {
+   clearRoadblocks();
+ }
+}
+
+function updateCombo(dt) {
+ if (comboTimer > 0) {
+   comboTimer -= dt;
+   if (comboTimer <= 0) comboCount = 0;
+ }
+}
+
+// ==========================================
+// 9W. BLACK MARKET — ONE-TIME DEALS
+// ==========================================
+let blackMarketOffer = null;
+let blackMarketTimer = 90 + Math.random() * 120;
+const BLACK_MARKET_DEALS = [
+ { label: 'SMG + 120 AMMO', cost: 300, apply: () => { player.weapons.smg.ammo += 120; selectWeapon('smg'); } },
+ { label: 'RIFLE + 100 AMMO', cost: 600, apply: () => { player.weapons.rifle.ammo += 100; selectWeapon('rifle'); } },
+ { label: 'FULL ARMOR REFILL', cost: 150, apply: () => { player.armor = 100; } },
+ { label: 'RPG + 4 ROCKETS', cost: 1500, apply: () => { player.weapons.rpg.ammo += 4; selectWeapon('rpg'); } }
+];
+
+function updateBlackMarket(dt) {
+ if (!blackMarketOffer) {
+   blackMarketTimer -= dt;
+   if (blackMarketTimer <= 0) {
+     const deal = BLACK_MARKET_DEALS[Math.floor(Math.random() * BLACK_MARKET_DEALS.length)];
+     blackMarketOffer = { ...deal, timeLeft: 20 };
+     showToast(`📞 BLACK MARKET: ${deal.label} FOR $${deal.cost.toLocaleString()} — PRESS [B] WITHIN 20s!`);
+   }
+   return;
+ }
+ blackMarketOffer.timeLeft -= dt;
+ if (blackMarketOffer.timeLeft <= 0) {
+   blackMarketOffer = null;
+   blackMarketTimer = 90 + Math.random() * 120;
+ }
+}
+
+function acceptBlackMarket() {
+ if (!blackMarketOffer) { showToast('NO DEAL RIGHT NOW.'); return; }
+ if (player.cash < blackMarketOffer.cost) { showToast('NOT ENOUGH CASH FOR THE DEAL!'); return; }
+ player.cash -= blackMarketOffer.cost;
+ blackMarketOffer.apply();
+ AudioEngine.cash();
+ showToast(`DEAL TAKEN: ${blackMarketOffer.label}`);
+ blackMarketOffer = null;
+ blackMarketTimer = 90 + Math.random() * 120;
+ saveGameState();
+}
+
+// ==========================================
+// 9X. TAXI FARES — REPEATABLE JOB WHILE DRIVING A CAB
+// ==========================================
+let taxiFare = null;
+let taxiFareCooldown = 10;
+
+function spawnTaxiFare() {
+ let x, z, tries = 0;
+ do { x = (Math.random() - 0.5) * 2 * CITY_EDGE; z = (Math.random() - 0.5) * 2 * CITY_EDGE; tries++; } while (checkCollision(x, z, 3) && tries < 40);
+ const dist = Math.hypot(x - player.x, z - player.z);
+ const reward = Math.round(80 + dist * 1.4);
+ const mesh = new THREE.Mesh(new THREE.RingGeometry(2.0, 3.0, 24), new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide }));
+ mesh.rotation.x = -Math.PI / 2;
+ mesh.position.set(x, 0.38, z);
+ scene.add(mesh);
+ taxiFare = { x, z, reward, timeLeft: Math.max(30, dist / 8), mesh };
+ showToast(`🚕 FARE WAITING AT THE YELLOW MARKER — $${reward.toLocaleString()}!`);
+}
+
+function updateTaxiFare(dt) {
+ const inTaxi = player.inVehicle && player.inVehicle.type === 'taxi';
+ if (!inTaxi) {
+   if (taxiFare) { scene.remove(taxiFare.mesh); taxiFare = null; }
+   return;
+ }
+ if (!taxiFare) {
+   taxiFareCooldown -= dt;
+   if (taxiFareCooldown <= 0) spawnTaxiFare();
+   return;
+ }
+ taxiFare.timeLeft -= dt;
+ if (taxiFare.timeLeft <= 0) {
+   scene.remove(taxiFare.mesh);
+   taxiFare = null;
+   taxiFareCooldown = 8 + Math.random() * 10;
+   return;
+ }
+ if (Math.hypot(player.inVehicle.x - taxiFare.x, player.inVehicle.z - taxiFare.z) < 5.5) {
+   player.cash += taxiFare.reward;
+   AudioEngine.cash();
+   showToast(`✅ FARE DROPPED OFF! +$${taxiFare.reward.toLocaleString()}`);
+   scene.remove(taxiFare.mesh);
+   taxiFare = null;
+   taxiFareCooldown = 6 + Math.random() * 8;
+   saveGameState();
+ }
+}
+
+// ==========================================
 // 10. INTERACTIVE MODALS
 // ==========================================
+let playerBeforeInterior = null;
+
+function enterBuilding(door) {
+ if (player.insideBuilding || player.inVehicle) return;
+ playerBeforeInterior = { x: player.x, z: player.z, rotY: player.rotY };
+ player.insideBuilding = door;
+ player.x = INTERIOR_X;
+ player.z = INTERIOR_Z - 5;
+ player.y = 0; player.vy = 0; player.isGrounded = true;
+ player.rotY = 0;
+ if (interiorAccentMat) interiorAccentMat.color.setHex(door.tint);
+ interiorStageGroup.visible = true;
+ showToast('🚪 YOU STEP INSIDE');
+}
+
+function exitBuilding() {
+ if (!player.insideBuilding) return;
+ player.insideBuilding = null;
+ if (playerBeforeInterior) {
+   player.x = playerBeforeInterior.x;
+   player.z = playerBeforeInterior.z;
+   player.rotY = playerBeforeInterior.rotY;
+ }
+ player.y = 0; player.vy = 0; player.isGrounded = true;
+ interiorStageGroup.visible = false;
+ showToast('🚪 YOU STEP BACK OUTSIDE');
+}
+
 function handleInteraction() {
+ if (player.insideBuilding) {
+   if (Math.hypot(player.x - INTERIOR_X, player.z - (INTERIOR_Z - 6)) < 2.8) exitBuilding();
+   return;
+ }
+
  const px = player.inVehicle ? player.inVehicle.x : player.x;
  const pz = player.inVehicle ? player.inVehicle.z : player.z;
 
  for (const z of zones) {
    if (Math.hypot(px - z.x, pz - z.z) < z.radius + 1.5) {
      if (z.id === 'race') { startRace(); return; }
-     if (z.id === 'bank') { startHeist(); return; }
      const exitingVehicle = player.inVehicle;
      if (player.inVehicle) toggleVehicle();
      modalOpen = true;
@@ -3821,13 +5049,29 @@ function handleInteraction() {
      } else if (z.id === 'property') {
        refreshPropertyModal();
        document.getElementById('propertyModal').style.display = 'flex';
+     } else if (z.id === 'casino') {
+       document.getElementById('casinoCash').textContent = `$${player.cash}`;
+       document.getElementById('casinoResult').textContent = 'Good luck.';
+       document.getElementById('casinoModal').style.display = 'flex';
+     } else if (z.id === 'bank') {
+       refreshBankModal();
+       document.getElementById('bankModal').style.display = 'flex';
      }
      return;
    }
  }
+
+ if (!player.inVehicle) {
+   for (const d of buildingDoors) {
+     if (Math.hypot(px - d.x, pz - d.z) < d.radius) { enterBuilding(d); return; }
+   }
+ }
 }
 
+const SHELTER_MODAL_IDS = ['gunShopModal', 'dinerModal', 'garageModal', 'boutiqueModal', 'trunkModal', 'propertyModal', 'casinoModal', 'bankModal'];
+
 function closeModals() {
+ const wasSheltering = player.wanted > 0 && SHELTER_MODAL_IDS.some(id => document.getElementById(id).style.display === 'flex');
  modalOpen = false;
  document.getElementById('gunShopModal').style.display = 'none';
  document.getElementById('policeModal').style.display = 'none';
@@ -3840,6 +5084,27 @@ function closeModals() {
  document.getElementById('trunkModal').style.display = 'none';
  document.getElementById('travelModal').style.display = 'none';
  document.getElementById('propertyModal').style.display = 'none';
+ document.getElementById('casinoModal').style.display = 'none';
+ document.getElementById('bankModal').style.display = 'none';
+ if (wasSheltering) {
+   player.wanted = Math.max(0, player.wanted - 1);
+   showToast('YOU LAID LOW AND LOST SOME HEAT');
+ }
+}
+
+function spinSlots() {
+ const cost = 100;
+ if (player.cash < cost) { showToast('NOT ENOUGH CASH!'); return; }
+ player.cash -= cost;
+ const roll = Math.random();
+ let payout = 0, msg;
+ if (roll < 0.03) { payout = cost * 10; msg = '🎰 JACKPOT!!!'; }
+ else if (roll < 0.25) { payout = cost * 2; msg = '🎰 NICE WIN!'; }
+ else { msg = '🎰 NO LUCK THIS TIME'; }
+ if (payout > 0) { player.cash += payout; AudioEngine.cash(); }
+ document.getElementById('casinoCash').textContent = `$${player.cash}`;
+ document.getElementById('casinoResult').textContent = payout > 0 ? `${msg} +$${payout.toLocaleString()}` : msg;
+ saveGameState();
 }
 
 function eatDinerMeal(healAmt, cost) {
@@ -3941,6 +5206,14 @@ function renderMinimap(ctx, size, scale) {
  ctx.fillStyle = '#090d16';
  ctx.fillRect(0, 0, size, size);
 
+ if (player.insideBuilding) {
+   ctx.fillStyle = '#38bdf8';
+   ctx.font = 'bold 13px sans-serif';
+   ctx.textAlign = 'center';
+   ctx.fillText('INDOORS', cx, cy);
+   return;
+ }
+
  const px = player.inVehicle ? player.inVehicle.x : player.x;
  const pz = player.inVehicle ? player.inVehicle.z : player.z;
 
@@ -4001,6 +5274,13 @@ function renderMinimap(ctx, size, scale) {
    ctx.fillStyle = '#facc15';
    ctx.beginPath();
    ctx.arc((bountyTarget.npc.x - px) * scale, (bountyTarget.npc.z - pz) * scale, 3.5, 0, Math.PI * 2);
+   ctx.fill();
+ }
+
+ if (taxiFare) {
+   ctx.fillStyle = '#fde047';
+   ctx.beginPath();
+   ctx.arc((taxiFare.x - px) * scale, (taxiFare.z - pz) * scale, 3, 0, Math.PI * 2);
    ctx.fill();
  }
 
@@ -4065,6 +5345,13 @@ function animate(now) {
  });
  waypointGroup.rotation.y += dt * 1.8;
 
+ const chasePos = Math.floor(now / 140) % casinoBulbMats.length;
+ casinoBulbMats.forEach((m, i) => {
+   const lit = i === chasePos || i === (chasePos + 2) % casinoBulbMats.length;
+   m.color.setHex(lit ? 0xf472b6 : 0x831843);
+ });
+ if (casinoBeacon) casinoBeacon.rotation.y += dt * 1.4;
+
  if (!gameStarted || modalOpen) {
    renderer.render(scene, camera);
    return;
@@ -4079,6 +5366,19 @@ function animate(now) {
  updateProperty(dt);
  updateBountyHunt(dt);
  updateAlly(dt);
+ updateTurf(dt);
+ updateTreasure(dt);
+ updateCombo(dt);
+ updateStuntCombo(dt);
+ updateBlackMarket(dt);
+ updateTaxiFare(dt);
+ updateInsuredVehicles(dt);
+ updateRadioMusic(dt);
+ updateRadioChatter(dt);
+ updateCollectibles(dt);
+ updateRoadblocks(dt);
+ updateBossFight(dt);
+ updateCrashingAircraft(dt);
 
  autoSaveTimer += dt;
  if (autoSaveTimer >= 2.0) {
@@ -4207,8 +5507,12 @@ function animate(now) {
      const nx = player.x + dx * speed * dt;
      const nz = player.z + dz * speed * dt;
 
-     if (!checkCollision(nx, player.z, 0.9)) player.x = nx;
-     if (!checkCollision(player.x, nz, 0.9)) player.z = nz;
+     // Building footprints are 2D (ground-level only) -- someone standing well above
+     // street level (a rooftop, mid-parachute) isn't actually inside that footprint,
+     // even though the X/Z coordinates overlap, so skip the ground check up there.
+     const highUp = player.y > 10;
+     if (highUp || !checkCollision(nx, player.z, 0.9)) player.x = nx;
+     if (highUp || !checkCollision(player.x, nz, 0.9)) player.z = nz;
 
      player.rotY = Math.atan2(dx, dz);
 
@@ -4314,37 +5618,67 @@ function animate(now) {
 
    const vx = Math.sin(v.rotY) * v.speed * dt;
    const vz = Math.cos(v.rotY) * v.speed * dt;
+   const isAircraft = v.type === 'plane' || v.type === 'heli';
 
-   if (v.type === 'plane') {
-     const takeoffSpeed = 28;
+   if (isAircraft) {
+     const takeoffSpeed = v.type === 'heli' ? 1 : 28;
+     // Plane climb slowed down: at the old rate, just holding forward (the most
+     // natural thing a player does) climbed clear of any reasonable "low flying"
+     // window within about a second and a half -- nowhere near enough time to
+     // actually fly low into a building you're approaching, even head-on.
+     const climbRate = v.type === 'heli' ? 8 : 6;
+     const descendRate = v.type === 'heli' ? 9 : 6;
      if (throttle > 0 && Math.abs(v.speed) > takeoffSpeed) {
-       v.altitude = Math.min(60, (v.altitude || 0) + 10 * dt);
+       v.altitude = Math.min(60, (v.altitude || 0) + climbRate * dt);
      } else if ((v.altitude || 0) > 0) {
-       v.altitude = Math.max(0, (v.altitude || 0) - 6 * dt);
+       v.altitude = Math.max(0, (v.altitude || 0) - descendRate * dt);
+     }
+     if (v.type === 'heli' && v.mesh.userData.rotorHub) {
+       v.mesh.userData.rotorHub.rotation.y += dt * 30;
+       if (v.mesh.userData.tailRotor) v.mesh.userData.tailRotor.rotation.x += dt * 34;
      }
    }
-   const inFlight = v.type === 'plane' && v.altitude > 4;
+   const inFlight = isAircraft && v.altitude > 4;
+   // Tapping forward again right before impact (to not lose speed) also triggers
+   // the climb, and at 10 units/sec of climb that clears this window in under two
+   // seconds -- a deliberate low pass could cross back above a too-tight threshold
+   // before actually reaching the target. Wider margin so a real low pass still
+   // reads as low even with a quick throttle correction just before the hit.
+   const lowFlying = isAircraft && inFlight && v.altitude < 35;
 
    const needsWater = v.type === 'jetski' || v.type === 'boat';
-   const blockedMove = (!inFlight && checkCollision(v.x + vx, v.z + vz, 2.0)) || (needsWater && !isOverWater(v.x + vx, v.z + vz));
-   if (!blockedMove) {
-     v.x += vx;
-     v.z += vz;
+   const pastMapEdge = Math.abs(v.x + vx) > CITY_LIMIT || Math.abs(v.z + vz) > CITY_LIMIT;
+   const hitsBuilding = checkCollision(v.x + vx, v.z + vz, 2.0);
+   // Aircraft are narrower than a car, so a crash specifically needs a tighter, more direct
+   // hit -- otherwise flying dead-center down a street at low altitude (a legitimately open
+   // gap for something the size of a plane) could falsely register as clipping a building.
+   const hitsBuildingDirectly = lowFlying && hitsBuildingOnly(v.x + vx, v.z + vz, 0.8);
+   if (hitsBuildingDirectly) {
+     crashVehicle(v);
    } else {
-     v.speed *= -0.35;
+     const blockedMove = (!inFlight && hitsBuilding) || pastMapEdge || (needsWater && !isOverWater(v.x + vx, v.z + vz));
+     if (!blockedMove) {
+       v.x += vx;
+       v.z += vz;
+     } else {
+       v.speed *= -0.35;
+     }
    }
 
+   if (v.destroyed) {
+     // crashVehicle() already ejected the player and reset their state this frame.
+   } else {
    player.x = v.x;
-   player.y = v.type === 'plane' ? (v.altitude || 0) : 0;
+   player.y = isAircraft ? (v.altitude || 0) : 0;
    player.z = v.z;
    checkStuntRamp(v);
    const hopY = vehicleHop > 0 ? Math.sin((0.6 - vehicleHop) / 0.6 * Math.PI) * 2.2 : 0;
-   v.mesh.position.set(v.x, hopY + (v.type === 'plane' ? (v.altitude || 0) : 0), v.z);
+   v.mesh.position.set(v.x, hopY + (isAircraft ? (v.altitude || 0) : 0), v.z);
    v.mesh.rotation.y = v.rotY;
-   if (v.type === 'plane') v.mesh.rotation.z = -steer * 0.3;
+   if (isAircraft) v.mesh.rotation.z = -steer * 0.3;
 
-   if (v.type === 'moto' || v.type === 'jetski' || v.type === 'boat') {
-     const seatY = v.type === 'moto' ? 0.55 : (v.type === 'jetski' ? 0.42 : 1.1);
+   if (v.type === 'moto' || v.type === 'dirtbike' || v.type === 'jetski' || v.type === 'boat') {
+     const seatY = v.type === 'moto' ? 0.55 : (v.type === 'dirtbike' ? 0.72 : (v.type === 'jetski' ? 0.42 : 1.1));
      player.mesh.position.set(v.x, hopY + seatY, v.z);
      player.mesh.rotation.y = v.rotY;
      player.mesh.userData.bodyRoot.position.y = 0;
@@ -4381,6 +5715,7 @@ function animate(now) {
    });
 
    document.getElementById('speedo').textContent = `${Math.round(Math.abs(v.speed) * 2.4)} MPH`;
+   }
  }
 
  vehicles.forEach(v => {
@@ -4539,7 +5874,14 @@ function animate(now) {
            if (n.role === 'cop' || n.role === 'swat') addWanted(2);
            else if (n.role === 'civilian') addWanted(1);
            else if (n.role === 'gang') {
-             player.cash += 75;
+             if (b.fromPlayer) {
+               const mult = registerKillCombo();
+               const reward = Math.round(75 * mult);
+               player.cash += reward;
+               if (mult > 1) showToast(`🔥 COMBO x${comboCount}! +$${reward}`);
+             } else {
+               player.cash += 75;
+             }
              AudioEngine.cash();
            }
          }
@@ -4609,17 +5951,26 @@ function animate(now) {
  }
 
  let activePrompt = '';
- for (const z of zones) {
-   if (Math.hypot(player.x - z.x, player.z - z.z) < z.radius) {
-     activePrompt = z.prompt;
-     break;
-   }
- }
- if (!activePrompt && !player.inVehicle) {
-   for (const v of vehicles) {
-     if (!v.destroyed && Math.hypot(player.x - v.x, player.z - v.z) < 4.5) {
-       activePrompt = 'Press [F] to Enter / Hijack Vehicle';
+ if (player.insideBuilding) {
+   if (Math.hypot(player.x - INTERIOR_X, player.z - (INTERIOR_Z - 6)) < 2.8) activePrompt = 'Press [E] to Exit';
+ } else {
+   for (const z of zones) {
+     if (Math.hypot(player.x - z.x, player.z - z.z) < z.radius) {
+       activePrompt = z.prompt;
        break;
+     }
+   }
+   if (!activePrompt && !player.inVehicle) {
+     for (const d of buildingDoors) {
+       if (Math.hypot(player.x - d.x, player.z - d.z) < d.radius) { activePrompt = 'Press [E] to Enter'; break; }
+     }
+   }
+   if (!activePrompt && !player.inVehicle) {
+     for (const v of vehicles) {
+       if (!v.destroyed && Math.hypot(player.x - v.x, player.z - v.z) < 4.5) {
+         activePrompt = 'Press [F] to Enter / Hijack Vehicle';
+         break;
+       }
      }
    }
  }
@@ -4649,7 +6000,8 @@ function animate(now) {
  }
 
  const camDist = player.inVehicle ? 13.0 : 8.2;
- const camHeight = (player.inVehicle ? 4.8 : 3.4) + player.y * 0.75;
+ const camHeightMul = (!player.inVehicle && player.y > 10) ? 1.3 : 0.75;
+ const camHeight = (player.inVehicle ? 4.8 : 3.4) + player.y * camHeightMul;
  const targetCamX = player.x + Math.sin(camYaw) * Math.cos(camPitch) * camDist;
  const targetCamY = camHeight + Math.sin(camPitch) * camDist;
  const targetCamZ = player.z + Math.cos(camYaw) * Math.cos(camPitch) * camDist;
